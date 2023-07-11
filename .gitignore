@@ -173,7 +173,6 @@ cython_debug/
 *.src
 *.out
 *.dbb
-*.txt
 *.pkl
 *.csv
 *.bat
