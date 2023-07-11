@@ -6,6 +6,7 @@ build-backend = "hatchling.build"
 name = "pyNuMAD"
 description = "Numerical Manufacturing and Design Tool"
 readme = "README.md"
+version = "0.0.1"
 authors = [
   { name = "Kirk Bonney", email = "klbonne@sandia.gov" },
 ]
