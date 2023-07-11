@@ -4,7 +4,6 @@ from os.path import abspath, dirname, join
 from pynumad.objects.Airfoil import Airfoil
 from pynumad.paths import DATA_PATH
 
-testdir = dirname(abspath(str(__file__)))
 test_data_dir = DATA_PATH
 
 class TestAirfoil(unittest.TestCase):

@@ -3,14 +3,14 @@ from os.path import abspath, dirname, join
 from pynumad.analysis.ansys.write import writeAnsysShellModel
 from pynumad.shell.shell import getShellMesh
 from pynumad.objects.Blade import Blade
+from pynumad.paths import DATA_PATH
 
-testdir = dirname(abspath(str(__file__)))
-test_datadir = join(testdir, "test_data")
+test_data_dir = DATA_PATH
 
 class TestANSYSWorkflow(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.yamlfile = join(test_datadir,"blade_yamls","myBlade.yaml")
+        self.yamlfile = join(test_data_dir,"blade_yamls","myBlade.yaml")
         
     def step1_read_yaml(self):
         self.blade = Blade(self.yamlfile)
