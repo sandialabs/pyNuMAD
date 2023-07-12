@@ -168,13 +168,11 @@ cython_debug/
 *.esav
 *.full
 *.mntr
-*.rst
 *.stat
 *.src
 *.out
 *.dbb
 *.pkl
-*.csv
 *.bat
 
 # vscode
