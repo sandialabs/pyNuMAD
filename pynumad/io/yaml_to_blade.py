@@ -53,6 +53,7 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
     af_data = data['airfoils']
     mat_data = data['materials']
 
+    
     ### STATIONS / AIRFOILS
     _add_stations(blade, blade_outer_shape_bem, hub_outer_shape_bem, 
                     af_data, filename, write_airfoils)
@@ -65,9 +66,34 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
     
     # Spar Cap Width and Offset
     # Obtain component name and index for hp and lp sides of sparcap
+
+    def fullKeysFromSubStrings(keyList,subStringList):
+        '''
+        Example Usage: 
+        subString = ['B1N3TDx']
+        res=getFullKeyFromSubString(df.keys(),subString)
+        
+        output:
+        ['B1N3TDxr_[m]']
+        
+        Example Usage: 
+        subString = ['B2','TDx']
+        res=getFullKeyFromSubString(df.keys(),subString)
+        
+        output:
+        ['B2N1TDxr_[m]', 'B2N2TDxr_[m]', 'B2N3TDxr_[m]', 'B2N4TDxr_[m]', 'B2N5TDxr_[m]', 'B2N6TDxr_[m]', 'B2N7TDxr_[m]', 'B2N8TDxr_[m]', 'B2N9TDxr_[m]', 'B2TipTDxr_[m]']
+
+        
+        '''
+        result=keyList
+        for subString in subStringList:
+            result=[key for key in result if subString in key]
+        return result
     for i in range(N_layer_comp):
+        
         if 'spar' in blade_internal_structure['layers'][i]['name'].lower():
             name = blade_internal_structure['layers'][i]['name']
+            
             if 'suc' in blade_internal_structure['layers'][i]['side'].lower():
                 spar_lp_index = i
                 spar_lp_name = name
@@ -75,28 +101,88 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
                 spar_hp_index = i
                 spar_hp_name = name
 
-    # Because spar cap width must be constant, average the yaml file on
-    # pressure and suction surfaces across span    
-    # blade.sparcapwidth = np.zeros((2))
-    blade.sparcapoffset = np.zeros((2))
-    blade.sparcapwidth_hp = np.array(blade_internal_structure['layers'][spar_hp_index]['width']['values'])*1000
-    blade.sparcapwidth_lp  = np.array(blade_internal_structure['layers'][spar_lp_index]['width']['values'])*1000
+    bladeParts=['layers','webs']
+    # Make sure each blade.ispan has layer thicknesses and widths
+    fullSpanGrid=np.array(blade_outer_shape_bem['chord']['grid'])
+    nStations=len(fullSpanGrid)
+    keysToModify={'offset_y_pa','thickness','fiber_orientation','width'}
+    for partName in bladeParts:
+        N_layer_comp = len(blade_internal_structure[partName])
+        for currentLayer in range(N_layer_comp):
+            layerKeys=set(blade_internal_structure[partName][currentLayer].keys())
+            
+            for currentKey in keysToModify.intersection(layerKeys):
+                grid=blade_internal_structure[partName][currentLayer][currentKey]['grid']
+                values=blade_internal_structure[partName][currentLayer][currentKey]['values']
+                startStationLoc=grid[0]
+                endStationLoc=grid[-1]
 
-    blade.sparcapoffset_hp = np.array(blade_internal_structure['layers'][spar_hp_index]['offset_y_pa']['values'])*1000
-    blade.sparcapoffset_lp = np.array(blade_internal_structure['layers'][spar_lp_index]['offset_y_pa']['values'])*1000
-    
-    # TE and LE Bands
-    for i in range(N_layer_comp):
-        if 'reinf' in blade_internal_structure['layers'][i]['name'].lower():
-            if 'le' in blade_internal_structure['layers'][i]['name'].lower():
-                I_LE = i
-            else:
-                I_TE = i
-    
-    # Leading and Trailing Edge bands are constants in millimeters
+                subSpanGridIndex=np.where((fullSpanGrid>=startStationLoc) & (fullSpanGrid <=endStationLoc))[0]
 
-    blade.leband = np.array(blade_internal_structure['layers'][I_LE]['width']['values'])*1000 / 2
-    blade.teband = np.array(blade_internal_structure['layers'][I_TE]['width']['values'])*1000 / 2
+                #iterpolate fullSpanGrid locations onto layer grid defined in the yamle file for the layer
+                subSpanValues=interpolator_wrap(grid,values,fullSpanGrid[subSpanGridIndex],'pchip')
+                fullSpanValues=np.zeros(nStations)
+
+                fullSpanValues[subSpanGridIndex]=subSpanValues
+            
+                #Reset
+                blade_internal_structure[partName][currentLayer][currentKey]['grid']=fullSpanGrid
+                blade_internal_structure[partName][currentLayer][currentKey]['values']=fullSpanValues
+
+    bladeStructureDict={}
+    for i in range(len(blade_internal_structure['layers'])):
+        bladeStructureDict[blade_internal_structure['layers'][i]['name'].lower()]=blade_internal_structure['layers'][i]
+
+
+
+    #Spar caps
+    sparCapKeys=fullKeysFromSubStrings(bladeStructureDict.keys(),['spar'])
+    if len(sparCapKeys)==2:
+        for iSparCap in range(2):
+            if 'suc' in bladeStructureDict[sparCapKeys[iSparCap]]['side'].lower():
+                lpSideIndex=iSparCap
+            if 'pres' in bladeStructureDict[sparCapKeys[iSparCap]]['side'].lower():
+                hpSideIndex=iSparCap
+    else:
+        raise ValueError('Incorrect number of spar cap components')
+    
+
+    blade.sparcapwidth_lp  = bladeStructureDict[sparCapKeys[lpSideIndex]]['width']['values']*1000
+    blade.sparcapoffset_lp = bladeStructureDict[sparCapKeys[lpSideIndex]]['offset_y_pa']['values']*1000
+
+    blade.sparcapwidth_hp  = bladeStructureDict[sparCapKeys[hpSideIndex]]['width']['values']*1000
+    blade.sparcapoffset_hp = bladeStructureDict[sparCapKeys[hpSideIndex]]['offset_y_pa']['values']*1000
+
+    # print(blade.sparcapwidth_lp-np.array(blade_internal_structure['layers'][spar_lp_index]['width']['values'])*1000)
+    # print(blade.sparcapoffset_lp-np.array(blade_internal_structure['layers'][spar_lp_index]['offset_y_pa']['values'])*1000)
+    # print(blade.sparcapwidth_hp-np.array(blade_internal_structure['layers'][spar_hp_index]['width']['values'])*1000)
+    # print(blade.sparcapoffset_hp-np.array(blade_internal_structure['layers'][spar_hp_index]['offset_y_pa']['values'])*1000)
+
+    # blade.sparcapwidth_hp = np.array(blade_internal_structure['layers'][spar_hp_index]['width']['values'])*1000
+    # blade.sparcapwidth_lp  = np.array(blade_internal_structure['layers'][spar_lp_index]['width']['values'])*1000
+
+    # blade.sparcapoffset_hp = np.array(blade_internal_structure['layers'][spar_hp_index]['offset_y_pa']['values'])*1000
+    # blade.sparcapoffset_lp = np.array(blade_internal_structure['layers'][spar_lp_index]['offset_y_pa']['values'])*1000
+    
+    # TE Bands
+    teReinfKeys=fullKeysFromSubStrings(bladeStructureDict.keys(),['te','reinf'])
+    if len(teReinfKeys)==1:
+        blade.teband = bladeStructureDict[teReinfKeys[0]]['width']['values']*1000 / 2
+    elif len(teReinfKeys)==2:
+        blade.teband = (bladeStructureDict[teReinfKeys[0]]['width']['values']+bladeStructureDict[teReinfKeys[1]]['width']['values'])*1000 / 2
+    else:
+        raise ValueError('Unknown number of TE reinforcements')
+
+    # LE Bands
+    leReinfKeys=fullKeysFromSubStrings(bladeStructureDict.keys(),['le','reinf'])
+    if len(leReinfKeys)==1:
+        blade.leband = bladeStructureDict[leReinfKeys[0]]['width']['values']*1000 / 2
+    elif len(leReinfKeys)==2:
+        blade.leband = (bladeStructureDict[leReinfKeys[0]]['width']['values']+bladeStructureDict[leReinfKeys[1]]['width']['values'])*1000 / 2
+    else:
+        raise ValueError('Invalid number of LE reinforcements')
+   
+    
     ### COMPONENTS
     _add_components(blade, blade_internal_structure, spar_hp_index, spar_lp_index)
     
