@@ -1,12 +1,12 @@
-.. _gettingstarted:
+.. _intallation:
 
-Getting Started 
-================
+Installation 
+============
 
 Download pyNuMAD
 ----------------
 
-The pyNuMAD source code is hosted on the `pyNuMAD GitHub repository <https://cee-gitlab.sandia.gov/ecamare/pyNuMAD/-/tree/dev>`_. 
+The pyNuMAD source code is hosted on the `pyNuMAD GitHub repository <https://github.com/sandialabs/pyNuMAD>`_. 
 pyNuMAD users are recommended to clone the Github repository.
 Cloning the repository allows users to easily pull the latest updates to the pyNuMAD source code.
 These updates may improve the code's speed, accuracy and add additional functionality or advanced features.
@@ -16,12 +16,12 @@ These updates may improve the code's speed, accuracy and add additional function
 
 To download pyNuMAD using `git <https://git-scm.com/>`_, type the following in a git interface:: 
 
-    >> git clone https://cee-gitlab.sandia.gov/ecamare/pyNuMAD.git
+    git clone https://cee-gitlab.sandia.gov/ecamare/pyNuMAD.git
 
 The local copy of pyNuMAD can easily be updated to the latest version of the 
 code hosted on the GitHub repository by using the pull command:: 
 
-    >> git pull
+    git pull
 
 Installation
 ------------
@@ -32,7 +32,7 @@ the following command in the root of the repository::
     pip install .
 
 Developers are recommended to install using the instructions on
-:ref:`development<developer>` page.
+:ref:`contributing<contributing>` page.
 
 Initializing a blade object
 ---------------------------
@@ -55,5 +55,3 @@ or initialize the blade with the path::
 
     blade = pynumad.Blade("path/to/yaml")
     blade = pynumad.Blade("path/to/excel")
-
-

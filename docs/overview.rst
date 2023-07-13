@@ -1,4 +1,4 @@
-.. _intro-overview:
+.. _overview:
 
 Overview
 =======================

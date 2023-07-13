@@ -12,15 +12,18 @@ Numerical Manufacturing And Design (NuMAD) Tool for Wind Turbine Blades
    :maxdepth: 2
    :hidden:
    
-   Home <self>
-   API documentation <apidoc/pynumad>
-   introduction/index.rst
-   user/index.rst
-   developer.rst
-   gettingstarted
+   installation
+   overview
+   release-notes
+   contributing.rst
+   apidoc/pynumad
+   publications
+   citation
+   license
 
 
 
+.. include:: ../README.md
 
 
 The structural design and optimization of wind turbine blades is a
@@ -46,6 +49,7 @@ suitable to be made available for public use.
 
 NuMAD Developers
 =====================
+
 NuMAD has been developed by `Sandia National Laboratories 
 (Sandia) <https://energy.sandia.gov/programs/renewable-energy/wind-power/>`_, 
 funded by the U.S. Department of Energy’s Wind Energy Technologies Technologies Office. 
