@@ -4,4 +4,4 @@ ANSYS_PATH = ""
 CUBIT_PATH = ""
 
 package_dir = dirname(abspath(str(__file__)))
-DATA_PATH = join(package_dir, "..", "data")
+DATA_PATH = join(package_dir, "..", "pynumad_data")
