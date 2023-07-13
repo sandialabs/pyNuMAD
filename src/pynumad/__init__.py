@@ -8,7 +8,7 @@ from pynumad.objects.Subobjects import MatDBentry, BOM, Ply, Layer, Shearweb
 from pynumad.io.mesh_to_yaml import mesh_to_yaml
 
 
-__version__ = '0.0.1'
+__version__ = "0.0.1"
 
 __copyright__ = """Copyright 2023 National Technology & Engineering 
 Solutions of Sandia, LLC (NTESS). Under the terms of Contract DE-NA0003525 

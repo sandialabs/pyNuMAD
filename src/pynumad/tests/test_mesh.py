@@ -7,18 +7,21 @@ from pynumad.paths import DATA_PATH
 
 test_data_dir = DATA_PATH
 
+
 class TestANSYSWorkflow(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        self.yamlfile = join(test_data_dir,"blade_yamls","myBlade.yaml")
-        
+        self.yamlfile = join(test_data_dir, "blade_yamls", "myBlade.yaml")
+
     def step1_read_yaml(self):
         self.blade = Blade(self.yamlfile)
 
     def step2_build_mesh(self):
         self.elementSize = 0.2
         adhes = 1
-        self.meshData = getShellMesh(self.blade, includeAdhesive=adhes, elementSize=self.elementSize)
+        self.meshData = getShellMesh(
+            self.blade, includeAdhesive=adhes, elementSize=self.elementSize
+        )
 
     # def step3_write_ANSYS_src(self):
     #     config = {}
@@ -38,9 +41,9 @@ class TestANSYSWorkflow(unittest.TestCase):
     #         config,
     #         includeAdhesive
     #     )
-    
+
     def get_steps(self):
-        for name in dir(self): #look at all functions
+        for name in dir(self):  # look at all functions
             if name.startswith("step"):
                 yield name, getattr(self, name)
 
@@ -50,6 +53,3 @@ class TestANSYSWorkflow(unittest.TestCase):
                 step()
             except Exception as e:
                 self.fail("{} failed ({}: {})".format(step, type(e), e))
-
-
-        
