@@ -1,0 +1,48 @@
+name: Build and Deploy Documentation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the documentation with Sphinx
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup nox
+        uses: excitedleigh/setup-nox@v2.0.0
+      - name: Build docs
+        run: nox -s docs
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: 'docs/_build/html'
+  deploy:
+    name: Deploy documentation to GitHub Pages
+    needs: build
+    # Sets permissions of the GITHUB_TOKEN to allow deployment
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Setup pages
+        uses: actions/configure-pages@v3
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/ddeploy-pages@v2
+      
