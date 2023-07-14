@@ -4,19 +4,17 @@
 #              See license.txt for disclaimer information              #
 ########################################################################
 
-import re
-import numpy as np
-
 import os
-import matplotlib.pyplot as plt
+import re
 import warnings
+
+import matplotlib.pyplot as plt
+import numpy as np
 import scipy as sp
-from typing import Optional
+from numpy import ndarray
 
 from pynumad.io.xml_to_airfoil import xml_to_airfoil
 from pynumad.utils.interpolation import interpolator_wrap
-
-from numpy import ndarray
 
 
 class Airfoil:

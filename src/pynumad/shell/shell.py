@@ -8,13 +8,13 @@ import pynumad
 from pynumad.utils.interpolation import interpolator_wrap
 
 ##from pynumad.shell.shellClasses import shellRegion, elementSet, NuMesh3D, spatialGridList2D, spatialGridList3D
-from pynumad.shell.SurfaceClass import Surface
-from pynumad.shell.Mesh3DClass import Mesh3D
-from pynumad.shell.ShellRegionClass import ShellRegion
+from pynumad.shell.surface import Surface
+from pynumad.shell.mesh3d import Mesh3D
+from pynumad.shell.shellregion import ShellRegion
 from pynumad.analysis.ansys.write import writeAnsysShellModel
 
 
-def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
+def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
     """
     This method generates a finite element shell mesh for the blade, based on what is
     stored in blade.geometry, blade.keypoints, and blade.profiles.  Output is given as
@@ -566,7 +566,7 @@ def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
     return shellData
 
 
-def generateShellModel(blade, feaCode, includeAdhesive, meshData=None):
+def generate_shell_model(blade, feaCode, includeAdhesive, meshData=None):
     # This method generates a shell FEA model in one of the supported FEA codes; w/ or w/o adhesieve
 
     if str(feaCode.lower()) == str("ansys"):
@@ -585,7 +585,7 @@ def generateShellModel(blade, feaCode, includeAdhesive, meshData=None):
         filename = join(blade.paths["job"], APDLname)
         if not meshData:
             forSolid = 0
-            meshData = shellMeshGeneral(blade, forSolid, includeAdhesive)
+            meshData = shell_mesh_general(blade, forSolid, includeAdhesive)
 
         writeAnsysShellModel(blade, filename, meshData, config)
         if config["dbgen"]:
@@ -620,7 +620,7 @@ def generateShellModel(blade, feaCode, includeAdhesive, meshData=None):
     return meshData
 
 
-def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
+def solid_mesh_from_shell(blade, shellMesh, layerNumEls=[]):
     shNodes = shellMesh["nodes"]
     shElements = shellMesh["elements"]
     elSets = shellMesh["sets"]["element"]
@@ -734,17 +734,17 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
     return solidMesh
 
 
-def getSolidMesh(blade, layerNumEls, elementSize):
+def get_solid_mesh(blade, layerNumEls, elementSize):
     ## Edit stacks to be usable for 3D solid mesh
     blade.editStacksForSolidMesh()
     ## Create shell mesh as seed
     ## Note the new output structure of shellMeshGeneral, as a single python dictionary  -E Anderson
-    shellMesh = shellMeshGeneral(blade, 1, 1, elementSize)
+    shellMesh = shell_mesh_general(blade, 1, 1, elementSize)
     print("finished shell mesh")
-    solidMesh = solidMeshFromShell(blade, shellMesh, layerNumEls)
+    solidMesh = solid_mesh_from_shell(blade, shellMesh, layerNumEls)
     return solidMesh
 
 
-def getShellMesh(blade, includeAdhesive, elementSize):
-    meshData = shellMeshGeneral(blade, 0, includeAdhesive, elementSize)
+def get_shell_mesh(blade, includeAdhesive, elementSize):
+    meshData = shell_mesh_general(blade, 0, includeAdhesive, elementSize)
     return meshData

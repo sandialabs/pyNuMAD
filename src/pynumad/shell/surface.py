@@ -1,6 +1,6 @@
 import numpy as np
-import pynumad.shell.MeshTools as mt
-from pynumad.shell.ShellRegionClass import *
+import pynumad.shell.meshtools as mt
+from pynumad.shell.shellregion import *
 
 
 class Surface:

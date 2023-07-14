@@ -1,7 +1,7 @@
 import unittest
 from os.path import abspath, dirname, join
 from pynumad.analysis.ansys.write import writeAnsysShellModel
-from pynumad.shell.shell import getShellMesh
+from pynumad.shell.shell import get_shell_mesh
 from pynumad.objects.Blade import Blade
 from pynumad.paths import DATA_PATH
 
@@ -19,7 +19,7 @@ class TestANSYSWorkflow(unittest.TestCase):
     def step2_build_mesh(self):
         self.elementSize = 0.2
         adhes = 1
-        self.meshData = getShellMesh(
+        self.meshData = get_shell_mesh(
             self.blade, includeAdhesive=adhes, elementSize=self.elementSize
         )
 

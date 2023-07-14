@@ -25,6 +25,7 @@ def xml_to_airfoil(airfoil, filecontents=None):
     t = re.search(pattern, fulltext)
     reference = t.group(1)
 
+    coords = []
     for line in filecontents:
         # check if there is a tag
         if re.search("<", line):
@@ -36,9 +37,8 @@ def xml_to_airfoil(airfoil, filecontents=None):
             x, y = line.split(" ")
             x = float(x)
             y = float(y)
-            try:
-                coords = np.append(coords, [[x, y]], axis=0)
-            except UnboundLocalError:
-                coords = np.array([[x, y]])
+            coords.append([x, y])
+    coords = np.array(coords)
     airfoil.reference = reference
     airfoil.coordinates = coords
+    return airfoil

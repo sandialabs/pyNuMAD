@@ -2,7 +2,7 @@ import pynumad as pynu
 import numpy as np
 import os
 
-from pynumad.shell.shell import getShellMesh
+from pynumad.shell.shell import get_shell_mesh
 
 ## Read blade data from yaml file
 blade = pynu.objects.Blade.Blade()
@@ -23,7 +23,7 @@ elementSize = 0.2
 
 ## Generate mesh
 adhes = 1
-bladeMesh = getShellMesh(blade, adhes, elementSize)
+bladeMesh = get_shell_mesh(blade, adhes, elementSize)
 
 ## Write mesh to yaml
 meshFile = 'shellMeshData.yaml'

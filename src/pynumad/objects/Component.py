@@ -1,12 +1,6 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
-
-from matplotlib import pyplot as plt
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib import pyplot as plt
 
 from pynumad.utils.interpolation import interpolator_wrap
 

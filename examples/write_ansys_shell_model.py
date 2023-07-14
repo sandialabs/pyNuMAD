@@ -1,7 +1,7 @@
 import numpy as np
 from os.path import join
 from pynumad.analysis.ansys.write import writeAnsysShellModel
-from pynumad.shell.shell import getShellMesh
+from pynumad.shell.shell import get_shell_mesh
 from pynumad.objects.Blade import Blade
 
 """
@@ -14,7 +14,7 @@ blade = Blade(yamlpath)
 elementSize = 0.2
 adhes = 1
 
-meshData = getShellMesh(blade, includeAdhesive=adhes, elementSize=elementSize)
+meshData = get_shell_mesh(blade, includeAdhesive=adhes, elementSize=elementSize)
 config = dict()
 config["BoundaryCondition"] = 'cantilevered'
 config["elementType"] = '181'

@@ -417,7 +417,8 @@ def readstrlist(str = None):
     return blade
 
 def strreps(strin = None,oldsubstrcell = None,newsubstrcell = None): 
-    assert np.asarray(oldsubstrcell).size == np.asarray(newsubstrcell).size,'Lengths of substring cell arrays must be equal.'
+    assert np.asarray(oldsubstrcell).size == np.asarray(newsubstrcell).size,'Lengths of 
+    substring cell arrays must be equal.'
     strout = strin
     for k in np.arange(1,np.asarray(oldsubstrcell).size+1).reshape(-1):
         strout = strout.replace(oldsubstrcell[k],newsubstrcell[k])

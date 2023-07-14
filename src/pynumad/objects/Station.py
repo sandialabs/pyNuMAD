@@ -1,11 +1,7 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
+import os
 
 import numpy as np
-import os
+
 from pynumad.objects.Airfoil import Airfoil
 from pynumad.utils.interpolation import interpolator_wrap
 
@@ -103,12 +99,12 @@ class Station:
         return xyz
 
     # NOTE: Not finished. Not sure what this is used for
-    def updateProfile(self):
-        xyz = self.xyz
-        if len(self.hgProfile) == 0:
-            self.hgProfile = line(0, 0, 0)
-        set(self.hgProfile, "XData", xyz[:, 0], "YData", xyz[:, 1], "ZData", xyz[:, 2])
-        return
+    # def updateProfile(self):
+    #     xyz = self.xyz
+    #     if len(self.hgProfile) == 0:
+    #         self.hgProfile = line(0, 0, 0)
+    #     set(self.hgProfile, "XData", xyz[:, 0], "YData", xyz[:, 1], "ZData", xyz[:, 2])
+    #     return
 
     # def delete(self = None):
     #     if ishandle(self.hgProfile):

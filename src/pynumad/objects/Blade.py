@@ -1,24 +1,17 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
-
-import re, warnings
-import numpy as np
+import re
 from copy import copy
 
-from pynumad.io.yaml_to_blade import yaml_to_blade
+import numpy as np
+from numpy import ndarray
+
 from pynumad.io.excel_to_blade import excel_to_blade
-from pynumad.utils.interpolation import interpolator_wrap
-from pynumad.utils.affinetrans import rotation, translation
-from pynumad.objects.Station import Station
+from pynumad.io.yaml_to_blade import yaml_to_blade
 from pynumad.objects.Airfoil import getAirfoilNormals, getAirfoilNormalsAngleChange
 from pynumad.objects.Stack import Stack
-from pynumad.objects.Subobjects import MatDBentry, Layer, Shearweb, BOM, Ply
-
-# for type hints
-from numpy import ndarray
+from pynumad.objects.Station import Station
+from pynumad.objects.Subobjects import BOM, Layer, MatDBentry, Ply, Shearweb
+from pynumad.utils.affinetrans import rotation, translation
+from pynumad.utils.interpolation import interpolator_wrap
 
 
 class Blade:

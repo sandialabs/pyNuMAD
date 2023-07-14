@@ -1,12 +1,5 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
-
 import yaml
 import numpy as np
-from scipy.stats import mode
 
 from pynumad.utils.misc_utils import LARCetaT, LARCetaL, _parse_data
 from pynumad.utils.interpolation import interpolator_wrap
@@ -43,7 +36,8 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
     # Name some key subdata
     blade_outer_shape_bem = data["components"]["blade"]["outer_shape_bem"]
 
-    # older versions of wind ontology do not have 'outer_shape_bem' subsection for hub data
+    # older versions of wind ontology do not have 'outer_shape_bem' 
+    # subsection for hub data
     try:
         hub_outer_shape_bem = data["components"]["hub"]["outer_shape_bem"]
     except KeyError:
@@ -268,7 +262,7 @@ def _add_stations(
     #         '.txt')
     #     blade.addStation(afc,np.multiply(tc_xL[i],L))
     # afc.resample #NOTE afc isn't used after this... why resample?
-    return
+    return blade
 
 
 def _add_materials(blade, material_data):

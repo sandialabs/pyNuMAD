@@ -1,6 +1,6 @@
 import numpy as np
-import pynumad.shell.MeshTools as mt
-from pynumad.shell.Segment2DClass import *
+import pynumad.shell.meshtools as mt
+from pynumad.shell.segment2d import *
 
 
 class Boundary2D:
