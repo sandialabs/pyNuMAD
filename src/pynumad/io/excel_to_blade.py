@@ -1,14 +1,11 @@
 import numpy as np
 import pandas as pd
-from os.path import abspath, dirname, join
 from pynumad.objects.Component import Component
 from pynumad.objects.Material import Material
 from pynumad.utils.interpolation import interpolator_wrap
+from pynumad.paths import DATA_PATH
 
-# DATA_DIR = os.path.dirname(os.path.abspath(__file__)) 
-# todo: fix this to not be dependent on my proj structure
-file_dir = dirname(abspath(str(__file__)))
-data_dir = join(file_dir, "..","..","data")
+data_dir = DATA_PATH
 
 def excel_to_blade(blade, filename = None):
     """
