@@ -5,12 +5,12 @@ from os.path import join
 import subprocess
 
 import pynumad
-from pynumad.utils.interpolation import interpolator_wrap
+from pynumad.mesh.interpolation import interpolator_wrap
 
 ##from pynumad.shell.shellClasses import shellRegion, elementSet, NuMesh3D, spatialGridList2D, spatialGridList3D
-from pynumad.shell.SurfaceClass import Surface
-from pynumad.shell.Mesh3DClass import Mesh3D
-from pynumad.shell.ShellRegionClass import ShellRegion
+from pynumad.shell.surface import Surface
+from pynumad.shell.mesh3d import Mesh3D
+from pynumad.shell.shellregion import ShellRegion
 from pynumad.analysis.ansys.write import writeAnsysShellModel
 
 

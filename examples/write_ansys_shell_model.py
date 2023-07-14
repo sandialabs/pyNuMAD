@@ -1,7 +1,7 @@
 import numpy as np
 from os.path import join
 from pynumad.analysis.ansys.write import writeAnsysShellModel
-from pynumad.shell.shell import getShellMesh
+from pynumad.mesh.shell import getShellMesh
 from pynumad.objects.Blade import Blade
 
 """

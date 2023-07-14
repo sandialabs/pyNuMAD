@@ -1,5 +1,5 @@
 import unittest
-from os.path import abspath, dirname, join
+from os.path import join
 
 from pynumad.objects.Airfoil import Airfoil
 from pynumad.paths import DATA_PATH

@@ -2,7 +2,7 @@ import pynumad as pynu
 import numpy as np
 import os
 
-from pynumad.shell.shell import getShellMesh
+from pynumad.mesh.shell import getShellMesh
 
 ## Read blade data from yaml file
 blade = pynu.objects.Blade.Blade()

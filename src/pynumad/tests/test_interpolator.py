@@ -1,6 +1,5 @@
 import unittest
 import numpy as np
-import matplotlib.pyplot as plt
 
 from pynumad.utils.interpolation import interpolator_wrap
 

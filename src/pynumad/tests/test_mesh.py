@@ -1,7 +1,6 @@
 import unittest
-from os.path import abspath, dirname, join
-from pynumad.analysis.ansys.write import writeAnsysShellModel
-from pynumad.shell.shell import getShellMesh
+from os.path import join
+from pynumad.mesh.shell import getShellMesh
 from pynumad.objects.Blade import Blade
 from pynumad.paths import DATA_PATH
 

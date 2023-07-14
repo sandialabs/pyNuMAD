@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 from pprint import pprint
 
-from pynumad.shell.shell import getShellMesh
+from pynumad.mesh.shell import getShellMesh
 
 blade = pynu.Blade()
 fileName = 'example_data/myBlade.yaml'
