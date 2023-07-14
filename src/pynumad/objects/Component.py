@@ -40,14 +40,14 @@ class Component:
     hCtrl
     hLine
 
-    Examples: 
-     
-    	``comp_self = ComponentDef();``
-     
-    	``comp_self = ComponentDef(comp_struct);``
+    Examples:
+
+        ``comp_self = ComponentDef();``
+
+        ``comp_self = ComponentDef(comp_struct);``
 
     """
-    
+
     def __init__(self):
         self.group: int = None
         self.name: str = None
@@ -56,28 +56,28 @@ class Component:
         self.hpextents: list = None
         self.lpextents: list = None
         self.cp: np.ndarray = None
-        self.imethod: str = 'linear'
+        self.imethod: str = "linear"
         self.pinnedends: bool = None
         self.hCtrl = None
         self.hLine = None
 
-
-    def getcp(self): 
+    def getcp(self):
         if self.pinnedends:
-            if np.any(self.cp[:,0] < 0) or np.any(self.cp[:,0] > 1):
-                raise Exception('ComponentDef: first coordinate of control points must be in range [0,1] when using "pinned" ends')
-            cpx = np.concatenate(([-0.01],self.cp[:,0],[1.01]))
-            cpy = np.concatenate(([0],self.cp[:,1],[0]))
+            if np.any(self.cp[:, 0] < 0) or np.any(self.cp[:, 0] > 1):
+                raise Exception(
+                    'ComponentDef: first coordinate of control points must be in range [0,1] when using "pinned" ends'
+                )
+            cpx = np.concatenate(([-0.01], self.cp[:, 0], [1.01]))
+            cpy = np.concatenate(([0], self.cp[:, 1], [0]))
         else:
-            cpx = self.cp[:,0]
-            cpy = self.cp[:,1]
-        
-        return cpx,cpy
-        
-        
-    def getNumLayers(self,span): 
-        cpx,cpy = self.getcp()
-        nLayers = interpolator_wrap(cpx,cpy,span,self.imethod,0)
+            cpx = self.cp[:, 0]
+            cpy = self.cp[:, 1]
+
+        return cpx, cpy
+
+    def getNumLayers(self, span):
+        cpx, cpy = self.getcp()
+        nLayers = interpolator_wrap(cpx, cpy, span, self.imethod, 0)
         return nLayers
 
     # TODO translate
@@ -85,11 +85,11 @@ class Component:
         """
         TODO docstring
         """
-        cpx,cpy = self.getcp()
+        cpx, cpy = self.getcp()
         fig, ax = plt.subplots()
-        ax.plot(cpx,cpy)
-        x = np.linspace(0,1,100)
-        y = np.round(interpolator_wrap(cpx,cpy,x,'pchip',0))
-        ax.plot(x,y)
+        ax.plot(cpx, cpy)
+        x = np.linspace(0, 1, 100)
+        y = np.round(interpolator_wrap(cpx, cpy, x, "pchip", 0))
+        ax.plot(x, y)
         plt.title(self.name)
         return
