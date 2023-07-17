@@ -8,7 +8,7 @@ import yaml
 import numpy as np
 from scipy.stats import mode
 
-from pynumad.utils.misc_utils import LARCetaT, LARCetaL, _parse_data
+from pynumad.utils.misc_utils import LARCetaT, LARCetaL, _parse_data,fullKeysFromSubStrings
 from pynumad.utils.interpolation import interpolator_wrap
 from pynumad.objects.Component import Component
 from pynumad.objects.Airfoil import Airfoil
@@ -67,30 +67,9 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
     # Spar Cap Width and Offset
     # Obtain component name and index for hp and lp sides of sparcap
 
-    def fullKeysFromSubStrings(keyList,subStringList):
-        '''
-        Example Usage: 
-        subString = ['B1N3TDx']
-        res=getFullKeyFromSubString(df.keys(),subString)
-        
-        output:
-        ['B1N3TDxr_[m]']
-        
-        Example Usage: 
-        subString = ['B2','TDx']
-        res=getFullKeyFromSubString(df.keys(),subString)
-        
-        output:
-        ['B2N1TDxr_[m]', 'B2N2TDxr_[m]', 'B2N3TDxr_[m]', 'B2N4TDxr_[m]', 'B2N5TDxr_[m]', 'B2N6TDxr_[m]', 'B2N7TDxr_[m]', 'B2N8TDxr_[m]', 'B2N9TDxr_[m]', 'B2TipTDxr_[m]']
 
-        
-        '''
-        result=keyList
-        for subString in subStringList:
-            result=[key for key in result if subString in key]
-        return result
     for i in range(N_layer_comp):
-        
+        print(blade_internal_structure['layers'][i]['name'])
         if 'spar' in blade_internal_structure['layers'][i]['name'].lower():
             name = blade_internal_structure['layers'][i]['name']
             
@@ -184,7 +163,7 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
    
     
     ### COMPONENTS
-    _add_components(blade, blade_internal_structure, spar_hp_index, spar_lp_index)
+    _add_components(blade, blade_internal_structure, bladeStructureDict)
     
     blade.updateBlade()
     # save(blade_name)
@@ -365,7 +344,7 @@ def _add_materials(blade, material_data):
     return
 
 
-def _add_components(blade, blade_internal_structure, spar_hp, spar_lp):
+def _add_components(blade, blade_internal_structure, bladeStructureDict):
     N_layer_comp = len(blade_internal_structure['layers'])
     component_list = list()
     for i in range(N_layer_comp):
@@ -397,143 +376,143 @@ def _add_components(blade, blade_internal_structure, spar_hp, spar_lp):
         cur_comp.pinnedends = 0
         component_list.append(cur_comp)
 
-
-
-    # Spar Caps (pressure and suction)
-    component_list[spar_hp].hpextents = ['b','c']
-    component_list[spar_lp].lpextents = ['b','c']
-    
-    for comp in range(len(component_list)):
-
-        # uv coating
-        if 'uv' in blade_internal_structure['layers'][comp]['name'].lower():
-            component_list[comp].hpextents = ['le','te']
-            component_list[comp].lpextents = ['le','te']
-            component_list[comp].cp[:,1] = component_list[comp].cp[:,1]
-
-        # Shell skin1
-        if 'shell_skin_outer' in blade_internal_structure['layers'][comp]['name'].lower():
-            component_list[comp].hpextents = ['le','te']
-            component_list[comp].lpextents = ['le','te']
-            # CK Change me when yaml is fixed!!!!
-            component_list[comp].cp[:,1] = component_list[comp].cp[:,1]
-        
-        # LE Band
-        if 'le_reinf' in blade_internal_structure['layers'][comp]['name'].lower():
-            component_list[comp].hpextents = ['le','a']
-            component_list[comp].lpextents = ['le','a']  
-        
-        # TE Band
-        if 'te_reinf' in blade_internal_structure['layers'][comp]['name'].lower():
-            component_list[comp].hpextents = ['d','te']
-            component_list[comp].lpextents = ['d','te']
-        
-        # Trailing edge suction surface panel
-        if 'te_ss' in blade_internal_structure['layers'][comp]['name'].lower():
-            component_list[comp].lpextents = ['c','d']
-    
-        # Leading edge suction surface panel
-        if 'le_ss' in blade_internal_structure['layers'][comp]['name'].lower():
-            component_list[comp].lpextents = ['a','b']
-
-        # Leading edge pressure surface panel)
-        if 'le_ps' in blade_internal_structure['layers'][comp]['name'].lower():
-            component_list[comp].hpextents = ['a','b']
-
-        # Trailing edge pressure surface panel
-        if 'te_ps' in blade_internal_structure['layers'][comp]['name'].lower():
-            component_list[comp].hpextents = ['c','d']
-    
-        # Shell skin2
-        if 'shell_skin_inner' in blade_internal_structure['layers'][comp]['name'].lower():
-            component_list[comp].hpextents = np.array(['le','te'])
-            component_list[comp].lpextents = np.array(['le','te'])
-            # CK Change me when yaml is fixed!!!!
-            component_list[comp].cp[:,1] = component_list[comp].cp[:,1]
-
-        # Forward Shear
-        if 'web' in blade_internal_structure['layers'][comp].keys():
-            if 'fore' in blade_internal_structure['layers'][comp]['web'].lower():
-                # Web Skin1
-                if 'skin_le' in blade_internal_structure['layers'][comp]['name'].lower():
-                    # comp[comp].hpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].lpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].hpextents = {['z+' sw_offset]};
-                    # comp[comp].lpextents = {['z+' sw_offset]};
-                    component_list[comp].hpextents = ['b']
-                    component_list[comp].lpextents = ['b']
-                    component_list[comp].group = 1
-                    component_list[comp].name = blade_internal_structure['layers'][comp]['name']
-                    # CK Change me when yaml is fixed!!!!
-                    component_list[comp].cp[:,1] = component_list[comp].cp[:,1]
-                
-                # Web Filler
-                if 'filler' in blade_internal_structure['layers'][comp]['name'].lower():
-                    # comp[comp].hpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].lpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].hpextents = {['z+' sw_offset]};
-                    # comp[comp].lpextents = {['z+' sw_offset]};
-                    component_list[comp].hpextents = ['b']
-                    component_list[comp].lpextents = ['b']
-                    component_list[comp].group = 1
-                    component_list[comp].name = blade_internal_structure['layers'][comp]['name']
-
-                # Web Skin2
-                if 'skin_te' in blade_internal_structure['layers'][comp]['name'].lower():
-                    # comp[comp].hpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].lpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].hpextents = {['z+' sw_offset]};
-                    # comp[comp].lpextents = {['z+' sw_offset]};
-                    component_list[comp].hpextents = ['b']
-                    component_list[comp].lpextents = ['b']
-                    component_list[comp].group = 1
-                    component_list[comp].name = blade_internal_structure['layers'][comp]['name']
-                    # CK Change me when yaml is fixed!!!!
-                    component_list[comp].cp[:,1] = component_list[comp].cp[:,1]
-
-        # Rear Shear
-        if 'web' in blade_internal_structure['layers'][comp].keys():
-            if 'rear' in blade_internal_structure['layers'][comp]['web'].lower():
-                # Web Skin1
-                if 'skin_le' in blade_internal_structure['layers'][comp]['name'].lower():
-                    # comp[comp].hpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].lpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].hpextents = {['z-' sw_offset]};
-                    # comp[comp].lpextents = {['z-' sw_offset]};
-                    component_list[comp].hpextents = ['c']
-                    component_list[comp].lpextents = ['c']
-                    component_list[comp].group = 2
-                    component_list[comp].name = blade_internal_structure['layers'][comp]['name']
-                    # CK Change me when yaml is fixed!!!!
-                    component_list[comp].cp[:,1] = component_list[comp].cp[:,1]
-                # Web Filler
-                if 'filler' in blade_internal_structure['layers'][comp]['name'].lower():
-                    # comp[comp].hpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].lpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].hpextents = {['z-' sw_offset]};
-                    # comp[comp].lpextents = {['z-' sw_offset]};
-                    component_list[comp].hpextents = ['c']
-                    component_list[comp].lpextents = ['c']
-                    component_list[comp].group = 2
-                    component_list[comp].name = blade_internal_structure['layers'][comp]['name']
-    
-                # Web Skin2
-                if 'skin_te' in blade_internal_structure['layers'][comp]['name'].lower():
-                    # comp[comp].hpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].lpextents = {[num2str(xs,2) 'b-c']};
-                    # comp[comp].hpextents = {['z-' sw_offset]};
-                    # comp[comp].lpextents = {['z-' sw_offset]};
-                    component_list[comp].hpextents = ['c']
-                    component_list[comp].lpextents = ['c']
-                    component_list[comp].group = 2
-                    component_list[comp].name = blade_internal_structure['layers'][comp]['name']
-                    # CK Change me when yaml is fixed!!!!
-                    component_list[comp].cp[:,1] = component_list[comp].cp[:,1]
-
-    ### add components to blade
     component_dict = dict()
     for comp in component_list:
         component_dict[comp.name] = comp
+
+    # Spar Caps (pressure and suction)
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['spar','ps'])
+    component_dict[keyList[0]].hpextents = ['b','c']
+
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['spar','ss'])
+    component_dict[keyList[0]].lpextents = ['b','c']
+
+
+        # uv coating
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['uv'])  #Try 1
+    if len(keyList)==0:
+        keyList=fullKeysFromSubStrings(component_dict.keys(),['gel']) #Try 2
+
+    if len(keyList)==1:
+        component_dict[keyList[0]].hpextents = ['le','te']
+        component_dict[keyList[0]].lpextents = ['le','te']
+    elif len(keyList)==0:
+        raise ValueError('No UV or gelcoat found')
+    else:
+        raise ValueError('Too many uv or gelcoat components')
+
+    # Shell skin
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['shell']) 
+    if len(keyList)==2:
+        component_dict[keyList[0]].hpextents = ['le','te']
+        component_dict[keyList[1]].lpextents = ['le','te']
+    else:
+        raise ValueError('Incorrect number of shell components')
+
+    # TE Band(s)
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['te','reinf'])
+    if len(keyList)==1:
+        component_dict[keyList[0]].hpextents = ['d','te']
+        component_dict[keyList[0]].lpextents = ['d','te'] 
+    elif len(keyList)==2:
+        tempKeyList=fullKeysFromSubStrings(keyList,['ss'])
+        if len(tempKeyList)==1:
+            component_dict[tempKeyList[0]].lpextents = ['d','te'] 
+        else:
+            ValueError('Incorrect number of te reinf ss components')
+
+        tempKeyList=fullKeysFromSubStrings(keyList,['ps'])
+        if len(tempKeyList)==1:
+            component_dict[tempKeyList[0]].hpextents = ['d','te'] 
+        else:
+            ValueError('Incorrect number of te reinf ps components')      
+    else:
+        raise ValueError('Invalid number of LE reinforcements')
+
+
+    # LE Band(s)
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['le','reinf'])
+    if len(keyList)==1:
+        component_dict[keyList[0]].hpextents = ['le','a']
+        component_dict[keyList[0]].lpextents = ['le','a'] 
+    elif len(keyList)==2:
+        tempKeyList=fullKeysFromSubStrings(keyList,['ss'])
+        if len(tempKeyList)==1:
+            component_dict[tempKeyList[0]].lpextents = ['le','a'] 
+        else:
+            ValueError('Incorrect number of te reinf ss components')
+
+        tempKeyList=fullKeysFromSubStrings(keyList,['ps'])
+        if len(tempKeyList)==1:
+            component_dict[tempKeyList[0]].hpextents = ['le','a'] 
+        else:
+            ValueError('Incorrect number of te reinf ps components')      
+    else:
+        raise ValueError('Invalid number of LE reinforcements')
+    
+    # Trailing edge suction-side panel
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['te_ss'])
+    if len(keyList)==1:
+        component_dict[keyList[0]].lpextents = ['c','d']
+    else:
+        raise ValueError('Invalid number of trailing edge suction-side panels')
+
+    # Leading edge suction-side panel
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['le_ss'])
+    if len(keyList)==1:
+        component_dict[keyList[0]].lpextents = ['a','b']
+    else:
+        raise ValueError('Invalid number of leading edge suction-side panels')  
+
+
+    # Trailing edge suction-side panel
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['le_ps'])
+    if len(keyList)==1:
+        component_dict[keyList[0]].hpextents = ['a','b']
+    else:
+        raise ValueError('Invalid number of leading edge pressure-side panels')
+
+    # Leading edge suction-side panel
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['te_ps'])
+    if len(keyList)==1:
+        component_dict[keyList[0]].hpextents = ['c','d']
+    else:
+        raise ValueError('Invalid number of trailing edge pressure-side panels')  
+    
+    #Web
+
+    for comp in component_dict:
+        print(comp)
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['web','fore']) #Try 1
+    if len(keyList)==0:
+        keyList=fullKeysFromSubStrings(component_dict.keys(),['web','1']) #Try 2
+
+    if len(keyList)>0:
+        for key in keyList:
+            component_dict[key].hpextents = ['b']
+            component_dict[key].lpextents = ['b']
+            component_dict[key].group = 1
+    elif len(keyList)==0:
+        raise ValueError('No fore web layers found found') 
+
+
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['web','aft']) #Try 1
+    if len(keyList)==0:
+        keyList=fullKeysFromSubStrings(component_dict.keys(),['web','0']) #Try 2
+    if len(keyList)==0:
+        keyList=fullKeysFromSubStrings(component_dict.keys(),['web','rear']) #Try 3
+
+    if len(keyList)>0:
+        for key in keyList:
+            component_dict[key].hpextents = ['c']
+            component_dict[key].lpextents = ['c']
+            component_dict[key].group = 2
+    elif len(keyList)==0:
+        raise ValueError('No rear web layers found found')    
+
+    
+
+    ### add components to blade
     blade.components = component_dict
     return
 

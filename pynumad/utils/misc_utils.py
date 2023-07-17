@@ -6,6 +6,29 @@
 
 import numpy as np
 
+def fullKeysFromSubStrings(keyList,subStringList):
+    '''
+    Example Usage: 
+    subString = ['B1N3TDx']
+    res=getFullKeyFromSubString(df.keys(),subString)
+    
+    output:
+    ['B1N3TDxr_[m]']
+    
+    Example Usage: 
+    subString = ['B2','TDx']
+    res=getFullKeyFromSubString(df.keys(),subString)
+    
+    output:
+    ['B2N1TDxr_[m]', 'B2N2TDxr_[m]', 'B2N3TDxr_[m]', 'B2N4TDxr_[m]', 'B2N5TDxr_[m]', 'B2N6TDxr_[m]', 'B2N7TDxr_[m]', 'B2N8TDxr_[m]', 'B2N9TDxr_[m]', 'B2TipTDxr_[m]']
+
+    
+    '''
+    result=keyList
+    for subString in subStringList:
+        result=[key for key in result if subString.lower() in key.lower()]
+    return result
+
 # SED-like substitution
 def copy_and_replace(fin, fout, replacements):
     inf = open(fin, 'r')
