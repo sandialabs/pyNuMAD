@@ -20,9 +20,7 @@ jobs:
       - name: Setup nox
         uses: excitedleigh/setup-nox@v2.0.0
       - name: print contents of repo
-        run: |
-          - ls
-          - ls ..
+        run: ls -la
       - name: Build docs
         run: nox -s docs
       - name: Upload artifact
