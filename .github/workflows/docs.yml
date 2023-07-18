@@ -24,7 +24,7 @@ jobs:
       - name: ls
         run: ls -la
       - name: Build docs
-        run: sphinx-build -M html docs/ docs/_build
+        run: sphinx-build -M html docs/ docs/_build -E
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
