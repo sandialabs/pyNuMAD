@@ -23,6 +23,8 @@ jobs:
         run: pip install sphinx sphinx_rtd_theme sphinxcontrib-bibtex
       - name: ls
         run: ls -la
+      - name: ls vdocs
+        run: ls -la docs/
       - name: Build docs
         run: sphinx-build -M html docs/ docs/_build -E
       - name: Upload artifact
