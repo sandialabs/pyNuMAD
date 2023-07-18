@@ -17,12 +17,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Setup nox
-        uses: excitedleigh/setup-nox@v2.0.0
-      - name: print contents of repo
-        run: ls -la
+      - name: Install repo
+        run: pip install .
+      - name: install sphinx and dependencies
+        run: pip install sphinx sphinx_rtd_theme sphinxcontrib-bibtex
       - name: Build docs
-        run: nox -s docs
+        run: sphinx-build -M html docs/ docs/_build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
