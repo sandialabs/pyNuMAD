@@ -16,17 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Install repo
-        run: pip install .
-      - name: install sphinx and dependencies
-        run: pip install sphinx sphinx_rtd_theme sphinxcontrib-bibtex
-      - name: ls
-        run: ls -la
-      - name: ls vdocs
-        run: ls -la docs/
+        uses: actions/checkout@v3
+      - name: Setup nox
+        uses: excitedleigh/setup-nox@v2.0.0
       - name: Build docs
-        run: sphinx-build -M html docs/ docs/_build -E
+        run: nox -s docs
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
@@ -48,5 +42,5 @@ jobs:
         uses: actions/configure-pages@v3
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/ddeploy-pages@v2
+        uses: actions/deploy-pages@v2
       
