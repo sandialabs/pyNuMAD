@@ -22,3 +22,7 @@ def docs(session):
 @nox.session
 def serve(session):
     session.run("python", "-m", "http.server", "-b", "localhost", "-d", "docs/_build/html", "8085")
+   
+@nox.session
+def check_style(session):
+    session.run("black", "--check")
