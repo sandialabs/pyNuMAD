@@ -1,9 +1,3 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
-
 import yaml
 import numpy as np
 from scipy.stats import mode

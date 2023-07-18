@@ -1,10 +1,4 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
-
-import numpy as np
+mport numpy as np
 
 
 # SED-like substitution
