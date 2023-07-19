@@ -179,5 +179,4 @@ cython_debug/
 *.code-workspace
 
 # etc
-docs/_static/*
 *.log
