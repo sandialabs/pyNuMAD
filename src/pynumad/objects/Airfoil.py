@@ -1,11 +1,7 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
-
 import re
 import numpy as np
+
+from typing import Self
 
 import os
 import matplotlib.pyplot as plt
@@ -42,11 +38,11 @@ class Airfoil():
     camber : array
         Camber line as a function of x. 
         Distance in percent chord between LP and HP curves. 
-        Computed by NuAMD.
+        Computed by pyNuMAD.
     thickness : float
         Relative thickness as a function of the x coordinate. 
         Values between 0 and 1, where 1 corresponds to maximum thickness. 
-        Computed by NuAMD.
+        Computed by pyNuMAD.
     percentthick : float
         Maximum airfoil thickness as a percentage of chord length [#]
     maxthick : float
@@ -142,7 +138,7 @@ class Airfoil():
         return self
 
 
-    def manageTE(self) -> None:
+    def manageTE(self) -> Self:
         """TODO docstring
         
         Parameters
@@ -173,28 +169,32 @@ class Airfoil():
 
     ### Geometry
     
-    def resample(self,n_samples: int = 150,spacing: str = 'cosine') -> None: 
-        """TODO docstring
+    def resample(self,n_samples: int = 150,spacing: str = 'cosine') -> Self: 
+        """Resample airfoil coordinates
         
         Parameters
         ----------
-
+        n_samples : int
+            Defaults to 150
+        spacing : str
+            spacing method for new samples
+            spacing = 'auto' | 'half-cosine' | 'cosine'
+            
         Returns
         -------
-
+        None
+        
         Example
         -------
         AirfoilDef.resample
         af.resample(n_samples,spacing)
-            spacing = 'auto' | 'half-cosine' | 'cosine'
-        
         af.resample(200,'half-cosine');
         """
         af_out = resampleAirfoil(self.coordinates,n_samples,spacing)
         xcoord = af_out[:,0]
         ycoord = af_out[:,1]
         # self(k).percentthick = (max(ycoord) - min(ycoord))*100;
-        self.c,self.camber,self.thickness = computeCamberAndThickness(xcoord,ycoord)
+        self.c, self.camber, self.thickness = computeCamberAndThickness(xcoord,ycoord)
         m = np.max(self.thickness)
         i = np.argmax(self.thickness)
         self.percentthick = m * 100
@@ -204,16 +204,23 @@ class Airfoil():
                 self.TEtype = 'sharp'
             else:
                 self.TEtype = 'flatback'
-        return self
+        return Self
         
 
     #currently unused
-    def adjustTE(self, tet, tes, onset) -> None:
+    def adjustTE(self, tet, tes, onset) -> Self:
         """TODO docstring
         
         Parameters
         ----------
-
+        tet :
+            the amount of TE thickness to add
+        tes : 
+            the slope of the added thickness profile at TE,
+            defaults to 5/3 * TE_thick
+        onset :
+            the chord fraction where adjustment begins,
+            defaults to location of max thickness
         Returns
         -------
 
@@ -221,15 +228,9 @@ class Airfoil():
         -------
         AirfoilDef.adjustTE
         af.adjustTE(TE_thick,[TE_slope],[onset])
-        TE_thick is the amount of TE thickness to add
-        TE_slope is the slope of the added thickness profile at TE,
-                    defaults to 5/3 * TE_thick
-        onset    is the chord fraction where adjustment begins,
-                    defaults to location of max thickness
-        
-         af.adjustTE(0.02);
-         af.adjustTE(0.02,0);
-         af.adjustTE(0.02,[],0.8);
+        af.adjustTE(0.02)
+        af.adjustTE(0.02,0)
+        af.adjustTE(0.02,[],0.8)
         """
 
         if not tes:
@@ -250,7 +251,7 @@ class Airfoil():
         mc = np.amax((self.c - onset) / (1 - onset),0)
         temod = np.array([mc ** 3,mc ** 4,mc ** 5,mc ** 6]) * p
         self.thickness = self.thickness + temod
-        pass
+        return self
 
 
     ### Plotting 
@@ -273,7 +274,7 @@ class Airfoil():
 
 ### Helper functions
 
-def resampleAirfoil(af_in, n_samples, spacing): 
+def resampleAirfoil(af_in, n_samples, spacing) -> Self: 
     """Resample airfoil coordinates
 
     Parameters

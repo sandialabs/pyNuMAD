@@ -3,11 +3,33 @@
 Release Notes
 =============
 
+.. _pyNuMADv0x:
+
+pyNuMAD 0.X
+-----------
+
+Core functionality from previous incarnations of the NuMAD software
+framework have been translated to the Python programming language
+under the name PyNuMAD. Following the changes made in NuMAD 3.0,
+PyNuMAD focuses on an object-oriented approach to blade design. 
+
+Below is a summary of key features currently available:
+
+- Reading in blade definitions from YAML and Excel files to a Blade object.
+- Creation of FEA mesh for use in analytical tools such as Abaqus or Cubit.
+- Limited visualization tools for exploring a blade object's attributes.
+
+A stable version of PyNuMAD is still in development. Future goals include:
+
+- Expanding the YAML reading functionality to handle a wider variety of inputs.
+- Driver codes for connecting PyNuMAD directly to other design softwares.
+- Optimization tools for blade design.
+
 .. _NuMADv3:
 
 NuMAD v3.0
 ----------------
-The current release now incorporates structural optimization, associated
+This previous MATLAB release incorporates structural optimization, associated
 structural analyses, and the move to object-oriented data structures.
 The exclusive use of the GUI in prior versions prevented automation in
 optimizations. Thus, moving to these data structures enabled
@@ -38,8 +60,8 @@ analyses, and the object-oriented data structures.
    blades”.
 
 -  Click `here <https://github.com/sandialabs/NuMAD/releases/tag/v3.0>`_ for NuMAD v3.0
-.. Kelley: add DOI
 
+.. Kelley: add DOI
 
 .. _FutureDev:
 

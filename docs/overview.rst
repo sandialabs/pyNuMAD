@@ -3,25 +3,23 @@
 Overview
 =======================
 
-`NuMAD (Numerical Manufacturing And Design) <https://github.com/sandialabs/NuMAD>`_ is an
+`pyNuMAD (Python Numerical Manufacturing And Design) <https://github.com/sandialabs/pyNuMAD>`_ is an
 open-source software program written in
-`MATLAB <http://www.mathworks.com>`__ which simplifies the process of
+`Python <python.org>`__ which simplifies the process of
 creating a three-dimensional model of a wind turbine blade. The tool
 manages all blade information including aerodynamic, and material
 properties as well as, material placement. The blade information can be
-modified by a structural-optimizer in NuMAD or it can be used to run the
+modified by a structural-optimizer in pyNuMAD or it can be used to run the
 other tools below in a stand-alone mode:
 
 -  The `ANSYS® <http://www.ansys.com/>`__ commercial finite element
    package
 
--  The NWTC codes PreComp,
-   `BModes <https://www.nrel.gov/docs/fy06osti/39133.pdf>`__, and
-   `FAST <https://www.nrel.gov/docs/fy06osti/38230.pdf>`__,
+-  `Abaqus <https://www.3ds.com/products-services/simulia/products/abaqus/>`__
 
--  PLOT3D file format for CFD mesh building
+-  `Cubit <https://cubit.sandia.gov/>`__
 
-When used in conjunction with these other tools, NuMAD provides
+When used in conjunction with these other tools, pyNuMAD provides
 computation of blade cross section properties, various structural
 analyses, and estimation of blade aeroelastic instability.
 
