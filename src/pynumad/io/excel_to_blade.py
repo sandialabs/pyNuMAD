@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import os
+
 from pynumad.objects.Component import Component
 from pynumad.objects.Material import Material
 from pynumad.utils.interpolation import interpolator_wrap
@@ -7,7 +9,7 @@ from pynumad.paths import DATA_PATH
 
 data_dir = DATA_PATH
 
-def excel_to_blade(blade, filename = None):
+def excel_to_blade(blade, filename):
     """
     xlsBlade  Construct BladeDef object with inputs from spreadsheet.  
 
@@ -23,14 +25,7 @@ def excel_to_blade(blade, filename = None):
     
     Example
     -------
-    blade = xlsBlade(FILENAME);
-
-    See also BladeDef
-    if not ('filename' is not None)  or len(filename)==0:
-        raise Exception('xlsBlade:NoInput','No input file specified.')
-
-    if not os.path.exist(str(filename)) :
-        raise Exception('xlsBlade:FileNotFound','File {} not found.'.format(filename))
+    blade = xlsBlade(FILENAME)
     """
     
     MPa_to_Pa = 1000000.0

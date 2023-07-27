@@ -10,6 +10,7 @@ Submodules
 ----------
 
 .. toctree::
+    :maxdepth: 1
     
     pynumad.objects.Airfoil
     pynumad.objects.Blade
