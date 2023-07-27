@@ -27,8 +27,6 @@ def excel_to_blade(blade, filename):
     -------
     blade = xlsBlade(FILENAME)
     """
-    if not os.path.exist(filename):
-        raise FileNotFoundError
     
     MPa_to_Pa = 1000000.0
     # Dictionary containing column indices
