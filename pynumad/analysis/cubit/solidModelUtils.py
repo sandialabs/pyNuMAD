@@ -234,7 +234,8 @@ def getApproximateThicknessDirectionForVolume(volumeID):
 
         return np.mean(approximateThicknessDirection[sortIndex,:],0)
     else:
-        raise ValueError('The number of thickness curves in volume is unexpected. Cannot assign material orientation' ) 
+        cubit.cmd(f'save as "debug.cub" overwrite')   
+        raise ValueError(f'The number of thickness curves in volume is unexpected. Cannot assign material orientation. nThicknessCurves: {nThicknessCurves}' ) 
  
     return
 

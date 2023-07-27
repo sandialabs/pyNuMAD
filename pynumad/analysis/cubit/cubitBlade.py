@@ -65,8 +65,8 @@ def generateCubitCrossSections(blade, wt_name, settings, crosssectionParams, mod
     pathName=directory+'/'+wt_name+'-crossSections'
     
     for iStation in stationList:
-
-        cubit.cmd('reset ') # This is needed to restart node numbering for VABS. VABS neeeds every element and node starting from 1 to nelem/nnode should be present
+        if model2Dor3D.lower() == '2d':
+            cubit.cmd('reset ') # This is needed to restart node numbering for VABS. VABS neeeds every element and node starting from 1 to nelem/nnode should be present
         writeSplineFromCoordinatePoints(cubit, refLineCoords)
         iStationGeometry = iStation
         if iStation == len(blade.ispan)-1:  # Only do this for the last station
@@ -108,15 +108,16 @@ def generateCubitCrossSections(blade, wt_name, settings, crosssectionParams, mod
             webNumber = 0
             foreWebStack = blade.swstacks[webNumber][iWebStation]
 
+        crossSectionNormal=getCrossSectionNormalVector(np.array([blade.keypoints[2,:,iStationGeometry],blade.keypoints[3,:,iStationGeometry],blade.keypoints[7,:,iStationGeometry]]))
 
         # Only save birdsMouthVerts for the right cross-section
         if iStation == iStationFirstWeb:
             birdsMouthVerts = writeCubitCrossSection(surfaceDict, iStation, iStationGeometry, blade,
-                                                     hasWebs[iStation], aftWebStack, foreWebStack, iLE, crosssectionParams, geometryScaling, thicknessScaling, isFlatback, lastRoundStation, materialsUsed)
+                                                     hasWebs[iStation], aftWebStack, foreWebStack, iLE, crosssectionParams, geometryScaling, thicknessScaling, isFlatback, lastRoundStation, materialsUsed,crossSectionNormal)
         else:
 
             writeCubitCrossSection(surfaceDict, iStation, iStationGeometry, blade, hasWebs[iStation], aftWebStack, foreWebStack,
-                                   iLE, crosssectionParams, geometryScaling, thicknessScaling, isFlatback, lastRoundStation, materialsUsed)
+                                   iLE, crosssectionParams, geometryScaling, thicknessScaling, isFlatback, lastRoundStation, materialsUsed,crossSectionNormal)
             birdsMouthVerts = []
 
         cubit.cmd(f'delete curve all with Is_Free except {spanwiseMatOriCurve}')
@@ -173,6 +174,14 @@ def generateCubitCrossSections(blade, wt_name, settings, crosssectionParams, mod
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
+            if settings['solver'] is not None:
+                if  'vabs' in settings['solver'].lower():
+                    writeVABSinput(surfaceDict, blade, crosssectionParams,directory,fileName, volumeIDs,materialsUsed,crossSectionNormal)
+
+            elif 'anba' in settings['solver'].lower():
+                raise ValueError('ANBA currently not supported')
+            else:
+                raise NameError(f'Unknown beam cross-sectional solver: {settings["solver"]}')
 
             if settings['export'] is not None:
                 if 'g' in settings['export'].lower():
@@ -182,29 +191,19 @@ def generateCubitCrossSections(blade, wt_name, settings, crosssectionParams, mod
                     cubit.cmd(f'save as "{pathName}-{str(iStation)}.cub" overwrite')
                 else:
                     raise NameError(f'Unknown model export format: {settings["export"]}')
-            
-            if settings['solver'] is not None:
-                if  'vabs' in settings['solver'].lower():
-                    writeVABSinput(surfaceDict, blade, crosssectionParams,directory,fileName, volumeIDs,materialsUsed)
-           
+        
+            #Import all cross-sections into one cub file
+            if settings['export'] is not None and'cub' in settings['export'].lower():
+                cubit.cmd('reset ') 
+                writeSplineFromCoordinatePoints(cubit, refLineCoords)
 
-                elif 'anba' in settings['solver'].lower():
-                    raise ValueError('ANBA currently not supported')
-                else:
-                    raise NameError(f'Unknown beam cross-sectional solver: {settings["solver"]}')
+                for iStation in stationList:
+                    cubit.cmd(f'import cubit "{pathName}-{str(iStation)}.cub"')
+                cubit.cmd(f'save as "{pathName}.cub" overwrite')
 
-    #Import all cross-sections into one cub file
-    if settings['export'] is not None and'cub' in settings['export'].lower():
-        cubit.cmd('reset ') 
-        writeSplineFromCoordinatePoints(cubit, refLineCoords)
-
-        for iStation in stationList:
-            cubit.cmd(f'import cubit "{pathName}-{str(iStation)}.cub"')
-        cubit.cmd(f'save as "{pathName}.cub" overwrite')
-
-        # Remove unnecessary files to save space
-        for filePath in glob.glob(f'{pathName}-*.cub'):
-            os.remove(filePath)
+                # Remove unnecessary files to save space
+                for filePath in glob.glob(f'{pathName}-*.cub'):
+                    os.remove(filePath)
     return cubit, blade, surfaceDict, birdsMouthVerts, iStationFirstWeb, iStationLastWeb, materialsUsed, spanwiseMatOriCurve
 
 
@@ -228,8 +227,7 @@ def generateCubitSolidModel(blade, wt_name, settings, crosssectionParams, statio
     partName = 'shell'
     orderedList = getOrderedList(partName)
     if len(orderedList) > 0:
-        meshVolList = makeAeroshell(
-            surfaceDict, orderedList, meshVolList, iStationEnd)
+        meshVolList = makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd)
 #     cubit.cmd(f'save as "python2.cub" overwrite')
 #     foo
 
@@ -237,34 +235,28 @@ def generateCubitSolidModel(blade, wt_name, settings, crosssectionParams, statio
     orderedList = getOrderedList(partName)
     orderedListWeb = orderedList.copy()
     if orderedList and len(orderedList[0]) > 1:
-        meshVolList = makeAeroshell(
-            surfaceDict, orderedList, meshVolList, iStationEnd)
+        meshVolList = makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd)
 
     partName = 'roundTEadhesive'
     orderedList = getOrderedList(partName)
     if orderedList and len(orderedList[0]) > 1:
-        meshVolList = makeAeroshell(
-            surfaceDict, orderedList, meshVolList, iStationEnd)
+        meshVolList = makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd)
 
     partName = 'flatTEadhesive'
     orderedList = getOrderedList(partName)
 
     if orderedList and len(orderedList[0]) > 1:
-        meshVolList = makeAeroshell(
-            surfaceDict, orderedList, meshVolList, iStationEnd)
+        meshVolList = makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd)
 
     if orderedListWeb and len(orderedListWeb[0]) > 1 and crosssectionParams['amplitudeFraction'] and birdsMouthVerts:
-
-        makeBirdsMouth(blade, birdsMouthVerts,
-                       crosssectionParams['amplitudeFraction'], iStationFirstWeb, iStationLastWeb)
+        makeBirdsMouth(blade, birdsMouthVerts,crosssectionParams['amplitudeFraction'], iStationFirstWeb, iStationLastWeb)
 
     cubit.cmd(f'merge volume {l2s(meshVolList)}')
     cubit.cmd(f'reset volume all')
 
     cubit.cmd(f'delete surface with Is_Free')
-    cubit.cmd(
-        f'curve with name "layerThickness*" interval {crosssectionParams["nelPerLayer"]}')
-    cubit.cmd('set default autosize on')
+    #cubit.cmd(f'curve with name "layerThickness*" interval {crosssectionParams["nelPerLayer"]}')
+    # cubit.cmd('set default autosize on')
     cubit.cmd(f'mesh volume {l2s(meshVolList)}')
     cubit.cmd(f'draw volume {l2s(meshVolList)}')
 
@@ -309,46 +301,52 @@ def generateCubitSolidModel(blade, wt_name, settings, crosssectionParams, statio
     # ### Assign material orientations ###
     # ####################################
 
-    # parseString = f'in volume with name "*volume*"'
-    # allVolumeIDs = parse_cubit_list('volume', parseString)
+    parseString = f'in volume with name "*volume*"'
+    allVolumeIDs = parse_cubit_list('volume', parseString)
+    psi={}
+    theta={}
+    phi={}
 
-    # for iVol, volumeID in enumerate(allVolumeIDs):
-    #     surfIDforMatOri, sign = getMatOriSurface(volumeID, spanwiseMatOriCurve)
+    for iVol, volumeID in enumerate(allVolumeIDs):
+        print(f'iVol {iVol} volumeID {volumeID}')
+        surfIDforMatOri, sign = getMatOriSurface(volumeID, spanwiseMatOriCurve)
 
-    #     for iEl, elementID in enumerate(get_volume_hexes(volumeID)):
+        for iEl, elementID in enumerate(get_volume_hexes(volumeID)):
 
-    #         coords = cubit.get_center_point("hex", elementID)
+            coords = cubit.get_center_point("hex", elementID)
 
-    #         cubit.create_vertex(coords[0], coords[1], coords[2])
-    #         iVert1 = get_last_id("vertex")
-    #         if surfIDforMatOri:
-    #             surfaceNormal = sign * \
-    #                 np.array(get_surface_normal_at_coord(
-    #                     surfIDforMatOri, coords))
+            cubit.create_vertex(coords[0], coords[1], coords[2])
+            iVert1 = get_last_id("vertex")
+            if surfIDforMatOri:
+                surfaceNormal = list(sign * np.array(get_surface_normal_at_coord(surfIDforMatOri, coords)))
 
-    #             curveLocationForTangent = cubit.curve(
-    #                 spanwiseMatOriCurve).closest_point(coords)
-    #             x = cubit.curve(spanwiseMatOriCurve).tangent(
-    #                 curveLocationForTangent)[0]
-    #             y = cubit.curve(spanwiseMatOriCurve).tangent(
-    #                 curveLocationForTangent)[1]
-    #             z = cubit.curve(spanwiseMatOriCurve).tangent(
-    #                 curveLocationForTangent)[2]
-    #             spanwiseDirection = vectNorm([x, y, z])
+                curveLocationForTangent = cubit.curve(spanwiseMatOriCurve).closest_point(coords)
+                x = cubit.curve(spanwiseMatOriCurve).tangent(curveLocationForTangent)[0]
+                y = cubit.curve(spanwiseMatOriCurve).tangent(curveLocationForTangent)[1]
+                z = cubit.curve(spanwiseMatOriCurve).tangent(curveLocationForTangent)[2]
+                spanwiseDirection = vectNorm([x, y, z])
 
-    #             perimeterDirection = crossProd(
-    #                 surfaceNormal, spanwiseDirection)
-    #         else:
-    #             perimeterDirection = [1, 0, 0]
-    #             surfaceNormal = [0, 1, 0]
+                perimeterDirection = crossProd(surfaceNormal, spanwiseDirection)
+            else:
+                perimeterDirection = [1, 0, 0]
+                surfaceNormal = [0, 1, 0]
 
-    #         length = 0.1
-    #         cubit.create_vertex(coords[0]+length*perimeterDirection[0], coords[1] +
-    #                             length*perimeterDirection[1], coords[2]+length*perimeterDirection[2])
-    #         iVert2 = get_last_id("vertex")
-    #         cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
+#             newCoordinateSystemVectors=[spanwiseDirection,perimeterDirection,surfaceNormal]
+# ````````````globalAxisBasisVectors=[[1,0,0],[0,1,0],[0,0,1]]
+#             psi[elementID],theta[elementID],phi[elementID]=getEulerAngles(globalAxisBasisVectors,newCoordinateSystemVectors)
+
+
+            length = 0.1
+            cubit.create_vertex(coords[0]+length*perimeterDirection[0], coords[1] +
+                                length*perimeterDirection[1], coords[2]+length*perimeterDirection[2])
+            iVert2 = get_last_id("vertex")
+            cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
     if settings['export'] is not None:
         if 'g' in settings['export'].lower():
             cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
         if 'cub' in settings['export'].lower():
             cubit.cmd(f'save as "{wt_name}.cub" overwrite')
+
+        with open('euler', 'wb') as file:
+            # A new file will be created
+            pickle.dump(blade, file)

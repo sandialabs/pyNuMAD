@@ -286,6 +286,7 @@ def makeCrossSectionSurface(surfaceDict,iStation,partName,topCurve,bottomCurve,m
     addSurfaceDictEntry(surfaceDict,cubit.surface(get_last_id("surface")),[0,1,2,3],[0,1,2,3],materialName,plyAngle) 
     
     cubit.cmd(f'curve {surfaceDict[get_last_id("surface")]["curves"][1]} rename "layerThickness"')
+    cubit.cmd(f'curve {surfaceDict[get_last_id("surface")]["curves"][-1]} rename "layerThickness"')
     cubit.cmd(f'curve {surfaceDict[get_last_id("surface")]["verts"][-1]} rename "layerThickness"')
 
     
@@ -1053,13 +1054,12 @@ def makeCrossSectionLayerAreas_web(surfaceDict,iStation,aftWebStack,foreWebStack
         partNameID,materialsUsed=makeCrossSectionSurface(surfaceDict,iStation,partName, topCurve,bottomCurve,materialName,plyAngle,partNameID,nModeledLayers+it+2+iCurve,materialsUsed)
     return partNameID, (vHP,vLP)
 
-def writeCubitCrossSection(surfaceDict,iStation,iStationGeometry,blade,hasWebs,aftWebStack,foreWebStack,iLE,crosssectionParams,geometryScaling,thicknessScaling,isFlatback,lastRoundStation,materialsUsed):
+def writeCubitCrossSection(surfaceDict,iStation,iStationGeometry,blade,hasWebs,aftWebStack,foreWebStack,iLE,crosssectionParams,geometryScaling,thicknessScaling,isFlatback,lastRoundStation,materialsUsed,crossSectionNormal):
    
     with open('cubitBlade.log', 'a') as logFile:
         logFile.write(f'Working on Station: {iStation}\n')
 
     partNameID=0
-    crossSectionNormal=getCrossSectionNormalVector(np.array([blade.keypoints[2,:,iStationGeometry],blade.keypoints[3,:,iStationGeometry],blade.keypoints[7,:,iStationGeometry]]))
 
 
     #### Step one create outer mold line
@@ -1331,7 +1331,7 @@ def writeCubitCrossSection(surfaceDict,iStation,iStationGeometry,blade,hasWebs,a
 
 
 
-def writeVABSinput(surfaceDict,blade,crosssectionParams,directory,fileName, surfaceIDs,materialsUsed):
+def writeVABSinput(surfaceDict,blade,crosssectionParams,directory,fileName, surfaceIDs,materialsUsed,crossSectionNormal):
     #Write VABS inputfile
     if crosssectionParams['elementShape'].lower() == 'quad':
         expandedConnectivityString='face'
@@ -1396,8 +1396,8 @@ def writeVABSinput(surfaceDict,blade,crosssectionParams,directory,fileName, surf
                 # #######For Plotting - find the larges element side length #######
                 # distances=[]
                 # for iNd,nodeID in enumerate(nodesIDs):
-                    # for jNd,nodeIDj in enumerate(nodesIDs):
-                        # distances.append(norm(vectSub(coords[iNd],coords[jNd])))
+                #     for jNd,nodeIDj in enumerate(nodesIDs):
+                #         distances.append(norm(vectSub(coords[iNd],coords[jNd])))
                 # length=max(distances)
                 # #######For Plotting - find the larges element side length #######
                 coords=np.mean(coords,0)
@@ -1429,12 +1429,12 @@ def writeVABSinput(surfaceDict,blade,crosssectionParams,directory,fileName, surf
                 # iVert2=get_last_id("vertex")
                 # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
                 # #######Only needed For Plotting Orientation Check#######
-            ####Normal to curve
-                # axialDirection=crossSectionNormal #There will be a slight error here for highly tapeded regions
-                # normalDirection=crossProd(axialDirection,tangentDirection)
+            ###Normal to curve
+                print(crossSectionNormal)
+                axialDirection=crossSectionNormal #There will be a slight error here for highly tapeded regions
+                normalDirection=crossProd(axialDirection,tangentDirection)
                 # #######Only needed For Plotting Orientation Check#######
                 # cubit.create_vertex(coords[0]+length*normalDirection[0],coords[1]+length*normalDirection[1],coords[2]+length*normalDirection[2])
-                # c
                 # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
                 # #######Only needed For Plotting Orientation Check#######
         #Define Plies
