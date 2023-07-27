@@ -1,13 +1,10 @@
 import re
 import numpy as np
 
-from typing import Self
-
 import os
 import matplotlib.pyplot as plt
 import warnings
 import scipy as sp
-from typing import Optional
 
 from pynumad.io.xml_to_airfoil import xml_to_airfoil
 from pynumad.utils.interpolation import interpolator_wrap
@@ -138,7 +135,7 @@ class Airfoil():
         return self
 
 
-    def manageTE(self) -> Self:
+    def manageTE(self):
         """TODO docstring
         
         Parameters
@@ -169,7 +166,7 @@ class Airfoil():
 
     ### Geometry
     
-    def resample(self,n_samples: int = 150,spacing: str = 'cosine') -> Self: 
+    def resample(self,n_samples: int = 150,spacing: str = 'cosine'): 
         """Resample airfoil coordinates
         
         Parameters
@@ -204,11 +201,11 @@ class Airfoil():
                 self.TEtype = 'sharp'
             else:
                 self.TEtype = 'flatback'
-        return Self
+        return self
         
 
     #currently unused
-    def adjustTE(self, tet, tes, onset) -> Self:
+    def adjustTE(self, tet, tes, onset):
         """TODO docstring
         
         Parameters
@@ -274,7 +271,7 @@ class Airfoil():
 
 ### Helper functions
 
-def resampleAirfoil(af_in, n_samples, spacing) -> Self: 
+def resampleAirfoil(af_in, n_samples, spacing): 
     """Resample airfoil coordinates
 
     Parameters
