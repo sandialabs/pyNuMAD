@@ -40,130 +40,55 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
         # data = yaml.load(blade_yaml,Loader=yaml.FullLoader)
         data = yaml.load(blade_yaml,Loader=yaml.Loader)
 
-    # Name some key subdata
+    # Obtain blade outer shape bem
     blade_outer_shape_bem = data['components']['blade']['outer_shape_bem']
-    
-    # older versions of wind ontology do not have 'outer_shape_bem' subsection for hub data
+
+    # obtain hub outer shape bem
     try:
         hub_outer_shape_bem = data['components']['hub']['outer_shape_bem']
     except KeyError:
+        # older versions of wind ontology do not have 'outer_shape_bem' subsection for hub data
         hub_outer_shape_bem = data['components']['hub']
-    
+
+    # obtain blade internal structure
     blade_internal_structure = data['components']['blade']['internal_structure_2d_fem']
+
+    # obtain airfoil data
     af_data = data['airfoils']
+
+    # obtain material data
     mat_data = data['materials']
 
-    
     ### STATIONS / AIRFOILS
     _add_stations(blade, blade_outer_shape_bem, hub_outer_shape_bem, 
                     af_data, filename, write_airfoils)
-    
+
     ### MATERIALS
     _add_materials(blade, mat_data)
 
     ## Blade Components
-    N_layer_comp = len(blade_internal_structure['layers'])
-    
-    # Spar Cap Width and Offset
-    # Obtain component name and index for hp and lp sides of sparcap
 
+    # Update "grid" and "values" keys to cover the whole span of the blade
+    blade_internal_structure = update_internal_structure(blade_internal_structure, blade_outer_shape_bem)
 
-    for i in range(N_layer_comp):
-        print(blade_internal_structure['layers'][i]['name'])
-        if 'spar' in blade_internal_structure['layers'][i]['name'].lower():
-            name = blade_internal_structure['layers'][i]['name']
-            
-            if 'suc' in blade_internal_structure['layers'][i]['side'].lower():
-                spar_lp_index = i
-                spar_lp_name = name
-            if 'pres' in blade_internal_structure['layers'][i]['side'].lower():
-                spar_hp_index = i
-                spar_hp_name = name
-
-    bladeParts=['layers','webs']
-    # Make sure each blade.ispan has layer thicknesses and widths
-    fullSpanGrid=np.array(blade_outer_shape_bem['chord']['grid'])
-    nStations=len(fullSpanGrid)
-    keysToModify={'offset_y_pa','thickness','fiber_orientation','width'}
-    for partName in bladeParts:
-        N_layer_comp = len(blade_internal_structure[partName])
-        for currentLayer in range(N_layer_comp):
-            layerKeys=set(blade_internal_structure[partName][currentLayer].keys())
-            
-            for currentKey in keysToModify.intersection(layerKeys):
-                grid=blade_internal_structure[partName][currentLayer][currentKey]['grid']
-                values=blade_internal_structure[partName][currentLayer][currentKey]['values']
-                startStationLoc=grid[0]
-                endStationLoc=grid[-1]
-
-                subSpanGridIndex=np.where((fullSpanGrid>=startStationLoc) & (fullSpanGrid <=endStationLoc))[0]
-
-                #iterpolate fullSpanGrid locations onto layer grid defined in the yamle file for the layer
-                subSpanValues=interpolator_wrap(grid,values,fullSpanGrid[subSpanGridIndex],'pchip')
-                fullSpanValues=np.zeros(nStations)
-
-                fullSpanValues[subSpanGridIndex]=subSpanValues
-            
-                #Reset
-                blade_internal_structure[partName][currentLayer][currentKey]['grid']=fullSpanGrid
-                blade_internal_structure[partName][currentLayer][currentKey]['values']=fullSpanValues
-
-    # Change layers from integer indexing to name indexing
-    bladeStructureDict={}
-    for i in range(len(blade_internal_structure['layers'])):
-        bladeStructureDict[blade_internal_structure['layers'][i]['name'].lower()]=blade_internal_structure['layers'][i]
-
+    blade_structure_dict = {
+        blade_internal_structure['layers'][i]['name'].lower(): 
+            blade_internal_structure['layers'][i]
+        for i in range(len(blade_internal_structure['layers']))
+    }
     #Spar caps
-    sparCapKeys=fullKeysFromSubStrings(bladeStructureDict.keys(),['spar'])
-    if len(sparCapKeys)==2:
-        for iSparCap in range(2):
-            if 'suc' in bladeStructureDict[sparCapKeys[iSparCap]]['side'].lower():
-                lpSideIndex=iSparCap
-            if 'pres' in bladeStructureDict[sparCapKeys[iSparCap]]['side'].lower():
-                hpSideIndex=iSparCap
-    else:
-        raise ValueError('Incorrect number of spar cap components')
-    
+    _add_spar_caps(blade, blade_structure_dict)
 
-    blade.sparcapwidth_lp  = bladeStructureDict[sparCapKeys[lpSideIndex]]['width']['values']*1000
-    blade.sparcapoffset_lp = bladeStructureDict[sparCapKeys[lpSideIndex]]['offset_y_pa']['values']*1000
-
-    blade.sparcapwidth_hp  = bladeStructureDict[sparCapKeys[hpSideIndex]]['width']['values']*1000
-    blade.sparcapoffset_hp = bladeStructureDict[sparCapKeys[hpSideIndex]]['offset_y_pa']['values']*1000
-
-    # print(blade.sparcapwidth_lp-np.array(blade_internal_structure['layers'][spar_lp_index]['width']['values'])*1000)
-    # print(blade.sparcapoffset_lp-np.array(blade_internal_structure['layers'][spar_lp_index]['offset_y_pa']['values'])*1000)
-    # print(blade.sparcapwidth_hp-np.array(blade_internal_structure['layers'][spar_hp_index]['width']['values'])*1000)
-    # print(blade.sparcapoffset_hp-np.array(blade_internal_structure['layers'][spar_hp_index]['offset_y_pa']['values'])*1000)
-
-    # blade.sparcapwidth_hp = np.array(blade_internal_structure['layers'][spar_hp_index]['width']['values'])*1000
-    # blade.sparcapwidth_lp  = np.array(blade_internal_structure['layers'][spar_lp_index]['width']['values'])*1000
-
-    # blade.sparcapoffset_hp = np.array(blade_internal_structure['layers'][spar_hp_index]['offset_y_pa']['values'])*1000
-    # blade.sparcapoffset_lp = np.array(blade_internal_structure['layers'][spar_lp_index]['offset_y_pa']['values'])*1000
-    
     # TE Bands
-    teReinfKeys=fullKeysFromSubStrings(bladeStructureDict.keys(),['te','reinf'])
-    if len(teReinfKeys)==1:
-        blade.teband = bladeStructureDict[teReinfKeys[0]]['width']['values']*1000 / 2
-    elif len(teReinfKeys)==2:
-        blade.teband = (bladeStructureDict[teReinfKeys[0]]['width']['values']+bladeStructureDict[teReinfKeys[1]]['width']['values'])*1000 / 2
-    else:
-        raise ValueError('Unknown number of TE reinforcements')
+    _add_te_bands(blade, blade_structure_dict)
 
     # LE Bands
-    leReinfKeys=fullKeysFromSubStrings(bladeStructureDict.keys(),['le','reinf'])
-    if len(leReinfKeys)==1:
-        blade.leband = bladeStructureDict[leReinfKeys[0]]['width']['values']*1000 / 2
-    elif len(leReinfKeys)==2:
-        blade.leband = (bladeStructureDict[leReinfKeys[0]]['width']['values']+bladeStructureDict[leReinfKeys[1]]['width']['values'])*1000 / 2
-    else:
-        raise ValueError('Invalid number of LE reinforcements')
-   
-    
+    _add_le_bands(blade, blade_structure_dict)
+
+
     ### COMPONENTS
-    _add_components(blade, blade_internal_structure, bladeStructureDict)
-    
+    _add_components(blade, blade_internal_structure, blade_structure_dict)
+
     blade.updateBlade()
     # save(blade_name)
     # BladeDef_to_NuMADfile(obj,numad_name,matdb_name,numad_af_folder)
@@ -344,7 +269,7 @@ def _add_materials(blade, material_data):
     return
 
 
-def _add_components(blade, blade_internal_structure, bladeStructureDict):
+def _add_components(blade, blade_internal_structure, blade_structure_dict):
     N_layer_comp = len(blade_internal_structure['layers'])
     component_list = list()
     for i in range(N_layer_comp):
@@ -451,14 +376,14 @@ def _add_components(blade, blade_internal_structure, bladeStructureDict):
         raise ValueError('Invalid number of LE reinforcements')
     
     # Trailing edge suction-side panel
-    keyList=fullKeysFromSubStrings(component_dict.keys(),['te_ss'])
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['te_','ss','filler'])
     if len(keyList)==1:
         component_dict[keyList[0]].lpextents = ['c','d']
     else:
         raise ValueError('Invalid number of trailing edge suction-side panels')
 
     # Leading edge suction-side panel
-    keyList=fullKeysFromSubStrings(component_dict.keys(),['le_ss'])
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['le_', 'ss', 'filler'])
     if len(keyList)==1:
         component_dict[keyList[0]].lpextents = ['a','b']
     else:
@@ -466,14 +391,14 @@ def _add_components(blade, blade_internal_structure, bladeStructureDict):
 
 
     # Trailing edge suction-side panel
-    keyList=fullKeysFromSubStrings(component_dict.keys(),['le_ps'])
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['le_', 'ps', 'filler'])
     if len(keyList)==1:
         component_dict[keyList[0]].hpextents = ['a','b']
     else:
         raise ValueError('Invalid number of leading edge pressure-side panels')
 
     # Leading edge suction-side panel
-    keyList=fullKeysFromSubStrings(component_dict.keys(),['te_ps'])
+    keyList=fullKeysFromSubStrings(component_dict.keys(),['te_', 'ps', 'filler'])
     if len(keyList)==1:
         component_dict[keyList[0]].hpextents = ['c','d']
     else:
@@ -541,3 +466,82 @@ def writeNuMADAirfoil(coords, reftext, fname):
             fid.write('%8.12f\t%8.12f\n' % tuple(coords[i,:]))
         
         fid.write('</coords>' % ())
+        
+        
+def update_internal_structure(blade_internal_structure, blade_outer_shape_bem):
+    bladeParts=['layers','webs']
+    # Make sure each blade.ispan has layer thicknesses and widths
+    fullSpanGrid=np.array(blade_outer_shape_bem['chord']['grid'])
+    nStations=len(fullSpanGrid)
+    keysToModify={'offset_y_pa','thickness','fiber_orientation','width', 'start_nd_arc', 'end_nd_arc'}
+    for partName in bladeParts:
+        N_layer_comp = len(blade_internal_structure[partName])
+        for currentLayer in range(N_layer_comp):
+            layerKeys=set(blade_internal_structure[partName][currentLayer].keys())
+
+            for currentKey in keysToModify.intersection(layerKeys):
+                grid=blade_internal_structure[partName][currentLayer][currentKey]['grid']
+                values=blade_internal_structure[partName][currentLayer][currentKey]['values']
+                startStationLoc=grid[0]
+                endStationLoc=grid[-1]
+
+                subSpanGridIndex=np.where((fullSpanGrid>=startStationLoc) & (fullSpanGrid <=endStationLoc))[0]
+
+                #iterpolate fullSpanGrid locations onto layer grid defined in the yamle file for the layer
+                subSpanValues=interpolator_wrap(grid,values,fullSpanGrid[subSpanGridIndex],'pchip')
+                fullSpanValues=np.zeros(nStations)
+
+                fullSpanValues[subSpanGridIndex]=subSpanValues
+
+                #Reset
+                blade_internal_structure[partName][currentLayer][currentKey]['grid']=fullSpanGrid
+                blade_internal_structure[partName][currentLayer][currentKey]['values']=fullSpanValues
+    return blade_internal_structure
+                
+def _add_spar_caps(blade, blade_structure_dict):
+    sparCapKeys=fullKeysFromSubStrings(blade_structure_dict.keys(),['spar'])
+    if len(sparCapKeys) != 2:
+        raise ValueError('Incorrect number of spar cap components')
+
+    for iSparCap in range(2):
+        if 'suc' in blade_structure_dict[sparCapKeys[iSparCap]]['side'].lower():
+            lpSideIndex=iSparCap
+        if 'pres' in blade_structure_dict[sparCapKeys[iSparCap]]['side'].lower():
+            hpSideIndex=iSparCap
+    
+    blade.sparcapwidth_lp  = blade_structure_dict[sparCapKeys[lpSideIndex]]['width']['values']*1000
+    try:
+        blade.sparcapoffset_lp = blade_structure_dict[sparCapKeys[lpSideIndex]]['offset_y_pa']['values']*1000
+    except KeyError:
+        blade.sparcap_start_nd_arc = blade_structure_dict[sparCapKeys[lpSideIndex]]['start_nd_arc']['values']
+        blade.sparcap_end_nd_arc = blade_structure_dict[sparCapKeys[lpSideIndex]]['end_nd_arc']['values']
+
+    blade.sparcapwidth_hp  = blade_structure_dict[sparCapKeys[hpSideIndex]]['width']['values']*1000
+    try:
+        blade.sparcapoffset_hp = blade_structure_dict[sparCapKeys[hpSideIndex]]['offset_y_pa']['values']*1000
+    except KeyError:
+        blade.sparcap_start_nd_arc = blade_structure_dict[sparCapKeys[hpSideIndex]]['start_nd_arc']['values']
+        blade.sparcap_end_nd_arc = blade_structure_dict[sparCapKeys[hpSideIndex]]['end_nd_arc']['values']
+    return blade
+
+def _add_te_bands(blade, blade_structure_dict):
+    teReinfKeys=fullKeysFromSubStrings(blade_structure_dict.keys(),['te','reinf'])
+    if len(teReinfKeys)==1:
+        blade.teband = blade_structure_dict[teReinfKeys[0]]['width']['values']*1000 / 2
+    elif len(teReinfKeys)==2:
+        blade.teband = (blade_structure_dict[teReinfKeys[0]]['width']['values'] + 
+                        blade_structure_dict[teReinfKeys[1]]['width']['values'])*1000 / 2
+    else:
+        raise ValueError('Unknown number of TE reinforcements')
+    return blade
+
+def _add_le_bands(blade, blade_structure_dict):
+    leReinfKeys=fullKeysFromSubStrings(blade_structure_dict.keys(),['le','reinf'])
+    if len(leReinfKeys)==1:
+        blade.leband = blade_structure_dict[leReinfKeys[0]]['width']['values']*1000 / 2
+    elif len(leReinfKeys)==2:
+        blade.leband = (blade_structure_dict[leReinfKeys[0]]['width']['values'] + 
+                        blade_structure_dict[leReinfKeys[1]]['width']['values'])*1000 / 2
+    else:
+        raise ValueError('Invalid number of LE reinforcements')
+    return blade
