@@ -31,4 +31,4 @@ def check_style(session):
 @nox.session
 def enforce_style(session):
     session.install("black")
-    session.run("black")
+    session.run("black", "src")

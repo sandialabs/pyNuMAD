@@ -1,1 +1,1 @@
-import pynumad.shell.shell
+from . import shell
