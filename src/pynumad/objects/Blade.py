@@ -347,7 +347,7 @@ class Blade():
         """
         self.updateGeometry()
         self.updateKeypoints()
-        self.updateBOM()
+        # self.updateBOM()
         return self
 
 
@@ -830,20 +830,26 @@ class Blade():
         None
 
         """
+        raise DeprecationWarning("updateBOM currently deprecated. Please do not use.")
+        # set conversion constants        
+        G_TO_KG = 0.001
+        M_TO_MM = 1000.0
+        MM_TO_M = 0.001
 
         # initialize structures
         self.bom = {'hp':[],'lp':[],'sw':[],'lebond':[],'tebond':[],
                     'swbonds':[],'dryweight':[]}
         self.bomIndices = {'hp':[],'lp':[],'sw':[]}
+        
         # calculate non-dimensional span
         ndspan = (self.ispan - self.ispan[0]) / (self.ispan[-1] - self.ispan[0])
+        
+        
         hprow = 0
         lprow = 0
         swnum = None
         swrow = 0
-        g_to_kg = 0.001
-        m_to_mm = 1000.0
-        mm_to_m = 0.001
+
         swBeginSta = []
         swEndSta = []
         for comp_name in self.components:
@@ -924,11 +930,12 @@ class Blade():
                         self.bomIndices['sw'][swnum].append([beginSta[ks],endSta[ks]])
                         swrow = swrow + 1
         
-        self.bom['lebond'] = sum(self.LEbond) * m_to_mm
-        self.bom['tebond'] = sum(self.TEbond) * m_to_mm
+        # compute lebond, tebond, and dryweight
+        self.bom['lebond'] = sum(self.LEbond) * M_TO_MM
+        self.bom['tebond'] = sum(self.TEbond) * M_TO_MM
         hp_dw = sum([L.weight for L in self.bom['hp']])
         lp_dw = sum([L.weight for L in self.bom['lp']])
-        self.bom['dryweight'] = g_to_kg * (hp_dw + lp_dw)
+        self.bom['dryweight'] = G_TO_KG * (hp_dw + lp_dw)
         
         nsw = len(self.bom['sw'])
         self.bom['swbonds'] = [None]*nsw
@@ -936,7 +943,7 @@ class Blade():
             sw_dw = sum([L.weight for L in self.bom['sw'][k]])
             self.bom['dryweight'] = self.bom['dryweight'] + sw_dw
             C = self.webbonds[k][:,swBeginSta[k]:swEndSta[k]]
-            self.bom['swbonds'][k] = m_to_mm * np.sum(C, 1)
+            self.bom['swbonds'][k] = M_TO_MM * np.sum(C, 1)
         
         # build the material stack for each area
         nSegments = self.keyareas.shape[0]
@@ -1051,7 +1058,7 @@ class Blade():
                 cur_layer = Layer()
                 matid = flat_stacks[k].plygroups[j].materialid
                 cur_layer.layerName = self.matdb[matid].name
-                cur_layer.thicknessA = mm_to_m * flat_stacks[k].plygroups[j].thickness
+                cur_layer.thicknessA = MM_TO_M * flat_stacks[k].plygroups[j].thickness
                 cur_layer.thicknessB = cur_layer.thicknessA
                 cur_layer.quantity = flat_stacks[k].plygroups[j].nPlies
                 cur_layer.theta = flat_stacks[k].plygroups[j].angle
@@ -1075,7 +1082,7 @@ class Blade():
                     cur_layer = Layer()
                     matid = self.swstacks[kw][k].plygroups[j].materialid
                     cur_layer.layerName = self.matdb[matid].name
-                    cur_layer.thicknessA = mm_to_m * self.swstacks[kw][k].plygroups[j].thickness
+                    cur_layer.thicknessA = MM_TO_M * self.swstacks[kw][k].plygroups[j].thickness
                     cur_layer.thicknessB = cur_layer.thicknessA
                     cur_layer.quantity = self.swstacks[kw][k].plygroups[j].nPlies
                     cur_layer.theta = self.swstacks[kw][k].plygroups[j].angle
