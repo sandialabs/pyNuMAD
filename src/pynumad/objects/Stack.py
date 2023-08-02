@@ -4,6 +4,7 @@
 #              See license.txt for disclaimer information              #
 ########################################################################
 
+
 class Stack:
     """A class definition for a stack of composite layers.
 
@@ -15,15 +16,15 @@ class Stack:
     name : string
         Name of the stack or composite material used by NuMAD, e.g. '000000_HP_LE_PANEL'
     indices : list
-        Indices of stack, ``[in board station, out board station, 
+        Indices of stack, ``[in board station, out board station,
         1st kepoint, 2nd keypoint]``, e.g. ``[ibSta,obSta,keypt1,keypt2]``
     plygroups : list
         List of ``ply`` dataclasses
-        
+
     Example
     -------
         ``stack = StackDef();``
-    
+
     See also ``xlsBlade``, ``BladeDef``, ``BladeDef.updateBOM``
     """
 
@@ -31,7 +32,7 @@ class Stack:
     indices = None
     plygroups: list = []
 
-    def addply(self,ply):
+    def addply(self, ply):
         """This method adds a Ply object to stack
 
         Parameters
@@ -47,8 +48,9 @@ class Stack:
             ``stack.addply(ply)``
         """
         if self.plygroups:
-            if ((ply.component == self.plygroups[-1].component) and
-                    (ply.angle == self.plygroups[-1].angle)):
+            if (ply.component == self.plygroups[-1].component) and (
+                ply.angle == self.plygroups[-1].angle
+            ):
                 self.plygroups[-1].nPlies += 1
             else:
                 self.plygroups.append(ply)
@@ -58,12 +60,12 @@ class Stack:
 
         return self
 
-            
     def layerThicknesses(self):
-        nLayers=len(self.plygroups)
-        thickness=0
-        layerThicknesses=[]
+        nLayers = len(self.plygroups)
+        thickness = 0
+        layerThicknesses = []
         for iLayer in range(nLayers):
-            layerThicknesses.append(self.plygroups[iLayer].nPlies*self.plygroups[iLayer].thickness)
+            layerThicknesses.append(
+                self.plygroups[iLayer].nPlies * self.plygroups[iLayer].thickness
+            )
         return layerThicknesses
-    

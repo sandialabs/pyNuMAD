@@ -1,36 +1,39 @@
 import numpy as np
 
-from scipy.interpolate import interp1d, PchipInterpolator,\
-    PPoly, CubicSpline
+from scipy.interpolate import interp1d, PchipInterpolator, PPoly, CubicSpline
 
 
-def interpolator_wrap(x, v, xq, method = 'linear', axis = 0, extrapolation = None):
+def interpolator_wrap(x, v, xq, method="linear", axis=0, extrapolation=None):
     """This function is designed to emulate the arg structure and output
     of matlabs interp1d function.
 
     Parameters
     ----------
         x : array
-        v : array 
-        xq : array 
-        method : str 
+        v : array
+        xq : array
+        method : str
             Defaults to 'linear'.
-        axis : int 
+        axis : int
             Defaults to 0.
-        extrapolation :bool  
+        extrapolation :bool
             Defaults to None.
 
     Returns:
         array :
     """
-    if method == 'linear':
-        interpolator = interp1d(x,v,'linear', axis,bounds_error=False, fill_value= 'extrapolate')
+    if method == "linear":
+        interpolator = interp1d(
+            x, v, "linear", axis, bounds_error=False, fill_value="extrapolate"
+        )
         vq = interpolator(xq)
-    elif method == 'pchip':
-        interpolator = PchipInterpolator(x,v,axis,extrapolate=True)
+    elif method == "pchip":
+        interpolator = PchipInterpolator(x, v, axis, extrapolate=True)
         vq = interpolator(xq)
-    elif method == 'spline':
-        interpolator = interp1d(x,v,'cubic', axis,bounds_error=False,fill_value='extrapolate')
+    elif method == "spline":
+        interpolator = interp1d(
+            x, v, "cubic", axis, bounds_error=False, fill_value="extrapolate"
+        )
         vq = interpolator(xq)
     return vq
     # if method == 'pp':
@@ -46,14 +49,14 @@ def interpolator_wrap(x, v, xq, method = 'linear', axis = 0, extrapolation = Non
     # if method == 'previous':
     #     raise Exception("Method error for interpolator_wrap. 'previous' not implemented")
 
-    
+
 def calcGenLinePP(blade_struct: dict):
     # TODO: docstring
     # Calculate blade reference line piecewise polynomials
     # blade_struct = calcGenLinePP(blade_struct) updates the piecewise
     # polynomial representation of the blade's Presweep and Precurve
     # reference lines. This function is called by NuMAD_genline.
-    
+
     # The fields PresweepRef and PrecurveRef are required in blade_struct.
     # Each of these fields has the following data structure:
     #     method: 'normal' | 'shear'
@@ -73,35 +76,35 @@ def calcGenLinePP(blade_struct: dict):
     #             disabled = returns straight line
     #         pp: piecewise polynomial data created by this function
     #         dpp: piecewise polynomial data of reference line's derivative
-    
+
     #    See also NuMAD_genline, PPoly, interp1.
-    
+
     # PresweepRef
     spline_type = blade_struct["PresweepRef"]["pptype"]
     PresweepRef = blade_struct["PresweepRef"]["table"]
-    if spline_type in ['linear','spline','pchip']:
+    if spline_type in ["linear", "spline", "pchip"]:
         if PresweepRef.shape[0] > 1:
-            pp = CubicSpline(PresweepRef[:,0],PresweepRef[:,1])
+            pp = CubicSpline(PresweepRef[:, 0], PresweepRef[:, 1])
         else:
-            pp = CubicSpline([0,1], [0,0])
-    
+            pp = CubicSpline([0, 1], [0, 0])
+
     blade_struct["PresweepRef"]["pp"] = pp
     # dc = np.diag(np.arange(pp.order - 1,1+- 1,- 1),1)
-    
+
     # blade_struct["PresweepRef"]["dpp"] = PPoly(pp.breaks,pp.coefs * dc)
-    
+
     # PrecurveRef
     spline_type = blade_struct["PrecurveRef"]["pptype"]
     PrecurveRef = blade_struct["PrecurveRef"]["table"]
-    if spline_type in ['linear','spline','pchip']:
+    if spline_type in ["linear", "spline", "pchip"]:
         if PrecurveRef.shape[0] > 1:
-            pp = CubicSpline(PrecurveRef[0,:],PrecurveRef[1,:])
+            pp = CubicSpline(PrecurveRef[0, :], PrecurveRef[1, :])
         else:
-            pp = CubicSpline([0,1], [0,0])
-    
+            pp = CubicSpline([0, 1], [0, 0])
+
     blade_struct["PrecurveRef"]["pp"] = pp
     # dc = np.diag(np.arange(pp.order - 1,1+- 1,- 1),1)
-    
+
     # blade_struct["PrecurveRef"]["dpp"] = PPoly(pp.breaks,pp.coefs * dc)
-    
+
     return blade_struct
