@@ -7,6 +7,12 @@ from pynumad.objects.Station import Station
 from pynumad.objects.Subobjects import MatDBentry, BOM, Ply, Layer, Shearweb
 from pynumad.io.mesh_to_yaml import mesh_to_yaml
 
+from pynumad import io
+from pynumad import objects
+from pynumad import shell
+from pynumad import utils
+from pynumad import analysis
+
 
 __version__ = '0.0.1'
 

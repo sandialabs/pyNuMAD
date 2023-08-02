@@ -108,11 +108,10 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
                 blade_internal_structure[partName][currentLayer][currentKey]['grid']=fullSpanGrid
                 blade_internal_structure[partName][currentLayer][currentKey]['values']=fullSpanValues
 
+    # Change layers from integer indexing to name indexing
     bladeStructureDict={}
     for i in range(len(blade_internal_structure['layers'])):
         bladeStructureDict[blade_internal_structure['layers'][i]['name'].lower()]=blade_internal_structure['layers'][i]
-
-
 
     #Spar caps
     sparCapKeys=fullKeysFromSubStrings(bladeStructureDict.keys(),['spar'])
@@ -202,8 +201,9 @@ def _add_stations(blade,blade_outer_shape_bem, hub_outer_shape_bem,
         tc[i] = af_data[IAF]['relative_thickness']
         tc_xL = blade_outer_shape_bem['airfoil_position']['grid'][i]
         aero_cent[i] = af_data[IAF]['aerodynamic_center']
-        xf_coords = np.stack((af_data[IAF]['coordinates']['x'],
-            af_data[IAF]['coordinates']['y']),1)
+        x = np.array(af_data[IAF]['coordinates']['x'], dtype=float)
+        y = np.array(af_data[IAF]['coordinates']['y'], dtype=float)
+        xf_coords = np.stack((x,y),1)
 
         # find coordinate direction (clockwise or counter-clockwise) Winding
         # Number. clockwise starting at (1,0) is correct

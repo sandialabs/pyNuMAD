@@ -6,7 +6,7 @@
 
 import numpy as np
 
-def fullKeysFromSubStrings(keyList,subStringList):
+def fullKeysFromSubStrings(key_list,subtring_list):
     '''
     Example Usage: 
     subString = ['B1N3TDx']
@@ -24,10 +24,16 @@ def fullKeysFromSubStrings(keyList,subStringList):
 
     
     '''
-    result=keyList
-    for subString in subStringList:
-        result=[key for key in result if subString.lower() in key.lower()]
-    return result
+    matched_keys = []
+    for key in key_list:
+        if all(substring in key.lower() for substring in subtring_list):
+            matched_keys.append(key)
+    return matched_keys
+    # result=keyList
+    # for subString in subStringList:
+    #     result=[key for key in result if subString.lower() in key.lower()]
+    # return result
+
 
 # SED-like substitution
 def copy_and_replace(fin, fout, replacements):
