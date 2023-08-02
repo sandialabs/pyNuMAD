@@ -168,13 +168,10 @@ cython_debug/
 *.esav
 *.full
 *.mntr
-*.rst
 *.stat
 *.src
 *.out
 *.dbb
-*.pkl
-*.csv
 *.bat
 
 # vscode
@@ -182,5 +179,4 @@ cython_debug/
 *.code-workspace
 
 # etc
-docs/_static/*
 *.log

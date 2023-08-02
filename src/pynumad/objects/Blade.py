@@ -1,9 +1,3 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
-
 import re, warnings
 import numpy as np
 from copy import copy
@@ -22,10 +16,10 @@ from numpy import ndarray
 
 class Blade():
     """BladeDef A class definition for wind & water turbine blades.
-    
+
     Parameters
     ----------
-    file : string
+    filename : string
 
     Attributes
     ----------
@@ -36,62 +30,62 @@ class Blade():
     chordoffset : array 		
         Chordwise offset (in addition to natural offset)
     components : list 
-		Blade components such as spar, panels, etc., refer to ``ComponentDef``
+        Blade components such as spar, panels, etc., refer to ``ComponentDef``
     degreestwist : array 
-		Twist distribution [degrees]
+        Twist distribution [degrees]
     ispan : array 
-		Spanwise locations of interpolated output
+        Spanwise locations of interpolated output
     leband : float 
-		Location of keypoint a
+        Location of keypoint a
     materials : list 
-		Material properties, refer to ``MaterialDef``
+        Material properties, refer to ``MaterialDef``
     mesh : float 
-		Approximate element edge size for FE model [m]
+        Approximate element edge size for FE model [m]
     percentthick : array 
-		Percent thickness of airfoil [%]
+        Percent thickness of airfoil [%]
     prebend : array 
-		Blade prebend, reference axis location along x2 [m]
+        Blade prebend, reference axis location along x2 [m]
     span : array 
-		Spanwise location of distributed properties [m]
+        Spanwise location of distributed properties [m]
     sparcapoffset : array 
-		(Does Nothing)
+        (Does Nothing)
     sparcapwidth : array 
-		Locations of keypoints b & c, defines distance 
+        Locations of keypoints b & c, defines distance 
         between keypoints b & c [mm]. First entry is the HP spar cap. 
         Second entry is the LP spar cap
     stations : list 
-		Blade Stations, define the camber and thickness along the blade, 
+        Blade Stations, define the camber and thickness along the blade, 
         refer to ``StationDef``
     sweep : array 
-		Blade Sweep, Reference axis location along x1 [m] 
-    self.teband
+        Blade Sweep, Reference axis location along x1 [m] 
+    self.teband : float
     idegreestwist : array 
-		interpolated twist
+        interpolated twist
     ichord : array 
-		interpolated chord
+        interpolated chord
     ipercentthick : array 
-		interpolated thickness
-    self.ic = array
-    self.icamber = array
-    self.ithickness = array
+        interpolated thickness
+    self.ic : array
+    self.icamber : array
+    self.ithickness : array
     ichordoffset : array 
-		interpolated offset
+        interpolated offset
     iaerocenter : array 
-		interpolated aerocenter
+        interpolated aerocenter
     isweep : array 
-		interpolated sweep
+        interpolated sweep
     iprebend : array 
-		interpolated prebend
+        interpolated prebend
     xoffset : array 
-		natural offset
+        natural offset
     profiles : array 
-		normalized airfoil profiles
+        normalized airfoil profiles
     geometry : array 
-		actual x,y,z geometry
+        actual x,y,z geometry
     arclength : array 
-		surface distance from L.E.
+        surface distance from L.E.
     cpos : array 
-		chordwise position
+        chordwise position
     LEindex : int  
     HParcx0 : array
     LParcx0 : array
@@ -112,13 +106,13 @@ class Blade():
     bom : dict
     bomIndices : dict
     stacks : array 
-		array of StackDef
+        array of StackDef
     swstacks : list 
-		contains StackDefs
+        contains StackDefs
     matdb : dict 
-		Composite definition for each region at each station
+        Composite definition for each region at each station
     TEtype : list 
-		trailing edge type; assigned in updateKeypoints
+        trailing edge type; assigned in updateKeypoints
     shearweb : list
     bomPlot : dict
     hgGeometry : list
@@ -128,14 +122,13 @@ class Blade():
     ansys : dict
         generate ANSYS settings
     write_airfoils : bool
+    
     Example
     -------
-    ``blade = BladeDef();``
-    
-    See also ``BladeDef_to_NuMADfile``, ``xlsBlade``, ``AirfoilDef``, 
-    ``StationDef``, ``ComponentDef``, ``StackDef``
+    blade = BladeDef()
     """
     def __init__(self, filename: str = None):
+
 
         self.aerocenter : ndarray = None
         self.chord : ndarray = None

@@ -25,4 +25,10 @@ def serve(session):
    
 @nox.session
 def check_style(session):
+    session.install("black")
     session.run("black", "--check")
+    
+@nox.session
+def enforce_style(session):
+    session.install("black")
+    session.run("black")
