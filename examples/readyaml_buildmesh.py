@@ -6,7 +6,7 @@ from pprint import pprint
 from pynumad.shell.shell import getShellMesh
 
 blade = pynu.Blade()
-fileName = 'example_data/myBlade.yaml'
+fileName = 'example_data/myBlade_modified.yaml'
 blade.read_yaml(fileName)
 
 elementSize = 0.2

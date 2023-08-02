@@ -340,7 +340,7 @@ class Blade():
         """
         self.updateGeometry()
         self.updateKeypoints()
-        # self.updateBOM()
+        self.updateBOM()
         return self
 
 
@@ -823,7 +823,7 @@ class Blade():
         None
 
         """
-        raise DeprecationWarning("updateBOM currently deprecated. Please do not use.")
+        # raise DeprecationWarning("updateBOM currently deprecated. Please do not use.")
         # set conversion constants        
         G_TO_KG = 0.001
         M_TO_MM = 1000.0
@@ -840,12 +840,8 @@ class Blade():
         
         hprow = 0
         lprow = 0
-        swnum = None
-        swrow = 0
-
-        swBeginSta = []
-        swEndSta = []
-        for comp_name in self.components:
+        outer_shape_comps = [name for name in self.components if self.components[name].group == 0]
+        for comp_name in outer_shape_comps:
             comp = self.components[comp_name]
             mat = self.materials[comp.materialid]
             hpRegion,lpRegion = self.findRegionExtents(comp)
@@ -858,7 +854,7 @@ class Blade():
                 # situation that beginSta/endSta is longer than 1
                 for ks in range(ksMax):
                     ## END
-                    if comp.group == 0 and hpRegion:
+                    if hpRegion:
                         areas = self.keyareas[hpRegion[0]:hpRegion[1],beginSta[ks]:endSta[ks]]
                         regionarea = sum(areas.flatten())
                         arcs = self.keyarcs[hpRegion[1],beginSta[ks]:endSta[ks]+1] - self.keyarcs[hpRegion[0],beginSta[ks]:endSta[ks]+1]
@@ -877,7 +873,7 @@ class Blade():
                         self.bom['hp'].append(cur_bom)
                         hprow = hprow + 1
                         
-                    if comp.group == 0 and lpRegion:
+                    if lpRegion:
                         areas = self.keyareas[lpRegion[0]:lpRegion[1],beginSta[ks]:endSta[ks]]
                         regionarea = sum(areas.flatten())
                         arcs = self.keyarcs[lpRegion[1],beginSta[ks]:endSta[ks]+1] - self.keyarcs[lpRegion[0],beginSta[ks]:endSta[ks]+1]
@@ -895,34 +891,52 @@ class Blade():
                         self.bomIndices['lp'].append([beginSta[ks],endSta[ks],*lpRegion])
                         self.bom['lp'].append(cur_bom)
                         lprow = lprow + 1
-                    
-                    if comp.group > 0:
-                        if swnum != comp.group - 1:
-                            swnum = comp.group - 1
-                            swrow = 0
-                            swBeginSta.append(beginSta[0])
-                            swEndSta.append(endSta[0])
-                            self.bom['sw'].append([])
-                            self.bomIndices['sw'].append([])
-                        swBeginSta[swnum] = np.amin([*beginSta,swBeginSta[swnum]])
-                        swEndSta[swnum] = np.amax([*endSta,swEndSta[swnum]])
-                        areas = self.webareas[swnum][beginSta[ks]:endSta[ks]]
-                        regionarea = sum(areas.flatten())
-                        cur_bom = BOM()
-                        cur_bom.layernum = swrow
-                        cur_bom.materialid = comp.materialid
-                        cur_bom.name = comp.name
-                        cur_bom.beginsta = self.ispan[beginSta[ks]]
-                        cur_bom.endsta = self.ispan[endSta[ks]]
-                        cur_bom.maxwidth = np.amax(self.webwidth[swnum])
-                        cur_bom.avgwidth = np.mean(self.webwidth[swnum])
-                        cur_bom.area = regionarea
-                        cur_bom.thickness = mat.layerthickness
-                        cur_bom.weight = mat.drydensity * regionarea
-                        self.bom['sw'][swnum].append(cur_bom)
-                        self.bomIndices['sw'][swnum].append([beginSta[ks],endSta[ks]])
-                        swrow = swrow + 1
         
+        # shearwebs
+        swnum = None
+        swrow = 0
+        swBeginSta = []
+        swEndSta = []
+        sw_comps = [comp for comp in self.components.values() if comp.group > 0]
+        def sorter(e):
+            return e.group
+        sw_comps.sort(key = sorter)
+        for comp in sw_comps:
+            mat = self.materials[comp.materialid]
+            num_layers = comp.getNumLayers(ndspan)
+            num_layers = np.round(num_layers)
+            
+            for k_layer in range(1,int(np.max(num_layers))+1):
+                beginSta,endSta = self.findLayerExtents(num_layers,k_layer)
+                ksMax = np.amin((len(beginSta),len(endSta)))
+                # situation that beginSta/endSta is longer than 1
+                for ks in range(ksMax):
+                    if swnum != comp.group - 1:
+                        swnum = comp.group - 1
+                        swrow = 0
+                        swBeginSta.append(beginSta[0])
+                        swEndSta.append(endSta[0])
+                        self.bom['sw'].append([])
+                        self.bomIndices['sw'].append([])
+                    swBeginSta[swnum] = np.amin([*beginSta,swBeginSta[swnum]])
+                    swEndSta[swnum] = np.amax([*endSta,swEndSta[swnum]])
+                    areas = self.webareas[swnum][beginSta[ks]:endSta[ks]]
+                    regionarea = sum(areas.flatten())
+                    cur_bom = BOM()
+                    cur_bom.layernum = swrow
+                    cur_bom.materialid = comp.materialid
+                    cur_bom.name = comp.name
+                    cur_bom.beginsta = self.ispan[beginSta[ks]]
+                    cur_bom.endsta = self.ispan[endSta[ks]]
+                    cur_bom.maxwidth = np.amax(self.webwidth[swnum])
+                    cur_bom.avgwidth = np.mean(self.webwidth[swnum])
+                    cur_bom.area = regionarea
+                    cur_bom.thickness = mat.layerthickness
+                    cur_bom.weight = mat.drydensity * regionarea
+                    self.bom['sw'][swnum].append(cur_bom)
+                    self.bomIndices['sw'][swnum].append([beginSta[ks],endSta[ks]])
+                    swrow = swrow + 1
+            
         # compute lebond, tebond, and dryweight
         self.bom['lebond'] = sum(self.LEbond) * M_TO_MM
         self.bom['tebond'] = sum(self.TEbond) * M_TO_MM
