@@ -40,9 +40,9 @@ def generateCubitCrossSections(
         crosssectionParams["TE_adhesive"]
         + 6 * crosssectionParams["minimumLayerThickness"]
     )
-    blade.expandBladeGeometryTEs(expandTEthicknesses)
+    blade.expand_blade_geometry_te(expandTEthicknesses)
 
-    blade.editStacksForSolidMesh()
+    blade.edit_stacks_for_solid_mesh()
 
     hasWebs = []
     webNumber = 1
@@ -77,16 +77,16 @@ def generateCubitCrossSections(
         writeSplineFromCoordinatePoints(cubit, refLineCoords)
         iStationGeometry = iStation
         if iStation == len(blade.ispan) - 1:  # Only do this for the last station
-            blade.addInterpolatedStation(blade.ispan[-1] * 0.999)
-            blade.editStacksForSolidMesh()
+            blade.add_interpolated_station(blade.ispan[-1] * 0.999)
+            blade.edit_stacks_for_solid_mesh()
             expandTEthicknesses.append(expandTEthicknesses[-1])
-            blade.expandBladeGeometryTEs(expandTEthicknesses)
+            blade.expand_blade_geometry_te(expandTEthicknesses)
 
             # adjustLastStackAfterNewTipStation(iStation)
 
             iStationGeometry = iStation + 1
 
-        if blade.getprofileTEtype(iStationGeometry) == "flat":
+        if blade.get_profile_te_type(iStationGeometry) == "flat":
             isFlatback = True
         else:
             isFlatback = False

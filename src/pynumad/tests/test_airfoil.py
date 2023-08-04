@@ -1,16 +1,13 @@
-import unittest
-from os.path import abspath, dirname, join
+import unittest, os
 
-from pynumad.objects.Airfoil import Airfoil
-from pynumad.paths import DATA_PATH
+from pynumad.objects.airfoil import Airfoil
 
-test_data_dir = DATA_PATH
-
+test_data_dir = os.path.join(os.path.dirname(__file__), 'test_data')
 
 class TestAirfoil(unittest.TestCase):
     @classmethod
-    def setUpClass(self):
-        self.xmlfile = join(test_data_dir, "airfoils", "DU91-W-250.txt")
+    def setUpClass(cls):
+        cls.xmlfile = os.path.join(test_data_dir, "airfoils", "DU91-W-250.txt")
 
     def test_load_xml(self):
         x = Airfoil(filename=self.xmlfile)

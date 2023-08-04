@@ -1,9 +1,3 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
-
 import yaml
 import numpy as np
 from scipy.stats import mode
@@ -15,9 +9,9 @@ from pynumad.utils.misc_utils import (
     fullKeysFromSubStrings,
 )
 from pynumad.utils.interpolation import interpolator_wrap
-from pynumad.objects.Component import Component
-from pynumad.objects.Airfoil import Airfoil
-from pynumad.objects.Material import Material
+from pynumad.objects.component import Component
+from pynumad.objects.airfoil import Airfoil
+from pynumad.objects.material import Material
 
 
 def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
@@ -102,7 +96,7 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
     ### COMPONENTS
     _add_components(blade, blade_internal_structure, blade_structure_dict)
 
-    blade.updateBlade()
+    blade.update_blade()
     # save(blade_name)
     # BladeDef_to_NuMADfile(obj,numad_name,matdb_name,numad_af_folder)
     return blade
@@ -191,7 +185,7 @@ def _add_stations(
         ref = blade_outer_shape_bem["airfoil_position"]["labels"][i]
         af = Airfoil(coords=xf_coords, ref=ref)
         af.resample(spacing="half-cosine")
-        blade.addStation(af, tc_xL * L)
+        blade.add_station(af, tc_xL * L)
     # Obtain some key blade attributes
     blade.span = blade.ispan
     blade.percentthick = np.multiply(
@@ -233,7 +227,7 @@ def _add_stations(
     #     '/af_coords/' +
     #     blade_outer_shape_bem['airfoil_position']['labels'][i] +
     #     '.txt')
-    #     blade.addStation(afc,np.multiply(tc_xL[i],L))
+    #     blade.add_station(afc,np.multiply(tc_xL[i],L))
 
     # NOTE nothing happens to afc? Tentatively ignoring...
     # If i return to this make sure to listify the afcs
@@ -242,7 +236,7 @@ def _add_stations(
     #     afc = AirfoilDef(out_folder + '/af_coords/' +
     #         blade_outer_shape_bem['airfoil_position']['labels'][i] +
     #         '.txt')
-    #     blade.addStation(afc,np.multiply(tc_xL[i],L))
+    #     blade.add_station(afc,np.multiply(tc_xL[i],L))
     # afc.resample #NOTE afc isn't used after this... why resample?
     return
 

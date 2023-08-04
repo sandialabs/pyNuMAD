@@ -13,10 +13,10 @@ blade.read_yaml(fileName)
 for stat in blade.stations:
     stat.airfoil.resample(n_samples=300)
     
-blade.updateGeometry()
+blade.update_geometry()
 nStations = blade.geometry.shape[2]
 minTELengths = 0.001*np.ones(nStations)
-blade.expandBladeGeometryTEs(minTELengths)
+blade.expand_blade_geometry_te(minTELengths)
 
 ## Set the target element size for the mesh
 elementSize = 0.2

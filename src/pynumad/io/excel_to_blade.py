@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 
-from pynumad.objects.Component import Component
-from pynumad.objects.Material import Material
+from pynumad.objects.component import Component
+from pynumad.objects.material import Material
 from pynumad.utils.interpolation import interpolator_wrap
 from pynumad.paths import DATA_PATH
 
@@ -191,7 +191,7 @@ def excel_to_blade(blade, filename):
                 k,
             )
         affile = data_dir + "/airfoils/{}.txt".format(afname[k])
-        blade.addStation(affile, afspan[k])
+        blade.add_station(affile, afspan[k])
         blade.stations[-1].airfoil.resample(175, "cosine")
 
     # afdb = np.array([blade.stations.airfoil])

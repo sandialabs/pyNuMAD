@@ -1,15 +1,13 @@
 import re, warnings
 import numpy as np
-from copy import copy
+from copy import deepcopy
 
 from pynumad.io.yaml_to_blade import yaml_to_blade
 from pynumad.io.excel_to_blade import excel_to_blade
 from pynumad.utils.interpolation import interpolator_wrap
 from pynumad.utils.affinetrans import rotation, translation
-from pynumad.objects.Station import Station
-from pynumad.objects.Airfoil import getAirfoilNormals, getAirfoilNormalsAngleChange
-from pynumad.objects.Stack import Stack
-from pynumad.objects.Subobjects import MatDBentry, Layer, Shearweb, BOM, Ply
+from pynumad.objects.airfoil import get_airfoil_normals, get_airfoil_normals_angle_change
+from pynumad.objects.elements import MatDBentry, Layer, Shearweb, BOM, Ply, Stack, Station
 
 # for type hints
 from numpy import ndarray
@@ -113,7 +111,7 @@ class Blade:
     matdb : dict
         Composite definition for each region at each station
     TEtype : list
-        trailing edge type; assigned in updateKeypoints
+        trailing edge type; assigned in update_keypoints
     shearweb : list
     bomPlot : dict
     hgGeometry : list
@@ -130,7 +128,7 @@ class Blade:
     """
 
     def __init__(self, filename: str = None):
-        self.aerocenter: ndarray = None
+        self.aerocenter: ndarray = None 
         self.chord: ndarray = None
         self.chordoffset: ndarray = None
         self.components: list = None
@@ -144,7 +142,7 @@ class Blade:
         self.span: ndarray = None
         self.sparcapoffset: ndarray = None
         self.sparcapwidth: ndarray = None
-        self.stations: list = None
+        self.stations: list = []
         self.sweep: ndarray = None
         self.teband: float = None
         self.idegreestwist: ndarray = None
@@ -309,7 +307,7 @@ class Blade:
 
     ### IO
 
-    def read_yaml(self, filename):
+    def read_yaml(self, filename: str):
         """Populate blade attributes with yaml file data
 
         Extended description of function.
@@ -347,29 +345,28 @@ class Blade:
 
     ### Update methods
 
-    def updateBlade(self):
+    def update_blade(self):
         """
         TODO docstring
         """
-        self.updateGeometry()
-        self.updateKeypoints()
-        self.updateBOM()
+        self.update_geometry()
+        self.update_keypoints()
+        self.update_bom()
         return self
 
-    def updateGeometry(self):
+    def update_geometry(self):
         """This method updates the interpolated blade parameters"""
 
         # update the interpolated station profiles
-        nStations = len(self.stations)
-        if nStations > 0:
-            nPoints = len(self.stations[0].airfoil.c)
+        n_stations = len(self.stations)
+        if n_stations > 0:
+            n_points = len(self.stations[0].airfoil.c)
         else:
             raise Exception(
                 "BladeDef must have at least one station before updating geometry."
             )
 
-        # add some error checking -- first station must be at blade
-        # root to prevent extrapolation
+        # first station must be at blade root to prevent extrapolation
         assert (
             self.stations[0].spanlocation == 0
         ), "first station must be at the blade root"
@@ -378,13 +375,13 @@ class Blade:
         spanlocation = np.array(
             [self.stations[i].spanlocation for i in range(len(self.stations))]
         )
-        c = np.zeros((nPoints, nStations))
-        camber = np.zeros((nPoints, nStations))
-        thickness = np.zeros((nPoints, nStations))
-        tetype = [None] * nStations
-        for k in range(0, nStations):
+        c = np.zeros((n_points, n_stations))
+        camber = np.zeros((n_points, n_stations))
+        thickness = np.zeros((n_points, n_stations))
+        tetype = [None] * n_stations
+        for k in range(n_stations):
             ck = self.stations[k].airfoil.c
-            if len(ck) != nPoints:
+            if len(ck) != n_points:
                 raise Exception("Station airfoils must have same number of samples.")
             c[:, k] = ck
             camber[:, k] = self.stations[k].airfoil.camber
@@ -393,8 +390,8 @@ class Blade:
 
         # fix numerical issue due to precision on camber calculation
         # camber should start and end at y-values of zero
-        camber[0, :] = np.zeros((1, nStations))
-        camber[-1, :] = np.zeros((1, nStations))
+        camber[0, :] = np.zeros((1, n_stations))
+        camber[-1, :] = np.zeros((1, n_stations))
 
         # Interpolate the station parameter tables.
         # Each column corresponds to an interpolated station.
@@ -432,7 +429,6 @@ class Blade:
                 ithickness[-1, k] = 0
 
         # Interpolate the blade parameter curves.
-        # Results are row vectors.
         self.idegreestwist = interpolator_wrap(
             self.span, self.degreestwist, self.ispan, "pchip"
         )
@@ -463,17 +459,17 @@ class Blade:
 
         # Generate the blade surface geometry.
         N = np.asarray(self.ispan).size
-        M = nPoints * 2 + 1
+        M = n_points * 2 + 1
         self.profiles = np.zeros((M, 2, N))
         self.geometry = np.zeros((M, 3, N))
         self.xoffset = np.zeros((1, N))
-        self.LEindex = nPoints
+        self.LEindex = n_points
 
-        for k in range(0, N):
-            self.updateAirfoilProfile(k)
+        for k in range(N):
+            self.update_airfoil_profile(k)
             mtindex = np.argmax(ithickness[:, k])
             self.xoffset[0, k] = ic[mtindex, k]
-            self.updateOMLgeometry(k)
+            self.update_oml_geometry(k)
 
         # Calculate the arc length of each curve
         self.arclength = np.zeros((M, N))
@@ -503,7 +499,7 @@ class Blade:
 
         return self
 
-    def updateKeypoints(self):
+    def update_keypoints(self):
         """This method updates the keypoints (a,b,c,...) which define the blade
         regions.
 
@@ -513,7 +509,7 @@ class Blade:
         self
 
         Example:
-          ``blade.updateKeypoints``
+          ``blade.update_keypoints``
 
         find the curves which bound each blade region
         """
@@ -566,7 +562,7 @@ class Blade:
             scoffset_hp = mm_to_m * self.sparcapoffset_hp[k]  # type: float
             scoffset_lp = mm_to_m * self.sparcapoffset_lp[k]  # type: float
 
-            tempTE = self.getprofileTEtype(k)
+            tempTE = self.get_profile_te_type(k)
             if self.TEtype:
                 self.TEtype.append(tempTE)
             else:
@@ -922,7 +918,7 @@ class Blade:
 
         return self
 
-    def updateBOM(self):
+    def update_bom(self):
         """This method updates the Bill-of-Materials
         See datatypes.BOM
 
@@ -932,7 +928,7 @@ class Blade:
         None
 
         """
-        # raise DeprecationWarning("updateBOM currently deprecated. Please do not use.")
+        # raise DeprecationWarning("update_bom currently deprecated. Please do not use.")
         # set conversion constants
         G_TO_KG = 0.001
         M_TO_MM = 1000.0
@@ -961,12 +957,12 @@ class Blade:
         for comp_name in outer_shape_comps:
             comp = self.components[comp_name]
             mat = self.materials[comp.materialid]
-            hpRegion, lpRegion = self.findRegionExtents(comp)
-            num_layers = comp.getNumLayers(ndspan)
+            hpRegion, lpRegion = comp.find_region_extents()
+            num_layers = comp.get_num_layers(ndspan)
             num_layers = np.round(num_layers)
 
             for k_layer in range(1, int(np.max(num_layers)) + 1):
-                beginSta, endSta = self.findLayerExtents(num_layers, k_layer)
+                beginSta, endSta = self.find_layer_extents(num_layers, k_layer)
                 ksMax = np.amin((len(beginSta), len(endSta)))
                 # situation that beginSta/endSta is longer than 1
                 for ks in range(ksMax):
@@ -1036,11 +1032,11 @@ class Blade:
         sw_comps.sort(key=sorter)
         for comp in sw_comps:
             mat = self.materials[comp.materialid]
-            num_layers = comp.getNumLayers(ndspan)
+            num_layers = comp.get_num_layers(ndspan)
             num_layers = np.round(num_layers)
 
             for k_layer in range(1, int(np.max(num_layers)) + 1):
-                beginSta, endSta = self.findLayerExtents(num_layers, k_layer)
+                beginSta, endSta = self.find_layer_extents(num_layers, k_layer)
                 ksMax = np.amin((len(beginSta), len(endSta)))
                 # situation that beginSta/endSta is longer than 1
                 for ks in range(ksMax):
@@ -1133,8 +1129,8 @@ class Blade:
             for kr in range(ind[2], ind[3]):
                 for kc in range(ind[0], ind[1]):
                     self.stacks[kr][kc].addply(
-                        copy(cur_ply)
-                    )  # copy is important to keep make ply object unique in each stack
+                        deepcopy(cur_ply)
+                    )  # deepcopy is important to keep make ply object unique in each stack
 
         for k in range(len(self.bom["lp"])):
             # for each row in the BOM, get the ply definition ...
@@ -1151,7 +1147,7 @@ class Blade:
             ind = self.bomIndices["lp"][k]
             for kr in range(ind[2], ind[3]):
                 for kc in range(ind[0], ind[1]):
-                    self.stacks[kr][kc].addply(copy(cur_ply))
+                    self.stacks[kr][kc].addply(deepcopy(cur_ply))
         self.swstacks = [None] * nWebs
         for kw in range(nWebs):
             self.swstacks[kw] = []
@@ -1182,7 +1178,7 @@ class Blade:
                 ind = self.bomIndices["sw"][kw][k]
 
                 for kc in range(ind[0], ind[1]):
-                    self.swstacks[kw][kc].addply(copy(cur_ply))
+                    self.swstacks[kw][kc].addply(deepcopy(cur_ply))
         # need to add the 'MatDB' information which stores composite stack
         # information in each region at each station
         # see datatypes.MatDBentry
@@ -1278,7 +1274,7 @@ class Blade:
                     ctr += 1
         return self
 
-    def updateAirfoilProfile(self, k):
+    def update_airfoil_profile(self, k):
         """
 
         Parameters
@@ -1306,12 +1302,13 @@ class Blade:
         self.profiles[:, :, k] = profile
         return self
 
-    def updateOMLgeometry(self, k):
+    def update_oml_geometry(self, k):
         """
         TODO docstring
         """
         x = self.profiles[:, 0, k]
         y = self.profiles[:, 1, k]
+        
         # self.xoffset[0,k] = c[mtindex]
         if self.naturaloffset:
             x = x - self.xoffset[0, k]
@@ -1319,12 +1316,14 @@ class Blade:
         x = x * self.ichord[k] * -1 * self.rotorspin  # scale by chord
         y = y * self.ichord[k]  # scale by chord
         twist = -1 * self.rotorspin * self.idegreestwist[k]
+        
         # prepare for hgtransform rotate & translate
         coords = np.zeros((len(x), 4))
         coords[:, 0] = np.cos(np.deg2rad(twist)) * x - np.sin(np.deg2rad(twist)) * y
         coords[:, 1] = np.sin(np.deg2rad(twist)) * x + np.cos(np.deg2rad(twist)) * y
         coords[:, 2] = np.zeros(len(x))
         coords[:, 3] = np.ones(len(x))
+        
         # use the generating line to translate and rotate the coordinates
         # NOTE currently, rotation is not assigned from blade properties
         # and defaults to 0
@@ -1335,14 +1334,14 @@ class Blade:
         of plane so that its normal follows the generating line direction. Need
         to replace 'twistFlag' with '-1*self.rotorspin' and calculate the slopes
         based on the available data. For now, default to parallel sections.
-                        if isequal(blade.PresweepRef.method,'normal')
-                            sweep_slope = ppval(blade.PresweepRef.dpp,sta.LocationZ);
-                            sweep_rot = atan(sweep_slope*twistFlag);
-                        end
-                        if isequal(blade.PrecurveRef.method,'normal')
-                            prebend_slope = ppval(blade.PrecurveRef.dpp,sta.LocationZ);
-                            prebend_rot = atan(-prebend_slope);
-                        endc
+        if isequal(blade.PresweepRef.method,'normal')
+            sweep_slope = ppval(blade.PresweepRef.dpp,sta.LocationZ);
+            sweep_rot = atan(sweep_slope*twistFlag);
+        end
+        if isequal(blade.PrecurveRef.method,'normal')
+            prebend_slope = ppval(blade.PrecurveRef.dpp,sta.LocationZ);
+            prebend_rot = atan(-prebend_slope);
+        endc
         """
         transX = -1 * self.rotorspin * self.isweep[k]
         transY = self.iprebend[k]
@@ -1354,12 +1353,9 @@ class Blade:
         coords = coords @ np.transpose(R) @ np.transpose(T)
         # save the transformed coordinates
         self.geometry[:, :, k] = coords[:, 0:3]
-        # self.geometry[:,0,k] = coords[:,0]
-        # self.geometry[:,1,k] = coords[:,1]
-        # self.geometry[:,2,k] = coords[:,2]
         return self
 
-    def addInterpolatedStation(self, newSpanLocation):
+    def add_interpolated_station(self, newSpanLocation):
         x0 = self.ispan
 
         if newSpanLocation < self.ispan[-1] and newSpanLocation > 0:
@@ -1381,10 +1377,10 @@ class Blade:
         self.sparcapoffset_hp = interpolator_wrap(x0, self.sparcapoffset_hp, self.ispan)
         self.sparcapoffset_lp = interpolator_wrap(x0, self.sparcapoffset_lp, self.ispan)
 
-        self.updateBlade()
+        self.update_blade()
         return insertIndex
 
-    def addStation(self, af=None, spanlocation: float = None):
+    def add_station(self, af=None, spanlocation: float = None):
         """This method adds a station
 
         Specifically, the station object is created
@@ -1401,36 +1397,23 @@ class Blade:
 
         Example
         -------
-        ``blade.addStation(af,spanlocation)`` where  ``af`` = airfoil filename
+        ``blade.add_station(af,spanlocation)`` where  ``af`` = airfoil filename
         or ``AirfoilDef`` object
         """
-        newStation = Station(af)
-        newStation.spanlocation = spanlocation
-        newStation.parent = self
-        if self.stations:
-            self.stations.append(newStation)
-        else:
-            self.stations = []
-            self.stations.append(newStation)
+        new_station = Station(af)
+        new_station.spanlocation = spanlocation
+        new_station.parent = self
+        self.stations.append(new_station)
 
-        # N = np.asarray(self.stations).size
-        # k = N + 1
-        # if k > 1:
-        #     self.stations[k] = StationDef(af)
-        # else:
-        #     self.stations = StationDef(af)
-
-        # self.stations[k].spanlocation = spanlocation
-        # self.stations[k].parent = self
         return self
 
-    # Supporting function for updateBOM
-    def findLayerExtents(self, layerDist=None, layerN=None):
+    # Supporting function for update_bom
+    def find_layer_extents(self, layer_dist=None, layer_n=None):
         """
         TODO docstring
         """
-        assert np.isscalar(layerN), 'second argument "layerN" must be a scalar'
-        staLogical = layerDist >= layerN
+        assert np.isscalar(layer_n), 'second argument "layerN" must be a scalar'
+        staLogical = layer_dist >= layer_n
         prev = 0
         beginSta = []
         endSta = []
@@ -1445,58 +1428,7 @@ class Blade:
 
         return beginSta, endSta
 
-    # Supporting function for updateBOM
-    def findRegionExtents(self, comp=None):
-        """
-        TODO docstring
-        """
-        le = self.keylabels.index("le")
-        # "keylabels" is expected to wrap from te on hp side around to te on lp side
-        try:
-            if len(comp.hpextents) == 2:
-                try:
-                    hp1 = self.keylabels[0 : le + 1].index(comp.hpextents[0])
-                except KeyError:
-                    print(f'HP extent label "{comp.hpextents[0]}" not defined.')
-                try:
-                    hp2 = self.keylabels[0 : le + 1].index(comp.hpextents[1])
-                except KeyError:
-                    print(f'HP extent label "{comp.hpextents[1]}" not defined.')
-                hpRegion = [hp1, hp2]
-                hpRegion.sort()
-            else:
-                hpRegion = []
-        except TypeError:
-            hpRegion = []
-
-        try:
-            if len(comp.lpextents) == 2:
-                try:
-                    lp1 = self.keylabels[le:].index(comp.lpextents[0]) + le
-                except KeyError:
-                    print(f'HP extent label "{comp.hpextents[0]}" not defined.')
-                try:
-                    lp2 = self.keylabels[le:].index(comp.lpextents[1]) + le
-                except KeyError:
-                    print(f'HP extent label "{comp.hpextents[1]}" not defined.')
-                lpRegion = [lp1, lp2]
-                lpRegion.sort()
-            else:
-                lpRegion = []
-        except:
-            lpRegion = []
-
-        # if length(comp['hpextents'])==1 && length(comp['lpextents'])==1
-        # sw1 = find(1==strcmpi(comp['hpextents']{1},keylabels(1:le)));
-        # assert(~isempty(sw1),'HP extent label "#s" not defined.',comp['hpextents']{1});
-        #  w2 = find(1==strcmpi(comp['lpextents']{1},keylabels(le:end))) + le-1;
-        # assert(~isempty(sw2),'LP extent label "#s" not defined.',comp['lpextents']{1});
-        # swRegion = [sw1 sw2];
-        # else
-        swRegion = []
-        return hpRegion, lpRegion  # ,swRegion
-
-    def getprofileTEtype(self, k: int):
+    def get_profile_te_type(self, k: int):
         """
 
         Parameters
@@ -1508,8 +1440,8 @@ class Blade:
         tetype : str
         """
         xy = self.profiles[:, :, k]
-        unitNormals = getAirfoilNormals(xy)
-        angleChange = getAirfoilNormalsAngleChange(unitNormals)
+        unitNormals = get_airfoil_normals(xy)
+        angleChange = get_airfoil_normals_angle_change(unitNormals)
         disconts = np.flatnonzero(angleChange > 30)
 
         if np.std(angleChange) < 2:
@@ -1520,13 +1452,13 @@ class Blade:
             tetype = "sharp"
         return tetype
 
-    def expandBladeGeometryTEs(self, minimumTEedgelengths):
+    def expand_blade_geometry_te(self, minimumTEedgelengths):
         """
         TODO: docstring
         """
         nStations = self.geometry.shape[2]
 
-        for iStation in range(0, nStations):
+        for iStation in range(nStations):
             firstPoint = self.ichord[iStation] * self.profiles[-2, :, iStation]
             secondPont = self.ichord[iStation] * self.profiles[1, :, iStation]
             edgeLength = np.linalg.norm(secondPont - firstPoint)
@@ -1561,46 +1493,37 @@ class Blade:
                 airFoilThickness = airFoilThickness + temod
 
                 self.ithickness[:, iStation] = airFoilThickness / tratio
-                self.updateAirfoilProfile(iStation)
+                self.update_airfoil_profile(iStation)
 
                 mtindex = np.argmax(self.ithickness[:, iStation])
                 self.xoffset[0, iStation] = self.ic[mtindex, iStation]
-                self.updateOMLgeometry(iStation)
+                self.update_oml_geometry(iStation)
                 # firstPoint=self.ichord(iStation)*self.profiles(end-1,:,iStation);
                 # secondPont=self.ichord(iStation)*self.profiles(2,:,iStation);
                 # edgeLength2=norm(secondPont-firstPoint);
                 # fprintf('station #i, edgeLength: #f, New edgeLength=#f, percent diff: #f\n',iStation,edgeLength*1000,edgeLength2*1000,(edgeLength2-edgeLength)/edgeLength2*100)
 
-        self.updateKeypoints()
+        self.update_keypoints()
         return
 
     ### Shell
 
-    def copyPly(self, ply):
-        newPly = Ply()
-        newPly.component = ply.component
-        newPly.materialid = ply.materialid
-        newPly.thickness = ply.thickness
-        newPly.angle = ply.angle
-        newPly.nPlies = ply.nPlies
-        return newPly
-
-    def editStacksForSolidMesh(self):
+    def edit_stacks_for_solid_mesh(self):
         numSec, numStat = self.stacks.shape
         for i in range(numSec):
             for j in range(numStat):
                 pg = self.stacks[i, j].plygroups
                 if len(pg) == 4:
-                    ply1 = self.copyPly(pg[1])
-                    ply2 = self.copyPly(pg[2])
-                    ply3 = self.copyPly(pg[3])
+                    ply1 = deepcopy(pg[1])
+                    ply2 = deepcopy(pg[2])
+                    ply3 = deepcopy(pg[3])
                     newPg = np.array([ply1, ply2, ply3])
                 else:
                     if len(pg) == 3:
                         # newPg = np.array([pg[1],pg[1],pg[2]])
-                        ply1 = self.copyPly(pg[1])
-                        ply2 = self.copyPly(pg[1])
-                        ply3 = self.copyPly(pg[2])
+                        ply1 = deepcopy(pg[1])
+                        ply2 = deepcopy(pg[1])
+                        ply3 = deepcopy(pg[2])
                         t2 = ply1.thickness
                         t3 = ply3.thickness
                         ply2.thickness = 0.3333333 * (t2 + t3)
@@ -1609,9 +1532,9 @@ class Blade:
                         newPg = np.array([ply1, ply2, ply3])
                     else:
                         if len(pg) == 2:
-                            ply1 = self.copyPly(pg[0])
-                            ply2 = self.copyPly(pg[0])
-                            ply3 = self.copyPly(pg[1])
+                            ply1 = deepcopy(pg[0])
+                            ply2 = deepcopy(pg[0])
+                            ply3 = deepcopy(pg[1])
                             # newPg = np.array([pg[0],pg[0],pg[1]])
                             t1 = ply1.thickness
                             t2 = ply3.thickness
@@ -1620,9 +1543,9 @@ class Blade:
                             ply3.thickness = 0.6666666 * t2
                             newPg = np.array([ply1, ply2, ply3])
                         else:
-                            ply1 = self.copyPly(pg[0])
-                            ply2 = self.copyPly(pg[0])
-                            ply3 = self.copyPly(pg[0])
+                            ply1 = deepcopy(pg[0])
+                            ply2 = deepcopy(pg[0])
+                            ply3 = deepcopy(pg[0])
                             # newPg = np.array([pg[0],pg[0],pg[0]])
                             t1 = ply1.thickness
                             ply2.thickness = 0.3333333 * t1
@@ -1636,9 +1559,9 @@ class Blade:
             for j in range(len(stackLst)):
                 pg = stackLst[j].plygroups
                 if len(pg) == 2:
-                    ply1 = self.copyPly(pg[0])
-                    ply2 = self.copyPly(pg[0])
-                    ply3 = self.copyPly(pg[1])
+                    ply1 = deepcopy(pg[0])
+                    ply2 = deepcopy(pg[0])
+                    ply3 = deepcopy(pg[1])
                     # newPg = np.array([pg[0],pg[0],pg[1]])
                     t1 = ply1.thickness
                     t2 = ply3.thickness
@@ -1648,9 +1571,9 @@ class Blade:
                     newPg = np.array([ply1, ply2, ply3])
                     self.swstacks[i][j].plygroups = newPg
                 elif len(pg) == 1:
-                    ply1 = self.copyPly(pg[0])
-                    ply2 = self.copyPly(pg[0])
-                    ply3 = self.copyPly(pg[0])
+                    ply1 = deepcopy(pg[0])
+                    ply2 = deepcopy(pg[0])
+                    ply3 = deepcopy(pg[0])
                     # newPg = np.array([pg[0],pg[0],pg[0]])
                     t1 = ply1.thickness
                     ply2.thickness = 0.3333333 * t1
@@ -1659,383 +1582,3 @@ class Blade:
                     newPg = np.array([ply1, ply2, ply3])
                     self.swstacks[i][j].plygroups = newPg
         return
-
-    """
-    #NOTE need team help here -kb
-    # not converted
-    def generateBeamModel(self): 
-        #This method generates blade sectional properties used for
-        #aeroelastic analyses
-        #TODO extend docstring
-        
-        
-        global precompPath
-        global bmodesPath
-        parID = gcp('nocreate')
-        if not len(parID)==0 :
-            batchRun = True
-        else:
-            batchRun = False
-        
-        # NOTES: ******************************************************
-        # 1. FIXED -- needs to read MatDBsi.txt file, store this
-        # internally (blade.matdb)
-        # 2. FIX -- the code creates files prepmat -- why? is this
-        # needed elsewhere?
-        # 3. using blade.profiles instead of data.station(ii).coords
-        # 4. FIX -- web data not saved in same format as NuMAD
-        # (data.shearweb structure in NuMAD)
-        # *************************************************************
-            
-        # ble: <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # code from BladeDef_to_NuMADfile and NuMAD2PreComp files
-        # need to add material properties for end station
-        if self.stacks.shape[2-1] < len(self.ispan):
-            for ii in np.arange(1,self.stacks.shape[1-1]+1).reshape(-1):
-                self.stacks(ii,len(self.ispan)).name = '**UNSPECIFIED**'
-        
-        # original code from NuMAD files ended ------------------------
-        # ble: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        
-        # create precomp input files
-        precomp = Blade2PreComp(self,self.matdb)
-        # run precomp
-        PreComp_SectionData = runPreCompAnalysis(precomp,precompPath,batchRun)
-        # Use BModes to calculate mode shapes based on section properties from PreComp
-        bmodesFrequencies = BModes4Blade2PreComp2FASTBlade(self,bmodesPath,PreComp_SectionData.data)
-        # fit polynomials to the modes
-        if batchRun:
-            modeShapes = polyfitmodes(np.array([1,3,2]))
-        else:
-            modeShapes = polyfitmodes
-        
-        # Generate FAST Blade file from this analysis
-        warnings.warn('need PresweepRef and PrecurveRef variables from NuMAD')
-        PreComp2FASTBlade_BladeDef(self,PreComp_SectionData.data,modeShapes,batchRun)
-        print('FAST Blade file has been written: FASTBlade_precomp.dat')
-        # Input file cleanup
-        if batchRun:
-            qu = 'Yes'
-        else:
-            qu = questdlg('Delete all miscellaneous input/output files?','File Cleanup...','Yes','No','No')
-        
-        # switch qu
-    #     case 'Yes'
-    #         delete('*.pci')
-    #         delete('*.inp')
-    #         delete PrepMat.txt
-    #         delete bmodes*.bmi
-    #         delete blade_sec_props.dat
-    #         delete bmodes*.echo
-    #     case 'No'
-    # end
-    # above lines caused problems with ML2PY
-        
-        # Estimate the flexural bending distance
-        warnings.warn('this code is not correct -- should be based on distance to neutral axis, not purely geometry')
-        make_c_array_BladeDef(self)
-        return bmodesFrequencies
-
-    def generateFEA(self): 
-        # This method generates FEA
-        
-        # 1. check that functionality from original code is not needed
-        # 2. FIXED -- shell7 needs to read MatDBsi.txt file, store this
-        # internally if the file isn't used elsewhere (blade.matdb)
-        # 3. FIX -- in shell7 file, need to define PrecurveRef and
-        # PresweepRef (currently set to zero)
-        # 4. FIX -- web data not saved in same format as NuMAD
-        # (data.shearweb structure in NuMAD)
-        
-        # NOTE:can add flags into the call -- e.g., element type, ...
-        global ansysPath
-        # define ANSYS model settings (can be options in generateFEA)
-        config.ansys.BoundaryCondition = 'cantilered'
-        config.ansys.ElementSystem = '181'
-        config.ansys.MultipleLayerBehavior = 'distinct'
-        config.ansys.meshing = 'elementsize'
-        config.ansys.smartsize = 5
-        config.ansys.elementsize = 0.2026
-        config.ansys.shell7gen = 1
-        config.ansys.dbgen = 1
-        fcopts = np.array(['EMAX','SMAX','TWSI','TWSR','HFIB','HMAT','PFIB','PMAT','L3FB','L3MT','L4FB','L4MT','USR1','USR2','USR3','USR4','USR5','USR6','USR7','USR8','USR9'])
-        config.ansys.FailureCriteria = cell(np.asarray(fcopts).size,2)
-        config.ansys.FailureCriteria[:,1] = np.transpose(fcopts)
-        config.ansys.FailureCriteria[:,2] = deal(np.array([False]))
-        # Generate a mesh using shell elements -- can add options here
-        shell7_name = 'shell7.src'
-        ansys_product = 'ANSYS'
-        self.paths.job = pwd
-        
-        filename = fullfile(self.paths.job,shell7_name)
-        develop__write_shell7(self,filename)
-        if self.ansys.dbgen:
-            if len(ansysPath)==0:
-                errordlg('Path to ANSYS not specified. Aborting.','Operation Not Permitted')
-                return
-            try:
-                #tcl: exec "$ANSYS_path" -b -p $AnsysProductVariable -I shell7.src -o output.txt
-                ansys_call = sprintf('"#s" -b -p #s -I #s -o output.txt',ansysPath,ansys_product,shell7_name)
-                status,result = dos(ansys_call)
-                if status==0:
-                    # dos command completed successfully; log written to output.txt
-                    if 1:
-                        print('ANSYS batch run to generate database (.db) has completed. See "output.txt" for any warnings.')
-                    else:
-                        helpdlg('ANSYS batch run to generate database (.db) has completed. See "output.txt" for any warnings.','ANSYS Call Completed')
-                if status==7:
-                    # an error has occured which is stored in output.txt
-                    if 1:
-                        print('Could not complete ANSYS call. See "output.txt" for details.')
-                    else:
-                        warndlg('Could not complete ANSYS call. See "output.txt" for details.','Error: ANSYS Call')
-            finally:
-                pass
-        
-        return
-        
-    #NOTE ask team about this
-    # ignore for now...
-    def writeBOMxls(self,file = None): 
-        # This method writes the bill-of-materials out to a spreadsheet.
-        
-        # Example:
-        
-        #   ``bladeDef.writeBOMxls('bom.xlsx')``
-        
-        m_to_mm = 1000.0
-        if os.path.exist(str('BOM_template.xlsx')):
-            copyfile('BOM_template.xlsx',file)
-        
-        header = np.array([['Layer #','Material ID','Component','Begin Station','End Station','Max width','Mean width','3D area','Layer Thickness','Computed layer weight'],['','','','(m)','(m)','(m)','(m)','(m^2)','(mm)','(g)']])
-        # LP skin table
-        array_ = np.array([[header],[self.bom['lp']]])
-        xlswrite(file,array_,'LP skin')
-        # HP skin table
-        array_ = np.array([[header],[self.bom['hp']]])
-        xlswrite(file,array_,'HP skin')
-        # shear web table
-        array_ = np.array([np.array([['SW #'],['']]),header])
-        
-        for k in np.arange(1,np.asarray(self.bom.sw).size+1).reshape(-1):
-            nr = self.bom.sw[k].shape[1-1]
-            array_ = np.array([[array_],[np.array([np.matlib.repmat(np.array([k]),nr,1),self.bom.sw[k]])]])
-        
-        xlswrite(file,array_,'shear webs')
-        # bond line lengths
-        array_ = np.array([['','Length'],['','(mm)'],['Root diameter',self.ichord(1) * m_to_mm],['LE bond',np.round(self.bom.lebond)],['TE bond',np.round(self.bom.tebond)]])
-        for r in np.arange(1,2+1).reshape(-1):
-            for k in np.arange(1,np.asarray(self.bom.swbonds).size+1).reshape(-1):
-                surfs = np.array(['HP','LP'])
-                str = sprintf('#s bond, SW #d',surfs[r],k)
-                cellrow = np.array([str,np.round(self.bom.swbonds[k](r))])
-                array_ = np.array([[array_],[cellrow]])
-        
-        xlswrite(file,array_,'lengths')
-        return
-        
-     
-    def writePlot3D(self,file = None,breakpoints = None):
-        #NOTE ask team about this
-        # ignore for now  
-
-        # Write the current blade geometry in Plot3D format.
-        # breakpoints is a list of chord fractions at which the
-        # surface geometry is divided into blocks
-        
-        # Examples:
-        
-        #   ``BladeDef.writePlot3D(filename,[breakpoints])``
-        
-        #   ``BladeDef.writePlot3D('file.p3d',[-.3, .3]);``
-        
-        if not ('breakpoints' is not None) :
-            breakpoints = []
-        
-        indicesOfBreakpoints = np.zeros((1,np.asarray(breakpoints).size))
-        # get the chordwise spacing of points, assuming identical
-        # spacing for all stations
-        chordspacing = self.cpos[:,1]
-        for kBreakpoint in np.arange(1,np.asarray(breakpoints).size+1).reshape(-1):
-            bp = breakpoints(kBreakpoint)
-            __,ind = np.amin(np.sqrt((chordspacing - bp) ** 2))
-            indicesOfBreakpoints[kBreakpoint] = ind
-        
-        N,M = self.cpos.shape
-        INCLUDE_REPEATS = False
-        if INCLUDE_REPEATS:
-            indicesOfBreakpoints = unique(np.array([1,indicesOfBreakpoints,N]))
-        else:
-            indicesOfBreakpoints = unique(np.array([2,indicesOfBreakpoints,N - 1]))
-        
-        fid = open(file,'wt')
-        
-        if (fid == - 1):
-            raise Exception('Could not open file "#s"',file)
-        
-        # output the data in Plot3d format
-        #TODO
-        # try:
-        #     nBlocks = np.asarray(indicesOfBreakpoints).size - 1
-        #     fid.write('#d\n' # (nBlocks))
-        #     for kblock in np.arange(1,nBlocks+1).reshape(-1):
-        #         a = indicesOfBreakpoints(kblock)
-        #         b = indicesOfBreakpoints(kblock + 1)
-        #         fid.write('#d  #d  #d\n' # (1 + b - a,M,1))
-        #     columnsPerLine = 5
-        #     for kblock in np.arange(1,nBlocks+1).reshape(-1):
-        #         a = indicesOfBreakpoints(kblock)
-        #         b = indicesOfBreakpoints(kblock + 1)
-        #         self.fprintf_matrix(fid,self.geometry(np.arange(a,b+1),1,:),columnsPerLine)
-        #         self.fprintf_matrix(fid,self.geometry(np.arange(a,b+1),2,:),columnsPerLine)
-        #         self.fprintf_matrix(fid,self.geometry(np.arange(a,b+1),3,:),columnsPerLine)
-        # finally:
-        #     pass
-        
-        # fid.close()
-        # return
-    
-    def fprintf_matrix(self,fid = None,matrixData = None,columnsPerLine = None): 
-        kColumn = 1
-        for kData in np.arange(1,np.asarray(matrixData).size+1).reshape(-1):
-            fid.write('%g ', (matrixData(kData)))
-            kColumn = kColumn + 1
-            if kColumn > columnsPerLine:
-                fid.write('\n')
-                kColumn = 1
-        
-        return
-    def downsampleProfile(self,k = None,n_points = None): 
-        #NOTE doesn't seem to be relevant
-        # ignoring for now -kb
-        # ble: can this be deleted?? Doesn't precisely control the
-        # number of points. replace with resampleAirfoil_ble
-        # currently used by BladeDef_to_NuMADfile and develop__write_shell7
-        N = self.profiles.shape[1-1]
-        assert (np.isscalar(k),'Profile index "k" must be scalar')
-        assert (n_points < N,'n_points must be less than length of profile')
-        dk = np.round((N - 2) / n_points)
-        LE = self.LEindex
-        tetype = self.getprofileTEtype(k)
-        if 'flat' == tetype[0]:
-            ind = unique(np.array([1,np.arange(2,LE+dk,dk),LE,fliplr(np.arange(N - 1,LE+- dk,- dk))]))
-        else:
-            if np.array(['sharp','round']) == tetype[0]:
-                ind = unique(np.array([np.arange(2,LE+dk,dk),LE,fliplr(np.arange(N - 2,LE+- dk,- dk))]))
-        
-        coords = self.profiles[ind,:,k]
-        return coords
-
-        
-    #     function delete(self)
-    #     try ##ok<TRYNC>
-    #         delete(self.bomPlot.hgLinesHP);
-    #         delete(self.bomPlot.hgLinesLP);
-    #         delete(self.bomPlot.hgPatchHP);
-    #         delete(self.bomPlot.hgPatchLP);
-    #         delete(self.bomPlot.uisliderHP);
-    # #                 delete(self.bomPlot.uisliderLP);
-    #         delete(self.bomPlot.hTitleHP);
-    #         delete(self.bomPlot.hTitleLP);
-    #     end
-    # end
-        
-    
-    def surf(self):
-        #NOTE not used
-        #ignoring for now -kb
-        h = surf(np.squeeze(self.geometry[:,3,:]),np.squeeze(self.geometry[:,1,:]),np.squeeze(self.geometry[:,2,:]),'MeshStyle','column')
-        if nargout > 0:
-            varargout = np.array([h])
-        
-        return varargout
-        
-
-    # Ignoring all plot stuff for now  
-    def plotregions(self): 
-        # try ##ok<TRYNC>
-    #     delete(self.hgKeypoints)
-    # end
-    # COMMENTED FOR ML2PY PROBLEMS
-        M = self.keypoints.shape[1-1]
-        for km in np.arange(1,M+1).reshape(-1):
-            self.hgKeypoints[km] = line(np.squeeze(self.keypoints[km,3,:]),np.squeeze(self.keypoints[km,1,:]),np.squeeze(self.keypoints[km,2,:]))
-        
-        return
-        
-        # 
-    def plotgeom(self): 
-        # try ##ok<TRYNC>
-    #     delete(self.hgGeometry)
-    # COMMENTED FOR ML2PY PROBLEMS
-    # end
-        N = self.geometry.shape[3-1]
-        for k in np.arange(1,N+1).reshape(-1):
-            self.hgGeometry[k] = line(self.geometry[:,3,k],self.geometry[:,1,k],self.geometry[:,2,k])
-        # 
-        return
-        # 
-        # 
-    def plotbom(self,k = None): 
-        if not ('k' is not None)  or len(k)==0:
-            k = 1
-        # 
-        if k=='cb':
-            k = np.rint(get(self.bomPlot.uisliderHP,'Value'))
-        # 
-        if len(self.bomPlot.hgLinesHP)==0 or not np.all(ishandle(self.bomPlot.hgLinesHP)) :
-            clf
-            self.bomPlot.axHP = axes('Position',np.array([0.1,0.6,0.8,0.3]))
-            self.bomPlot.hgLinesHP = plt.plot(self.ispan,self.keyarcs(1,:) - self.HParcx0,'k-.',self.ispan,self.keyarcs(7,:) - self.HParcx0,'k-.')
-            self.bomPlot.hTitleHP = plt.title('','Interpreter','none')
-            self.bomPlot.axLP = axes('Position',np.array([0.1,0.2,0.8,0.3]))
-            self.bomPlot.hgLinesLP = plt.plot(self.ispan,self.keyarcs(13,:) - self.LParcx0,'k-.',self.ispan,self.keyarcs(7,:) - self.LParcx0,'k-.')
-            self.bomPlot.hTitleLP = plt.title('','Interpreter','none')
-            n = self.bom['hp'].shape[1-1]
-            self.bomPlot.uisliderHP = uicontrol('Style','slider','Min',1,'Max',n,'Value',1,'SliderStep',np.array([1 / (n - 1),10 / (n - 1)]),'Units','normalized','Position',np.array([0.02,0.02,0.96,0.04]),'Callback',lambda src = None,evt = None: self.plotbom('cb'))
-            #             self.bomPlot.uisliderLP = uicontrol('Style','slider',...
-    #                 'Min',1,'Max',n,'Value',1,'SliderStep',[1/(n-1) 10/(n-1)],...
-    #                 'Units','normalized','Position',[.02 .02 .96 .04],...
-    #                 'Callback',@(src,evt) self.plotbom('cb'));
-        # 
-        k = np.amin(k,self.bom['hp'].shape[1-1])
-        self.bomPlot.kLayer = k
-        set(self.bomPlot.uisliderHP,'Value',k)
-        str = sprintf('HP Layer #d: #s',k,self.bom['hp'][k,3])
-        set(self.bomPlot.hTitleHP,'String',str)
-        str = sprintf('LP Layer #d: #s',k,self.bom['lp'][k,3])
-        set(self.bomPlot.hTitleLP,'String',str)
-        hp = self.bomIndices.hp(k,:)
-        x = self.ispan(np.arange(hp(1),hp(2)+1))
-        y1 = self.keyarcs(hp(3),np.arange(hp(1),hp(2)+1)) - self.HParcx0(np.arange(hp(1),hp(2)+1))
-        y2 = self.keyarcs(hp(4),np.arange(hp(1),hp(2)+1)) - self.HParcx0(np.arange(hp(1),hp(2)+1))
-        if ishandle(self.bomPlot.hgPatchHP):
-            os.delete(self.bomPlot.hgPatchHP)
-        # 
-        axes(self.bomPlot.axHP)
-        self.bomPlot.hgPatchHP = patch(np.array([x,fliplr(x)]),np.array([y1,fliplr(y2)]),'b')
-        lp = self.bomIndices.lp(k,:)
-        x = self.ispan(np.arange(lp(1),lp(2)+1))
-        y1 = self.keyarcs(lp(3),np.arange(lp(1),lp(2)+1)) - self.LParcx0(np.arange(lp(1),lp(2)+1))
-        y2 = self.keyarcs(lp(4),np.arange(lp(1),lp(2)+1)) - self.LParcx0(np.arange(lp(1),lp(2)+1))
-        if ishandle(self.bomPlot.hgPatchLP):
-            os.delete(self.bomPlot.hgPatchLP)
-        # 
-        axes(self.bomPlot.axLP)
-        self.bomPlot.hgPatchLP = patch(np.array([x,fliplr(x)]),np.array([y1,fliplr(y2)]),'b')
-        return
-        
-        
-    def plotprofile(self,k = None): 
-        # This method plots profiles
-        
-        # Examples:
-        
-        #   ``blade.plotprofile(1);``
-        
-        #   ``blade.plotprofile(1:N);``
-        
-        # plt.plot(np.squeeze(self.profiles(:,1,k)),np.squeeze(self.profiles(:,2,k)),'.-')
-        return
-    
-    """

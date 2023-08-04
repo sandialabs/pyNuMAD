@@ -1,17 +1,14 @@
 import unittest
-from os.path import abspath, dirname, join
-from pynumad.analysis.ansys.write import writeAnsysShellModel
+import os
 from pynumad.shell.shell import getShellMesh
-from pynumad.objects.Blade import Blade
-from pynumad.paths import DATA_PATH
+from pynumad.objects.blade import Blade
 
-test_data_dir = DATA_PATH
-
+test_data_dir = os.path.join(os.path.dirname(__file__), 'test_data')
 
 class TestMesh(unittest.TestCase):
     @classmethod
-    def setUpClass(self):
-        self.yamlfile = join(test_data_dir, "blade_yamls", "myBlade_modified.yaml")
+    def setUpClass(cls):
+        cls.yamlfile = os.path.join(test_data_dir, "blades", "blade.yaml")
 
     def test_mesh(self):
         blade = Blade(self.yamlfile)

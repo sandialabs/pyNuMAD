@@ -736,7 +736,7 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
 
 def getSolidMesh(blade, layerNumEls, elementSize):
     ## Edit stacks to be usable for 3D solid mesh
-    blade.editStacksForSolidMesh()
+    blade.edit_stacks_for_solid_mesh()
     ## Create shell mesh as seed
     ## Note the new output structure of shellMeshGeneral, as a single python dictionary  -E Anderson
     shellMesh = shellMeshGeneral(blade, 1, 1, elementSize)
