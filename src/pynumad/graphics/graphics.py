@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from pynumad.utils.interpolation import interpolator_wrap
 
 
 def plot_airfoil(airfoil):
@@ -45,6 +46,20 @@ def plot_profile(blade, k):
         blade.profiles[:,0,k],
         blade.profiles[:,1,k],
         '.-')
+    fig.show()
+    return ax
+
+def plot_component(component):
+    """
+    TODO docstring
+    """
+    fig, ax = plt.subplots()
+    cpx, cpy = component.getcp()
+    ax.plot(cpx, cpy)
+    x = np.linspace(0, 1, 100)
+    y = np.round(interpolator_wrap(cpx, cpy, x, "pchip", 0))
+    ax.plot(x, y)
+    plt.title(component.name)
     fig.show()
     return ax
 
