@@ -1,5 +1,5 @@
-from pynumad.analysis.cubit.cubitUtils import *
-from pynumad.analysis.cubit.solidModelUtils import *
+from pynumad.analysis.cubit.utils import *
+from pynumad.analysis.cubit.solid_model_utils import *
 from pynumad.utils.orientations import *
 import numpy as np
 import os
@@ -8,7 +8,7 @@ import pickle
 
 
 
-def generateCubitCrossSections(blade, wt_name, settings, crosssectionParams, model2Dor3D, stationList=None, directory='.'):
+def cubit_make_cross_sections(blade, wt_name, settings, crosssectionParams, model2Dor3D, stationList=None, directory='.'):
 
     if stationList is None or len(stationList)==0:
         stationList = list(range(len(blade.ispan)))
@@ -60,7 +60,7 @@ def generateCubitCrossSections(blade, wt_name, settings, crosssectionParams, mod
     lastRoundStation = roundStations[-1]
 
 
-    with open('cubitBlade.log', 'w') as logFile:
+    with open('make_blade.log', 'w') as logFile:
         logFile.write(f'Making cross sections for {wt_name}\n')
 
 
@@ -209,14 +209,14 @@ def generateCubitCrossSections(blade, wt_name, settings, crosssectionParams, mod
     return cubit, blade, surfaceDict, birdsMouthVerts, iStationFirstWeb, iStationLastWeb, materialsUsed, spanwiseMatOriCurve
 
 
-def generateCubitSolidModel(blade, wt_name, settings, crosssectionParams, stationList=None):
+def cubit_make_solid_blade(blade, wt_name, settings, crosssectionParams, stationList=None):
 
     if stationList is None or len(stationList)==0:
         stationList = list(range(len(blade.ispan)))
     elif len(stationList)==1:
         raise ValueError('Need more that one cross section to make a solid model')
 
-    cubit, blade, surfaceDict, birdsMouthVerts, iStationFirstWeb, iStationLastWeb, materialsUsed, spanwiseMatOriCurve = generateCubitCrossSections(
+    cubit, blade, surfaceDict, birdsMouthVerts, iStationFirstWeb, iStationLastWeb, materialsUsed, spanwiseMatOriCurve = cubit_make_cross_sections(
         blade, wt_name, settings, crosssectionParams, '3D', stationList)
 
     iStationStart = stationList[0]

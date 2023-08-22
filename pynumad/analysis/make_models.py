@@ -6,8 +6,8 @@ import numpy as np
 from pynumad.utils.misc_utils import copy_and_replace
 
 
-def writeBeamModel(wt_name,settings,blade,mu,log,directory='.'):
-    import pynumad.analysis.beamUtils as beamUtils
+def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
+    import pynumad.analysis.beam_utils as beam_utils
 
 #     #Runs VABS or OpenSG to homogenize
 #     #Makes beamDyn or GEBT files
@@ -86,19 +86,19 @@ def writeBeamModel(wt_name,settings,blade,mu,log,directory='.'):
         iStation=int(fileName.split('-')[-3].split('.')[0])
         print(f'fileName {fileName} iStation {iStation}')
 
-        beam_stiff[iStation,:,:],beam_inertia[iStation,:,:]=beamUtils.readVABShomogenization(fileName)
+        beam_stiff[iStation,:,:],beam_inertia[iStation,:,:]=beam_utils.readVABShomogenization(fileName)
     
 
     if 'beamdyn' in settings['beamSolver'].lower():
-        beam_stiff,beam_inertia=beamUtils.transformMatrixToBeamDyn(beam_stiff,beam_inertia)
-        axisFileName=beamUtils.write_beamdyn_axis(directory, wt_name, blade,radial_stations)
-        propFileName=beamUtils.write_beamdyn_prop(directory, wt_name, radial_stations, beam_stiff, beam_inertia, mu)
+        beam_stiff,beam_inertia=beam_utils.transformMatrixToBeamDyn(beam_stiff,beam_inertia)
+        axisFileName=beam_utils.write_beamdyn_axis(directory, wt_name, blade,radial_stations)
+        propFileName=beam_utils.write_beamdyn_prop(directory, wt_name, radial_stations, beam_stiff, beam_inertia, mu)
     return [axisFileName,propFileName]
 
 
 
-def writeSierraModel(wt_name,settings,blade,materialsUsed,directory='.'):
-   # import pynumad.analysis.beamUtils as beamUtils
+def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
+   # import pynumad.analysis.beam_utils as beam_utils
 
 #     #Runs VABS or OpenSG to homogenize
 #     #Makes beamDyn or GEBT files

@@ -544,7 +544,7 @@ def makeCrossSectionLayerAreas_perimeter(surfaceDict,iStation,stationStacks,para
     lastPerimeter=nStationLayups-2
 
     for iPerimeter in range(nStationLayups-1): #Skip the last stack since the current and the next stack are generated at the same time.
-        with open('cubitBlade.log', 'a') as logFile:
+        with open('make_blade.log', 'a') as logFile:
             logFile.write(f'\tlpHpside {lpHpside}, iPerimeter={iPerimeter}\n')
 
         currentStack = stationStacks[iPerimeter]
@@ -1056,7 +1056,7 @@ def makeCrossSectionLayerAreas_web(surfaceDict,iStation,aftWebStack,foreWebStack
 
 def writeCubitCrossSection(surfaceDict,iStation,iStationGeometry,blade,hasWebs,aftWebStack,foreWebStack,iLE,crosssectionParams,geometryScaling,thicknessScaling,isFlatback,lastRoundStation,materialsUsed,crossSectionNormal):
    
-    with open('cubitBlade.log', 'a') as logFile:
+    with open('make_blade.log', 'a') as logFile:
         logFile.write(f'Working on Station: {iStation}\n')
 
     partNameID=0

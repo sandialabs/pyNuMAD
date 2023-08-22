@@ -1,6 +1,6 @@
 from cubit import *
 from PyCubed_Main import * 
-from pynumad.analysis.cubit.cubitUtils import printSineCurveBetweenTwoVerts
+from pynumad.analysis.cubit.utils import printSineCurveBetweenTwoVerts
 import numpy as np
 import re
 
