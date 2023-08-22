@@ -3,6 +3,7 @@ import subprocess
 #import os
 import glob
 import numpy as np
+from pynumad.utils.misc_utils import copy_and_replace
 
 
 def writeBeamModel(wt_name,settings,blade,mu,log,directory='.'):
@@ -93,3 +94,113 @@ def writeBeamModel(wt_name,settings,blade,mu,log,directory='.'):
         axisFileName=beamUtils.write_beamdyn_axis(directory, wt_name, blade,radial_stations)
         propFileName=beamUtils.write_beamdyn_prop(directory, wt_name, radial_stations, beam_stiff, beam_inertia, mu)
     return [axisFileName,propFileName]
+
+
+
+def writeSierraModel(wt_name,settings,blade,materialsUsed,directory='.'):
+   # import pynumad.analysis.beamUtils as beamUtils
+
+#     #Runs VABS or OpenSG to homogenize
+#     #Makes beamDyn or GEBT files
+
+
+
+    # radial_stations=blade.ispan/blade.ispan[-1]
+    # nStations=len(radial_stations)
+    # #Run input files
+
+    if 'sm' in settings['solver'].lower():
+
+        templateFileName='sm.i.template'
+        adagioFileName='sm.i'
+
+        materialLines=f''
+        blockLines=f''
+        for materialName in materialsUsed:
+            material=blade.materials[materialName]
+            print(material.name)
+            materialLines+=f'begin property specification for material {material.name}\n'
+            materialLines+=f'   DENSITY      = {material.density}\n'
+            materialLines+='    begin parameters for model elastic_orthotropic\n'
+            materialLines+='        youngs modulus = 70e9\n'
+            materialLines+='        poissons ratio  = 0.33\n'
+            materialLines+=f'        E11          = {material.ex}\n'
+            materialLines+=f'        E22          = {material.ey}\n'
+            materialLines+=f'        E33          = {material.ez}\n'
+            materialLines+=f'        NU12         = {material.prxy}\n'
+            materialLines+=f'        NU13         = {material.prxz}\n'
+            materialLines+=f'        NU23         = {material.pryz}\n'
+            materialLines+=f'        G12          = {material.gxy}\n'
+            materialLines+=f'        G13          = {material.gxz}\n'
+            materialLines+=f'        G23          = {material.gyz}\n'
+
+
+            
+            materialLines+='\n' 
+            materialLines+='        # Coordinate system\n'
+            materialLines+='        COORDINATE SYSTEM = sysR\n' 
+            materialLines+='    end parameters for model elastic_orthotropic\n' 
+            materialLines+=f'end property specification for material {material.name}\n' 
+            materialLines+='\n\n' 
+            
+
+            blockLines+=f'begin parameters for block {material.name}\n'
+            blockLines+=f'    material {material.name}\n'
+            blockLines+=f'    solid mechanics use model elastic_orthotropic\n'
+            blockLines+=f'end parameters for block {material.name}\n'
+            blockLines+='\n\n' 
+            
+
+
+        copy_and_replace(templateFileName, adagioFileName,
+            {
+                'BLADE_MATERIALS': materialLines,
+                'WT_NAME':wt_name+'.g',
+                'BLADE_BLOCKS': blockLines,
+            })
+    if 'sd' in settings['solver'].lower():
+        templateFileName='sd.i.template'
+        adagioFileName='sd.i'
+
+        materialLines=f''
+        blockLines=f''
+        for materialName in materialsUsed:
+            material=blade.materials[materialName]
+            print(material.name)
+            materialLines+=f'material {material.name}\n'
+            materialLines+=f'orthotropic_prop\n'
+            materialLines+=f'    E1          = {material.ex}\n'
+            materialLines+=f'    E2          = {material.ey}\n'
+            materialLines+=f'    E3          = {material.ez}\n'
+            materialLines+=f'    nu12         = {material.prxy}\n'
+            materialLines+=f'    nu23         = {material.pryz}\n'
+            materialLines+=f'    nu13         = {material.prxz}\n'
+            materialLines+=f'    G12          = {material.gxy}\n'
+            materialLines+=f'    G23          = {material.gyz}\n'
+            materialLines+=f'    G13          = {material.gxz}\n'
+            materialLines+=f'    density       = {material.density}\n'
+            materialLines+='\n' 
+
+            materialLines+=f'end \n' 
+            materialLines+='\n\n' 
+            
+
+            blockLines+=f'block {material.name}\n'
+            blockLines+=f'    material {material.name}\n'
+            blockLines+=f'end \n'
+            blockLines+='\n\n' 
+            
+
+
+        copy_and_replace(templateFileName, adagioFileName,
+            {
+                'BLADE_MATERIALS': materialLines,
+                'WT_NAME':wt_name+'.g',
+                'BLADE_BLOCKS': blockLines,
+            })
+
+
+    else:
+        raise ValueError('Unknown solver type')
+
+

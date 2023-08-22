@@ -1,9 +1,11 @@
 from pynumad.analysis.cubit.cubitUtils import *
 from pynumad.analysis.cubit.solidModelUtils import *
-
+from pynumad.utils.orientations import *
 import numpy as np
 import os
 import glob
+import pickle
+
 
 
 def generateCubitCrossSections(blade, wt_name, settings, crosssectionParams, model2Dor3D, stationList=None, directory='.'):
@@ -255,8 +257,9 @@ def generateCubitSolidModel(blade, wt_name, settings, crosssectionParams, statio
     cubit.cmd(f'reset volume all')
 
     cubit.cmd(f'delete surface with Is_Free')
+    cubit.cmd('vol all size 0.2')
     #cubit.cmd(f'curve with name "layerThickness*" interval {crosssectionParams["nelPerLayer"]}')
-    # cubit.cmd('set default autosize on')
+    cubit.cmd('set default autosize on')
     cubit.cmd(f'mesh volume {l2s(meshVolList)}')
     cubit.cmd(f'draw volume {l2s(meshVolList)}')
 
@@ -303,22 +306,24 @@ def generateCubitSolidModel(blade, wt_name, settings, crosssectionParams, statio
 
     parseString = f'in volume with name "*volume*"'
     allVolumeIDs = parse_cubit_list('volume', parseString)
-    psi={}
-    theta={}
-    phi={}
+    theta2={}
+    theta1={}
+    theta3={}
+    directions={}
 
     for iVol, volumeID in enumerate(allVolumeIDs):
-        print(f'iVol {iVol} volumeID {volumeID}')
+        
         surfIDforMatOri, sign = getMatOriSurface(volumeID, spanwiseMatOriCurve)
 
         for iEl, elementID in enumerate(get_volume_hexes(volumeID)):
-
+            
             coords = cubit.get_center_point("hex", elementID)
-
+            if elementID==33:
+                print()
             cubit.create_vertex(coords[0], coords[1], coords[2])
             iVert1 = get_last_id("vertex")
             if surfIDforMatOri:
-                surfaceNormal = list(sign * np.array(get_surface_normal_at_coord(surfIDforMatOri, coords)))
+                surfaceNormal = vectNorm(list(sign * np.array(get_surface_normal_at_coord(surfIDforMatOri, coords))))
 
                 curveLocationForTangent = cubit.curve(spanwiseMatOriCurve).closest_point(coords)
                 x = cubit.curve(spanwiseMatOriCurve).tangent(curveLocationForTangent)[0]
@@ -326,14 +331,39 @@ def generateCubitSolidModel(blade, wt_name, settings, crosssectionParams, statio
                 z = cubit.curve(spanwiseMatOriCurve).tangent(curveLocationForTangent)[2]
                 spanwiseDirection = vectNorm([x, y, z])
 
-                perimeterDirection = crossProd(surfaceNormal, spanwiseDirection)
+                perimeterDirection = vectNorm(crossProd(surfaceNormal, spanwiseDirection))
+
+                #Recalculate to garantee orthogonal system
+                surfaceNormal = crossProd(spanwiseDirection, perimeterDirection)
             else:
                 perimeterDirection = [1, 0, 0]
                 surfaceNormal = [0, 1, 0]
+                spanwiseDirection=[0,0,1]
 
-#             newCoordinateSystemVectors=[spanwiseDirection,perimeterDirection,surfaceNormal]
-# ````````````globalAxisBasisVectors=[[1,0,0],[0,1,0],[0,0,1]]
-#             psi[elementID],theta[elementID],phi[elementID]=getEulerAngles(globalAxisBasisVectors,newCoordinateSystemVectors)
+            newCoordinateSystemVectors=[spanwiseDirection,perimeterDirection,surfaceNormal]
+            globalAxisBasisVectors=[[1,0,0],[0,1,0],[0,0,1]]
+
+            # with open('spanwiseDirection.txt', 'a') as f:
+            #     f.write(f' {spanwiseDirection[0]}, {spanwiseDirection[1]}, {spanwiseDirection[2]};')
+
+            # with open('perimeterDirection.txt', 'a') as f:
+            #     f.write(f' {perimeterDirection[0]}, {perimeterDirection[1]}, {perimeterDirection[2]};')
+            # with open('surfaceNormal.txt', 'a') as f:
+            #     f.write(f' {surfaceNormal[0]}, {surfaceNormal[1]}, {surfaceNormal[2]};')
+
+            # print(f'iEl {iEl} elementID {elementID}')
+            # print(f'spanwiseDirection: {spanwiseDirection}')
+            # print(f'perimeterDirection: {perimeterDirection}')
+            # print(f'surfaceNormal: {surfaceNormal}')
+
+            dcm=getDCM(globalAxisBasisVectors,newCoordinateSystemVectors)
+            directions[elementID]=newCoordinateSystemVectors
+            theta1[elementID],theta2[elementID],theta3[elementID]=dcmToEulerAngles(dcm)
+
+            # with open('theta.txt', 'a') as f:
+            #     f.write(f' {theta2[elementID]}, {theta1[elementID]}, {theta3[elementID]};')
+
+            # print(f'theta2: {theta2[elementID]}, theta1: {theta1[elementID]}, theta3: {theta3[elementID]}')
 
 
             length = 0.1
@@ -349,4 +379,8 @@ def generateCubitSolidModel(blade, wt_name, settings, crosssectionParams, statio
 
         with open('euler', 'wb') as file:
             # A new file will be created
-            pickle.dump(blade, file)
+            pickle.dump((theta1,theta2,theta3), file)
+        with open('directions', 'wb') as file:
+            # A new file will be created
+            pickle.dump(directions, file)
+    return materialsUsed
