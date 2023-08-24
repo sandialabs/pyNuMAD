@@ -93,7 +93,7 @@ class Component:
     def get_num_layers(self, span):
         cpx, cpy = self.getcp()
         return interpolator_wrap(cpx, cpy, span, self.imethod, 0)
-    
+
     def find_region_extents(self):
         """
         TODO docstring
@@ -103,11 +103,11 @@ class Component:
         try:
             if len(self.hpextents) == 2:
                 try:
-                    hp1 = self._keylabels[:le + 1].index(self.hpextents[0])
+                    hp1 = self._keylabels[: le + 1].index(self.hpextents[0])
                 except KeyError:
                     print(f'HP extent label "{self.hpextents[0]}" not defined.')
                 try:
-                    hp2 = self._keylabels[:le + 1].index(self.hpextents[1])
+                    hp2 = self._keylabels[: le + 1].index(self.hpextents[1])
                 except KeyError:
                     print(f'HP extent label "{self.hpextents[1]}" not defined.')
                 hpRegion = [hp1, hp2]
