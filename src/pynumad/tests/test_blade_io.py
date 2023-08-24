@@ -3,7 +3,7 @@ import os
 
 from pynumad.objects.blade import Blade
 
-test_data_dir = os.path.join(os.path.dirname(__file__), 'test_data')
+test_data_dir = os.path.join(os.path.dirname(__file__), "test_data")
 
 
 class TestBladeIO(unittest.TestCase):

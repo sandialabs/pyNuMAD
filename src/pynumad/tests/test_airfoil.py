@@ -2,7 +2,8 @@ import unittest, os
 
 from pynumad.objects.airfoil import Airfoil
 
-test_data_dir = os.path.join(os.path.dirname(__file__), 'test_data')
+test_data_dir = os.path.join(os.path.dirname(__file__), "test_data")
+
 
 class TestAirfoil(unittest.TestCase):
     @classmethod

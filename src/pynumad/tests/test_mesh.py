@@ -3,7 +3,8 @@ import os
 from pynumad.shell.shell import getShellMesh
 from pynumad.objects.blade import Blade
 
-test_data_dir = os.path.join(os.path.dirname(__file__), 'test_data')
+test_data_dir = os.path.join(os.path.dirname(__file__), "test_data")
+
 
 class TestMesh(unittest.TestCase):
     @classmethod
