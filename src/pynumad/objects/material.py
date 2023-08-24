@@ -78,48 +78,52 @@ class Material:
     """
 
     def __init__(self):
-        self.name: str = None  # User selected name of the material
-        self.type: str = None  # Two options: ‘isotropic’ or ‘orthotropic’
-        self.layerthickness: float = None  # Layer thickness [mm]
-        self.ex: float = None  # Longitudinal elastic modulus [Pa]
-        self.ey: float = None  # Transverse elastic modulus [Pa]
-        self.ez: float = None  # Through-the-thickness elastic modulus in the principal material coordinates [Pa]
-        self.gxy: float = None  # In-plane shear modulus [Pa]
-        self.gyz: float = None  # Transverse shear modulus [Pa]
-        self.gxz: float = None  # Transverse shear modulus [Pa]
-        self.prxy: float = None  # In-plane Poisson ratio [ ]
-        self.pryz: float = None  # Transverse Poisson ratio [ ]
-        self.prxz: float = None  # Transverse Poisson ratio [ ]
-        self.density: float = None  # Cured mass density [kg/m2]
-        self.drydensity: float = None  # Density of fabric
-        self.uts: float = None  # 1 × 3 array of ultimate tensile strength design values. Sequence: SL , ST, Sz, 1 × 1 for isotropic.
-        self.ucs: float = None  # 1 × 3 array of ultimate compressive strength design values. Sequence: SL , ST, Sz, 1 × 1 for isotropic.
-        self.uss: float = None  # 1 × 3 array of ultimate shear strength design values. Sequence: SLT , STz, SLz, 1 × 1 for isotropic.
-        self.xzit: float = (
-            None  # Lz tensile inclination parameter for Puck failure index
-        )
-        self.xzic: float = (
-            None  # Lz compressive inclination parameter for Puck failure index
-        )
-        self.yzit: float = (
-            None  # Tz tensile inclination parameter for Puck failure index
-        )
-        self.yzic: float = (
-            None  # Tz compressive inclination parameter for Puck failure index
-        )
-        self.g1g2: float = (
-            None  # Fracture toughness ratio between GI (mode I) and GII (mode II) [ ]
-        )
-        self.alp0: float = (
-            None  # Fracture angle under pure transverse compression [degrees]
-        )
-        self.etat: float = None  # Transverse friction coefficient for Larc [ ]
-        self.etal: float = None  # Longitudinal friction coefficient for Larc [ ]
-        self.m: list = None  # Fatigue slope exponent [ ]
-        self.gamma_mf: list = (
-            None  # from DNL-GL standard, fatigue strength reduction factor
-        )
-        self.gamma_ms: list = (
-            None  # from DNV-GL standard, short term strength reduction factor
-        )
+        self.name: str = None
+        self.type: str = None
+        self.layerthickness: float = None
+        self.ex: float = None
+        self.ey: float = None
+        self.ez: float = None
+        self.gxy: float = None
+        self.gyz: float = None
+        self.gxz: float = None
+        self.prxy: float = None
+        self.pryz: float = None
+        self.prxz: float = None
+        self.density: float = None
+        self.drydensity: float = None
+        self.uts: float = None
+        self.ucs: float = None
+        self.uss: float = None
+        self.xzit: float = None
+        self.xzic: float = None
+        self.yzit: float = None
+        self.yzic: float = None
+        self.g1g2: float = None
+        self.alp0: float = None
+        self.etat: float = None
+        self.etal: float = None
+        self.m: list = None
+        self.gamma_mf: list[float] = None
+        self.gamma_ms: list[float] = None
         self.reference: str = None
+
+    def _compare(self, other):
+        """
+        Parameters
+        ----------
+        other : Material
+
+        Returns
+        -------
+        bool
+        """
+        attrs = [
+            a
+            for a in dir(self)
+            if not a.startswith("__") and not callable(getattr(self, a))
+        ]
+        for attr in attrs:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return True
