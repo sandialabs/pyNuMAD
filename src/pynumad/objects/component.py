@@ -29,10 +29,10 @@ class Component:
     fabricangle : float
         Fiber angle
     hpextents : list
-        Array of keypoints such as {'b','c'}
+        Array of keypoints such as ['b','c']
     lpextents : list
-        String Array: Array of keypoints such as {'b','c'}
-    cp : np
+        String Array: Array of keypoints such as ['b','c']
+    control_points : np
         control points defining layer distribution
     imethod: str
         imethod
@@ -55,7 +55,7 @@ class Component:
         self.fabricangle: float = None
         self.hpextents: list = None
         self.lpextents: list = None
-        self.cp: np.ndarray = None
+        self.control_points: np.ndarray = None
         self.imethod: str = "linear"
         self.pinnedends: bool = None
         self.hCtrl = None
@@ -75,23 +75,44 @@ class Component:
             "e",
             "te",
         ]
+        
+    def _compare(self, other):
+        """
+        Parameters
+        ----------
+        other : Component
 
-    def getcp(self):
+        Returns
+        -------
+        bool
+        """
+        attrs = [
+            a
+            for a in dir(self)
+            if not a.startswith("__") and not callable(getattr(self, a))
+        ]
+        for attr in attrs:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return True
+
+
+    def get_control_points(self):
         if self.pinnedends:
-            if np.any(self.cp[:, 0] < 0) or np.any(self.cp[:, 0] > 1):
+            if np.any(self.control_points[:, 0] < 0) or np.any(self.control_points[:, 0] > 1):
                 raise Exception(
                     'ComponentDef: first coordinate of control points must be in range [0,1] when using "pinned" ends'
                 )
-            cpx = np.concatenate(([-0.01], self.cp[:, 0], [1.01]))
-            cpy = np.concatenate(([0], self.cp[:, 1], [0]))
+            cpx = np.concatenate(([-0.01], self.control_points[:, 0], [1.01]))
+            cpy = np.concatenate(([0], self.control_points[:, 1], [0]))
         else:
-            cpx = self.cp[:, 0]
-            cpy = self.cp[:, 1]
+            cpx = self.control_points[:, 0]
+            cpy = self.control_points[:, 1]
 
         return cpx, cpy
 
     def get_num_layers(self, span):
-        cpx, cpy = self.getcp()
+        cpx, cpy = self.get_control_points()
         return interpolator_wrap(cpx, cpy, span, self.imethod, 0)
 
     def find_region_extents(self):

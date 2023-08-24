@@ -255,12 +255,12 @@ def excel_to_blade(blade, filename):
         comp.lpextents = readstrlist(
             txt.iloc[xls_dict["cmpt"]["datarow1"] + k, xls_dict["cmpt"]["lpext"]]
         )
-        comp.cp = readnumlist(
+        comp.control_points = readnumlist(
             raw.iloc[xls_dict["cmpt"]["datarow1"] + k, xls_dict["cmpt"]["cpspan"]]
         )
-        comp.cp = np.stack(
+        comp.control_points = np.stack(
             (
-                comp.cp,
+                comp.control_points,
                 readnumlist(
                     raw.iloc[
                         xls_dict["cmpt"]["datarow1"] + k, xls_dict["cmpt"]["cpnlay"]
@@ -395,32 +395,3 @@ def readstrlist(strings=None):
     else:
         strlist = strings.split(",")
     return strlist
-
-
-"""
-readnumlist scratch code
-
-    # str = strreps(str,np.array(['[',']',',']),np.array(['','',' ']))
-    # numv = cell2mat(textscan(str,'%f'))
-
-
-def readstrlist(str = None): 
-    # read a list of string values
-    str = strreps(str,np.array(['[',']',',']),np.array(['','',' ']))
-    if len(str)==0:
-        str = ' '
-    
-    strvcell = textscan(str,'%s')
-    strv = transpose(strvcell[0])
-    return strv
-    
-    return blade
-
-def strreps(strin = None,oldsubstrcell = None,newsubstrcell = None): 
-    assert np.asarray(oldsubstrcell).size == np.asarray(newsubstrcell).size,'Lengths of substring cell arrays must be equal.'
-    strout = strin
-    for k in np.arange(1,np.asarray(oldsubstrcell).size+1).reshape(-1):
-        strout = strout.replace(oldsubstrcell[k],newsubstrcell[k])
-    
-    return strout
-"""

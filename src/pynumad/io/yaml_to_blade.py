@@ -366,7 +366,7 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
             cur_comp.imethod = "pchip"
         else:
             cur_comp.imethod = "linear"
-        # cur_comp.cp[:,0] = np.transpose(i_component_data['thickness']['grid'])
+        # cur_comp.control_points[:,0] = np.transpose(i_component_data['thickness']['grid'])
         cptemp1 = np.transpose(i_component_data["thickness"]["grid"])
         temp_n_layer = (
             np.multiply(np.transpose(i_component_data["thickness"]["values"]), 1000.0)
@@ -377,9 +377,9 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
             np.multiply(np.transpose(i_component_data["thickness"]["values"]), 1000.0)
             / definition.materials[cur_comp.materialid].layerthickness
         )
-        cur_comp.cp = np.stack((cptemp1, cptemp2), axis=1)
+        cur_comp.control_points = np.stack((cptemp1, cptemp2), axis=1)
         # if I_round_up.size > 0:
-        #     cur_comp.cp[I_round_up,1] = 1 # increase n_layers from 0 to 1 for 0.05<n_layers<0.5
+        #     cur_comp.control_points[I_round_up,1] = 1 # increase n_layers from 0 to 1 for 0.05<n_layers<0.5
         #     comp['cp'](:,2) = cell2mat(blade_internal_structure['layers']{i}['thickness']['values'])'.*1000;  # use when each material ply is 1 mm
         cur_comp.pinnedends = 0
         component_list.append(cur_comp)
