@@ -61,7 +61,7 @@ def generateCubitCrossSections(
     refLineCoords = np.vstack(([blade.sweep, blade.prebend, blade.ispan])).transpose()
     spanwiseMatOriCurve = 1
 
-    roundStations = np.argwhere(np.array(blade.TEtype) == "round")
+    roundStations = np.argwhere(np.array(blade.te_type) == "round")
     roundStations = list(roundStations[:, 0])
     lastRoundStation = roundStations[-1]
 
@@ -86,7 +86,7 @@ def generateCubitCrossSections(
 
             iStationGeometry = iStation + 1
 
-        if blade.get_profile_te_type(iStationGeometry) == "flat":
+        if blade.geometry.get_profile_te_type(iStationGeometry) == "flat":
             isFlatback = True
         else:
             isFlatback = False

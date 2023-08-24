@@ -2,7 +2,8 @@ from pynumad.objects.blade import Blade
 from pynumad.objects.airfoil import Airfoil
 from pynumad.objects.component import Component
 from pynumad.objects.material import Material
-from pynumad.objects.elements import MatDBentry, BOM, Ply, Layer, Shearweb, Stack, Station
+from pynumad.objects.elements import MatDBentry, BOM, Ply, Layer, Shearweb, Stack
+from pynumad.objects.station import Station
 from pynumad.io.mesh_to_yaml import mesh_to_yaml
 
 from pynumad import shell
