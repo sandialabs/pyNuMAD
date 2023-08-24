@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import warnings
 import scipy as sp
 
-from pynumad.io.airfoil import xml_to_airfoil
+from pynumad.io.xml_to_airfoil import xml_to_airfoil
 from pynumad.utils.interpolation import interpolator_wrap
 
 from numpy import ndarray
@@ -45,7 +45,7 @@ class Airfoil:
         Maximum airfoil thickness as a percentage of chord length [#]
     maxthick : float
         Airfoil thickness as a percentage of chord. Values between 0 and 1.
-    TEtype : str
+    te_type : str
         Options, 'round', 'sharp', or 'flat'
     """
 
@@ -58,7 +58,7 @@ class Airfoil:
         self.thickness: float = None
         self.percentthick: float = None
         self.maxthick: float = None
-        self.TEtype: str = None
+        self.te_type: str = None
 
         if filename:
             # currently assuming XML format
@@ -120,7 +120,6 @@ class Airfoil:
         hp = self.camber - (self.thickness / 2)
         return np.concatenate(([0], np.flipud(hp), lp[1:], [0]))
 
-
     def read_xml(self, filename):
         """
         TODO docstring
@@ -129,7 +128,7 @@ class Airfoil:
         return self
 
     def manageTE(self):
-        """Modifies self.TEtype and self.coordinates
+        """Modifies self.te_type and self.coordinates
 
         Parameters
         ----------
@@ -155,7 +154,7 @@ class Airfoil:
 
         # ddof set to 1 to match default matlab behavior
         if np.std(angleChange, ddof=1) < 1:
-            self.TEtype = "round"
+            self.te_type = "round"
         return self
 
     def resample(self, n_samples: int = 150, spacing: str = "cosine"):
@@ -186,10 +185,11 @@ class Airfoil:
         i = np.argmax(self.thickness)
         self.percentthick = m * 100
         self.maxthick = self.c[i]
-        if not self.TEtype or ("round" not in self.TEtype):
-            self.TEtype = "sharp" if np.abs(self.thickness[-1]) < 1e-4 else "flatback"
+        if not self.te_type or ("round" not in self.te_type):
+            self.te_type = "sharp" if np.abs(self.thickness[-1]) < 1e-4 else "flatback"
         return self
-    
+
+
 def get_airfoil_normals(coordinates) -> ndarray:
     """Method finds which airfoil is flatback.
 
@@ -278,7 +278,7 @@ def resample_airfoil(coords_in: ndarray, n_samples: int, spacing: str) -> ndarra
     JP: initial creation
     BRR: modified for release 1/25/2011
     """
-    
+
     # Error checking
     # if airfoil coordinates are not in Nx2 array
     if coords_in.shape[1] != 2:
