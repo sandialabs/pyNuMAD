@@ -1,20 +1,21 @@
 import pynumad as pynu
 import numpy as np
 import os
+from os.path import join
 
-from pynumad.shell.shell import getShellMesh
+from pynumad.shell.shell import get_shell_mesh
 
 ## Read blade data from yaml file
-blade = pynu.objects.Blade.Blade()
-fileName = 'example_data/myBlade.yaml'
+blade = pynu.Blade()
+fileName = join("example_data","blade.yaml")
 blade.read_yaml(fileName)
 
 ## Set the airfoil point resolution
-for stat in blade.stations:
+for stat in blade.definition.stations:
     stat.airfoil.resample(n_samples=300)
     
-blade.update_geometry()
-nStations = blade.geometry.shape[2]
+blade.generate_geometry()
+nStations = blade.geometry.coordinates.shape[2]
 minTELengths = 0.001*np.ones(nStations)
 blade.expand_blade_geometry_te(minTELengths)
 
@@ -23,7 +24,7 @@ elementSize = 0.2
 
 ## Generate mesh
 adhes = 1
-bladeMesh = getShellMesh(blade, adhes, elementSize)
+bladeMesh = get_shell_mesh(blade, adhes, elementSize)
 
 ## Write mesh to yaml
 meshFile = 'shellMeshData.yaml'
