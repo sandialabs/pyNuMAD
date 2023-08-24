@@ -38,6 +38,28 @@ class Station:
             self.airfoil = af
         else:
             self.airfoil = Airfoil()
+            
+    
+    def _compare(self, other):
+        """
+        Parameters
+        ----------
+        other : Station
+
+        Returns
+        -------
+        bool
+        """
+        attrs = [
+            a
+            for a in dir(self)
+            if not a.startswith("__") and not callable(getattr(self, a))
+        ]
+        for attr in attrs:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return True
+
 
     @property
     def degreestwist(self):

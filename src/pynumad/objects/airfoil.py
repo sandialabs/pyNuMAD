@@ -95,6 +95,26 @@ class Airfoil:
                 self.coordinates = np.stack((xcoord, ycoord), axis=1)
         self.manageTE()
 
+    def _compare(self, other):
+        """
+        Parameters
+        ----------
+        other : Airfoil
+
+        Returns
+        -------
+        bool
+        """
+        attrs = [
+            a
+            for a in dir(self)
+            if not a.startswith("__") and not callable(getattr(self, a))
+        ]
+        for attr in attrs:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return True
+
     @property
     def x(self):
         """Horizontal axis of Airfoil shape coordinates Working
