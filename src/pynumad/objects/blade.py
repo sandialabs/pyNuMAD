@@ -375,13 +375,13 @@ class Blade:
         mm_to_m = 0.001
 
         # number of interpolated span stations
-        N = self.ispan.size
+        num_istations = self.ispan.size
 
         # number of areas around airfoil profile; must be even (see calc of web areas)
-        M = 12
+        num_areas = 12
 
         # initialize keypoints
-        keypoints = KeyPoints(shape=(M, N))
+        keypoints = KeyPoints(shape=(num_areas, num_istations))
         self.keypoints = keypoints
 
         # start and finish indices in geometry/arcs
@@ -390,7 +390,7 @@ class Blade:
 
         # keypoints, keyarcs, keycpos
         self.te_type = []  # reset te_type
-        for k in range(0, N):
+        for k in range(num_istations):
             # allow for separate definitions of HP and LP spar cap
             # width and offset [HP LP]
             n1 = mm_to_m * definition.leband[k]  # no foam width
@@ -534,12 +534,12 @@ class Blade:
         for ksw in range(max(component_groups)):  # for each shear web
             # pre-allocating arrays
             keypoints.web_indices.append([])
-            keypoints.web_arcs.append(np.ndarray((2, N)))
-            keypoints.web_cpos.append(np.ndarray((2, N)))
-            keypoints.web_points.append(np.ndarray((2, 3, N)))
-            keypoints.web_areas.append(np.ndarray((N - 1)))
-            keypoints.web_width.append(np.ndarray((N)))
-            keypoints.web_bonds.append(np.ndarray((2, N - 1)))
+            keypoints.web_arcs.append(np.ndarray((2, num_istations)))
+            keypoints.web_cpos.append(np.ndarray((2, num_istations)))
+            keypoints.web_points.append(np.ndarray((2, 3, num_istations)))
+            keypoints.web_areas.append(np.ndarray((num_istations - 1)))
+            keypoints.web_width.append(np.ndarray(num_istations))
+            keypoints.web_bonds.append(np.ndarray((2, num_istations - 1)))
 
             # find the components that are part of the shear web
             ksw_cmpts = [
@@ -600,7 +600,7 @@ class Blade:
                 p2 = keypoints.key_arcs[n2, :]
                 p = (1 - f) * p1 + f * p2
                 keypoints.web_arcs[ksw][0, :] = p
-                for k in range(N):
+                for k in range(num_istations):
                     keypoints.web_cpos[ksw][0, k] = interpolator_wrap(
                         k_arclen, k_cpos, p[k]
                     )
@@ -628,7 +628,7 @@ class Blade:
                 )
                 p[np.abs(p) < np.abs(pMin)] = pMin[np.abs(p) < np.abs(pMin)]
                 keypoints.web_cpos[ksw][0, :] = p
-                for k in range(N):
+                for k in range(num_istations):
                     keypoints.web_arcs[ksw][0, k] = interpolator_wrap(
                         self.cpos[ns : nf + 1, :, k],
                         geometry.arclength[ns : nf + 1, :, k],
@@ -671,7 +671,7 @@ class Blade:
                 p2 = keypoints.key_arcs[n2, :]
                 p = (1 - f) * p1 + f * p2
                 keypoints.web_arcs[ksw][1, :] = p
-                for k in range(N):
+                for k in range(num_istations):
                     keypoints.web_cpos[ksw][1, k] = interpolator_wrap(
                         k_arclen, k_cpos, p[k]
                     )
@@ -697,7 +697,7 @@ class Blade:
                 )
                 p[np.abs(p) < np.abs(pMin)] = pMin[np.abs(p) < np.abs(pMin)]
                 keypoints.web_cpos[ksw][1, :] = p
-                for k in range(N):
+                for k in range(num_istations):
                     keypoints.web_arcs[ksw][1, k] = interpolator_wrap(
                         k_cpos, k_arclen, p[k]
                     )
@@ -710,8 +710,8 @@ class Blade:
                 )
 
         # calculate shell areas
-        for kc in range(N - 1):
-            for kr in range(M):
+        for kc in range(num_istations - 1):
+            for kr in range(num_areas):
                 # choose number of points to use in area calculation
                 # jcb: I decided to base this on the number of points
                 # in the interpolated station profile found within the region
@@ -765,7 +765,7 @@ class Blade:
                 keypoints.key_areas[kr, kc] = t1 + t2
                 if kr == 0:
                     keypoints.te_bond[kc] = dspan[0]
-                if (M / 2 + 1) == (kr + 1):
+                if (num_areas / 2 + 1) == (kr + 1):
                     keypoints.le_bond[kc] = dspan[0]
 
         # calculate areas used by shear webs
@@ -773,7 +773,7 @@ class Blade:
         # do not take into account the thickness of the shell or
         # sparcap layup.
         for ksw in range(len(keypoints.web_points)):
-            for kc in range(N - 1):
+            for kc in range(num_istations - 1):
                 ib = keypoints.web_points[ksw][:, :, kc]
                 ob = keypoints.web_points[ksw][:, :, kc + 1]
                 # treat each "rectangular" area as two triangles
@@ -789,7 +789,7 @@ class Blade:
                 keypoints.web_width[ksw][kc] = base1
                 # calculate edge (bond-line) lengths
                 keypoints.web_bonds[ksw][0:2, kc] = np.sqrt(np.sum((ob - ib) ** 2, 1))
-            keypoints.web_width[ksw][N - 1] = base2
+            keypoints.web_width[ksw][num_istations - 1] = base2
 
         return self
 
@@ -1228,6 +1228,13 @@ class Blade:
     ### Shell
 
     def edit_stacks_for_solid_mesh(self):
+        """_summary_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         numSec, numStat = self.stacks.shape
         for i in range(numSec):
             for j in range(numStat):
