@@ -16,7 +16,6 @@ class MaterialDatabase(dict):
         n_webs, n_stations = swstacks.shape
 
         # prepare material database ==========================================
-        self.matdb = dict()
         
         # add base materials
         for mat_name in materials:
@@ -38,7 +37,7 @@ class MaterialDatabase(dict):
                 cur_entry.prxz = cur_material.prxz
             cur_entry.dens = cur_material.density
             cur_entry.reference = cur_material.reference
-            self.matdb[mat_name] = cur_entry
+            self[mat_name] = cur_entry
 
         # add component stacks
         flat_stacks = stacks.flatten("F")
@@ -83,7 +82,7 @@ class MaterialDatabase(dict):
                     cur_plygroup = cur_stack.plygroups[j]
                     cur_layer = Layer()
                     matid = cur_plygroup.materialid
-                    cur_layer.layerName = self.matdb[matid].name
+                    cur_layer.layerName = self[matid].name
                     cur_layer.thicknessA = (
                         mm_to_m * cur_plygroup.thickness
                     )
