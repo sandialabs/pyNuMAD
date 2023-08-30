@@ -194,7 +194,7 @@ def _add_stations(
             )
 
         ref = blade_outer_shape_bem["airfoil_position"]["labels"][i]
-        af = Airfoil(coords=xf_coords, ref=ref)
+        af = Airfoil(coords=xf_coords, reference=ref)
         af.resample(spacing="half-cosine")
         definition.add_station(af, tc_xL * L)
 
