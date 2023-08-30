@@ -3,13 +3,14 @@ from copy import deepcopy
 from numpy import ndarray
 import numpy as np
 from pynumad.objects.keypoints import KeyPoints
+from pynumad.objects.bom import BillOfMaterials
 
 class StackDatabase:
     def __init__(self):
         self.stacks: ndarray = None
         self.swstacks: ndarray = None
         
-    def generate(self, keypoints: KeyPoints):
+    def generate(self, keypoints: KeyPoints, bom: BillOfMaterials):
         # build the material stack for each area
         n_segments = keypoints.key_areas.shape[0]
         n_stations = keypoints.key_areas.shape[1]
@@ -44,33 +45,33 @@ class StackDatabase:
                     k_seg + 1,
                 ]
 
-        for k in range(len(self.bom["hp"])):
+        for k in range(len(bom["hp"])):
             # for each row in the BOM, get the ply definition ...
             cur_ply = Ply()
-            cur_ply.component = self.bom["hp"][k].name
-            cur_ply.materialid = self.bom["hp"][k].materialid
-            cur_ply.thickness = self.bom["hp"][k].thickness
-            cur_ply.angle = 0  # TODO, set to 0 for now, self.bom['lp'](k, );
+            cur_ply.component = bom["hp"][k].name
+            cur_ply.materialid = bom["hp"][k].materialid
+            cur_ply.thickness = bom["hp"][k].thickness
+            cur_ply.angle = 0  # TODO, set to 0 for now, bom['lp'](k, );
             cur_ply.nPlies = 1  # default to 1, modified in addply() if necessary
 
             # ... and add the ply to every area that is part of the region
-            ind = self.bomIndices["hp"][k]
+            ind = bom.indices["hp"][k]
             for k_seg in range(ind[2], ind[3]):
                 for k_stat in range(ind[0], ind[1]):
                     # deepcopy is important to keep make ply object unique in each stack
                     self.stacks[k_seg, k_stat].addply(deepcopy(cur_ply))  
 
-        for k in range(len(self.bom["lp"])):
+        for k in range(len(bom["lp"])):
             # for each row in the BOM, get the ply definition ...
             cur_ply = Ply()
-            cur_ply.component = self.bom["lp"][k].name
-            cur_ply.materialid = self.bom["lp"][k].materialid
-            cur_ply.thickness = self.bom["lp"][k].thickness
-            cur_ply.angle = 0  # TODO, set to 0 for now, self.bom['lp'](k, );
+            cur_ply.component = bom["lp"][k].name
+            cur_ply.materialid = bom["lp"][k].materialid
+            cur_ply.thickness = bom["lp"][k].thickness
+            cur_ply.angle = 0  # TODO, set to 0 for now, bom['lp'](k, );
             cur_ply.nPlies = 1  # default to 1, modified in addply() if necessary
 
             # ... and add the ply to every area that is part of the region
-            ind = self.bomIndices["lp"][k]
+            ind = bom.indices["lp"][k]
             for k_seg in range(ind[2], ind[3]):
                 for k_stat in range(ind[0], ind[1]):
                     self.stacks[k_seg, k_stat].addply(deepcopy(cur_ply))
@@ -92,17 +93,17 @@ class StackDatabase:
                     ind[1],
                 ]
         for k_web in range(n_webs):
-            for k in range(len(self.bom["sw"][k_web])):
+            for k in range(len(bom["sw"][k_web])):
                 # for each row in the BOM, get the ply definition ...
                 cur_ply = Ply()
-                cur_ply.component = self.bom["sw"][k_web][k].name
-                cur_ply.materialid = self.bom["sw"][k_web][k].materialid
-                cur_ply.thickness = self.bom["sw"][k_web][k].thickness
-                cur_ply.angle = 0  # TODO, set to 0 for now, self.bom['lp'](k, );
+                cur_ply.component = bom["sw"][k_web][k].name
+                cur_ply.materialid = bom["sw"][k_web][k].materialid
+                cur_ply.thickness = bom["sw"][k_web][k].thickness
+                cur_ply.angle = 0  # TODO, set to 0 for now, bom['lp'](k, );
                 cur_ply.nPlies = 1  # default to 1, modified in addply() if necessary
                 
                 # ... and add the ply to every area that is part of the region
-                ind = self.bomIndices["sw"][k_web][k]
+                ind = bom.indices["sw"][k_web][k]
                 for k_stat in range(ind[0], ind[1]):
                     self.swstacks[k_web, k_stat].addply(deepcopy(cur_ply))
         

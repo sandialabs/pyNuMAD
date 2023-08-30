@@ -77,6 +77,9 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
     coordinates = geometry.coordinates
     profiles = geometry.profiles
     key_points = blade.keypoints.key_points
+    stacks = blade.stackdb.stacks
+    swstacks = blade.stackdb.swstacks
+    
     geomSz = coordinates.shape
     lenGeom = geomSz[0]
     numXsec = geomSz[2]
@@ -300,19 +303,19 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
                 "quad3",
                 shellKp,
                 nEl,
-                name=blade.stacks[j, i].name,
+                name=stacks[j, i].name,
                 elType="quad",
                 meshMethod="structured",
             )
             newSec = dict()
             newSec["type"] = "shell"
             layup = list()
-            for pg in blade.stacks[j, i].plygroups:
+            for pg in stacks[j, i].plygroups:
                 totThick = pg.thickness * pg.nPlies
                 ply = [pg.materialid, totThick, pg.angle]
                 layup.append(ply)
             newSec["layup"] = layup
-            newSec["elementSet"] = blade.stacks[j, i].name
+            newSec["elementSet"] = stacks[j, i].name
             secList.append(newSec)
             stSp = stSp + 3
         stPt = stPt + 3
@@ -328,8 +331,8 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
             for j in range(rws - 1):
                 totalThick = 0
                 for k in range(3):
-                    tpp = 0.001 * blade.stacks[sec, j].plygroups[k].thickness
-                    npls = blade.stacks[sec, j].plygroups[k].nPlies
+                    tpp = 0.001 * stacks[sec, j].plygroups[k].thickness
+                    npls = stacks[sec, j].plygroups[k].nPlies
                     totalThick = totalThick + tpp * npls
                 for k in range(3):
                     vx = splineXi[stPt, tgtSp] - splineXi[stPt, spl]
@@ -349,7 +352,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
     web1Sets = np.array([])
     web2Sets = np.array([])
     for i in range(rws - 1):
-        if blade.swstacks[0][i].plygroups:
+        if swstacks[0][i].plygroups:
             shellKp = np.zeros((16, 3))
             shellKp[0, :] = np.array(
                 [splineXi[stPt, 12], splineYi[stPt, 12], splineZi[stPt, 12]]
@@ -403,21 +406,21 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
                 "quad3",
                 shellKp,
                 nEl,
-                name=blade.swstacks[0][i].name,
+                name=swstacks[0][i].name,
                 elType="quad",
                 meshMethod="structured",
             )
             newSec = dict()
             newSec["type"] = "shell"
             layup = list()
-            for pg in blade.swstacks[0][i].plygroups:
+            for pg in swstacks[0][i].plygroups:
                 totThick = pg.thickness * pg.nPlies
                 ply = [pg.materialid, totThick, pg.angle]
                 layup.append(ply)
             newSec["layup"] = layup
-            newSec["elementSet"] = blade.swstacks[0][i].name
+            newSec["elementSet"] = swstacks[0][i].name
             secList.append(newSec)
-        if blade.swstacks[1][i].plygroups:
+        if swstacks[1][i].plygroups:
             shellKp = np.zeros((16, 3))
             shellKp[0, :] = np.array(
                 [splineXi[stPt, 27], splineYi[stPt, 27], splineZi[stPt, 27]]
@@ -471,19 +474,19 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
                 "quad3",
                 shellKp,
                 nEl,
-                name=blade.swstacks[1][i].name,
+                name=swstacks[1][i].name,
                 elType="quad",
                 meshMethod="structured",
             )
             newSec = dict()
             newSec["type"] = "shell"
             layup = list()
-            for pg in blade.swstacks[1][i].plygroups:
+            for pg in swstacks[1][i].plygroups:
                 totThick = pg.thickness * pg.nPlies
                 ply = [pg.materialid, totThick, pg.angle]
                 layup.append(ply)
             newSec["layup"] = layup
-            newSec["elementSet"] = blade.swstacks[1][i].name
+            newSec["elementSet"] = swstacks[1][i].name
             secList.append(newSec)
         stPt = stPt + 3
 
@@ -671,7 +674,7 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
     for i in range(0, len(layerNumEls)):
         nodeDist = np.zeros(numNds)
         nodeHitCt = np.zeros(numNds, dtype=int)
-        numSec, numStat = blade.stacks.shape
+        numSec, numStat = stacks.shape
         j = 0
         for es in elSets:
             layerThick = 0.001 * sectns[j]["layup"][i][1]
