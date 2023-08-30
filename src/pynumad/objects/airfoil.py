@@ -15,14 +15,6 @@ from numpy import ndarray
 class Airfoil:
     """Airfoil object
 
-    Parameters
-    ----------
-    coords : array
-    ref : string
-        Name of airfoil reference
-    filename : string
-        path to filename of airfoil (xml somewhat supported)
-
     Attributes
     ----------
     name : str
@@ -49,7 +41,19 @@ class Airfoil:
         Options, 'round', 'sharp', or 'flat'
     """
 
-    def __init__(self, filename=None, coords=None, ref=None):
+    def __init__(self, filename: str = None, coords: ndarray = None, reference: str = None):
+        """_summary_
+
+        Parameters
+        ----------
+        filename : string
+            path to filename of airfoil (xml somewhat supported)
+        coords : array
+        reference : string
+            Name of airfoil reference
+
+        """
+        
         self.name: str = None
         self.reference: str = None
         self.coordinates: ndarray = None
@@ -75,24 +79,20 @@ class Airfoil:
                 file_contents = f.read().splitlines()
             self.read_xml(file_contents)
 
+        elif reference is not None and coords is not None:
+            self.name = reference
+            self.reference = reference
+            self.coordinates = coords
+            
         else:
-            try:
-                # check if ref is a string and coords an array
-                ref * 5
-                coords * 5
-                # if so, assign as attributes
-                self.name = ref
-                self.reference = ref
-                self.coordinates = coords
-            except TypeError:
-                # otherwise, provide default AF profile
-                self.name = "circular"
-                self.reference = ""
-                theta = np.linspace(0, np.pi, 50)
-                theta = np.concatenate((theta, [np.pi], theta[1:-1]))
-                xcoord = 0.5 * np.cos(-1 * theta) + 0.5
-                ycoord = 0.5 * np.sin(-1 * theta)
-                self.coordinates = np.stack((xcoord, ycoord), axis=1)
+            # otherwise, provide default AF profile
+            self.name = "circular"
+            self.reference = ""
+            theta = np.linspace(0, np.pi, 50)
+            theta = np.concatenate((theta, [np.pi], theta[1:-1]))
+            xcoord = 0.5 * np.cos(-1 * theta) + 0.5
+            ycoord = 0.5 * np.sin(-1 * theta)
+            self.coordinates = np.stack((xcoord, ycoord), axis=1)
         self.manageTE()
 
     def _compare(self, other):

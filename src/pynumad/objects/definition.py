@@ -5,6 +5,45 @@ from pynumad.objects.station import Station
 
 
 class Definition:
+    """Contains the definition of a blade object
+
+    Attributes
+    ----------
+    components : list
+    shearweb : list
+    materials : dict
+    stacks : ndarray
+    swstacks : array
+    ispan : ndarray
+        Spanwise locations of interpolated output
+    aerocenter : ndarray
+        Aerodynamic center of airfoil (used only by NuMAD->FAST)
+    chord : ndarray
+        Chord distribution [m]
+    chordoffset : ndarray
+        Chordwise offset (in addition to natural offset)
+    degreestwist : ndarray
+        Twist distribution [degrees]
+    leband : float
+        Location of keypoint a
+    percentthick : ndarray
+        Percent thickness of airfoil [%]
+    prebend : ndarray
+        Blade prebend, reference axis location along x2 [m]
+    span : ndarray
+        Spanwise location of distributed properties [m]
+    sparcapoffset : ndarray
+    sparcapwidth : ndarray
+        Locations of keypoints b & c, defines distance
+        between keypoints b & c [mm]. First entry is the HP spar cap.
+        Second entry is the LP spar cap
+    stations : list
+        list of station objects
+    sweep : ndarray
+        Blade Sweep, Reference axis location along x1 [m]
+    teband : float
+    te_type : list
+    """
     def __init__(self):
         self.components: list = None
         self.shearweb: list = None

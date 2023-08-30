@@ -13,66 +13,39 @@ from pynumad.objects.settings import BladeSettings
 class Geometry:
     """Contains the geometry of a blade object
 
-    Parameters
-    ----------
-    shape: string
-
     Attributes
     ----------
-    aerocenter: array
-        Aerodynamic center of airfoil (used only by NuMAD->FAST)
-    chord : array
-        Chord distribution [m]
-    chordoffset : array
-        Chordwise offset (in addition to natural offset)
-    coordinates : array
-        actual x,y,z geometry
-    degreestwist : array
-        Twist distribution [degrees]
-    ispan : array
-        Spanwise locations of interpolated output
-    leband : float
-        Location of keypoint a
-    percentthick : array
-        Percent thickness of airfoil [%]
-    prebend : array
-        Blade prebend, reference axis location along x2 [m]
-    span : array
-        Spanwise location of distributed properties [m]
-    sparcapoffset : array
-        (Does Nothing)
-    sparcapwidth : array
-        Locations of keypoints b & c, defines distance
-        between keypoints b & c [mm]. First entry is the HP spar cap.
-        Second entry is the LP spar cap
-    sweep : array
-        Blade Sweep, Reference axis location along x1 [m]
-    teband : float
-    idegreestwist : array
-        interpolated twist
-    ichord : array
-        interpolated chord
-    ipercentthick : array
-        interpolated thickness
-    c : array
+    c : ndarray
         nondimensional (0-1) value of x axis
-    ic : array
-    icamber : array
+    camber : ndarray
+    thickness : ndarray
+    ic : ndarray
+    icamber : ndarray
     ithickness : array
-    ichordoffset : array
+        interpolated thickness
+    cpos : ndarray
+        x-axis parametrization for airfoil curve
+    ichord : ndarray
+        interpolated chord
+    ichordoffset : ndarray
         interpolated offset
-    iaerocenter : array
+    iaerocenter : ndarray
         interpolated aerocenter
-    isweep : array
-        interpolated sweep
-    iprebend : array
-        interpolated prebend
-    xoffset : array
-        natural offset
+    idegreestwist : ndarray
+        interpolated twist
+    ipercentthick : ndarray
+        interpolated percent thickness
     profiles : array
         normalized airfoil profiles
-    cpos : array
-        x-axis parametrization for airfoil curve
+    coordinates : ndarray
+        actual x,y,z geometry
+    xoffset : ndarray
+        natural offset
+    LEindex : ndarray
+    iprebend : ndarray
+        interpolated prebend
+    isweep : ndarray
+        interpolated sweep
     """
 
     def __init__(self, settings=None):
@@ -83,7 +56,6 @@ class Geometry:
         self.icamber: ndarray = None
         self.ithickness: ndarray = None
         self.cpos: ndarray = None
-        self.idegreestwist: ndarray = None
         self.ichord: ndarray = None
         self.ichordoffset: ndarray = None
         self.iaerocenter: ndarray = None
@@ -189,7 +161,7 @@ class Geometry:
                 len(station.airfoil.c) == num_points
             ), "Station airfoils must have same number of samples."
 
-            self.cf = station.airfoil.c
+            self.c[:,k] = station.airfoil.c
             self.camber[:, k] = station.airfoil.camber
             self.thickness[:, k] = station.airfoil.thickness
             tetype[k] = station.airfoil.te_type

@@ -8,9 +8,6 @@
 class Material:
     """MaterialDef:  A class for blade materials.
 
-    Parameters
-    ----------
-
     Attributes
     ----------
     name : str
@@ -80,6 +77,7 @@ class Material:
     def __init__(self):
         self.name: str = None
         self.type: str = None
+        self.reference: str = None
         self.layerthickness: float = None
         self.ex: float = None
         self.ey: float = None
@@ -106,7 +104,6 @@ class Material:
         self.m: list = None
         self.gamma_mf: list[float] = None
         self.gamma_ms: list[float] = None
-        self.reference: str = None
 
     def _compare(self, other):
         """

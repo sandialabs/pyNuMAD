@@ -11,15 +11,10 @@ from pynumad.utils.interpolation import interpolator_wrap
 
 class Station:
     """
-    Parameters
-    ----------
-    af : AirfoilDef or string
-        airfoil
-
     Attributes
     ----------
-    airfoil
-        ``AirfoilDef`` object
+    airfoil : Airfoil
+        Airfoil corresponding to the station
     spanlocation
         Spanwise location where station is defined [m]
     parent
@@ -27,6 +22,12 @@ class Station:
     """
 
     def __init__(self, af=None):
+        """
+        Parameters
+        ----------
+        af : Airfoil, string
+            airfoil object or filename to airfoil coords
+        """
         self.airfoil = None
         self.spanlocation = None
         self.parent = None

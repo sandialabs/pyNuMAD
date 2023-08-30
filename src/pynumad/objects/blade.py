@@ -20,27 +20,45 @@ from numpy import ndarray
 class Blade:
     """BladeDef A class definition for wind & water turbine blades.
 
-    Parameters
-    ----------
-    filename : string
-
     Attributes
     ----------
+    name : str
+        Name of the blade
+    definition : Definition
+        Object containing the definition of the blade.
+    ispan : ndarray
+        Array defining the interpolated stations from 0 to 1
+    geometry : Geometry
+        Object containing the interpolated geometry of the blade
+    keypoints : KeyPoints
+        Object containing information about keypoint locations and areas
+    bill_of_materials : BillOfMaterials
+    stackdb : StackDatabase
+    materialdb : MaterialDatabase
+    settings : BladeSettings
 
     Example
     -------
-    blade = BladeDef("path/to/blade.yaml")
+    blade = Blade("path/to/blade.yaml")
     """
 
     def __init__(self, filename: str = None):
+        """
+        Parameters
+        ----------
+        filename : str, optional
+            Directory and filename of blade input file to load into the
+            Blade object.
+        """
+        self.name: str = None
+        self.definition: Definition = Definition()
+        self.ispan: ndarray = None
         self.geometry: Geometry = Geometry()
         self.keypoints: KeyPoints = KeyPoints()
-        self.definition: Definition = Definition()
-        self.stackdb: StackDatabase = StackDatabase()
-        self.materialdb = MaterialDatabase()
         self.bill_of_materials: BillOfMaterials = BillOfMaterials()
-        self.ispan: ndarray = None
-        self.settings = BladeSettings()
+        self.stackdb: StackDatabase = StackDatabase()
+        self.materialdb: MaterialDatabase = MaterialDatabase()
+        self.settings: BladeSettings = BladeSettings()
 
         # read input file
         if filename:
@@ -52,7 +70,9 @@ class Blade:
                 raise Exception(
                     "Unknown filetype. Currently supported inputs are excel and yaml files."
                 )
-
+            self.name = filename.split(".")[0]
+        else:
+            self.name = "blade"
         return
 
     def __str__(self):
@@ -99,14 +119,15 @@ class Blade:
         return self
 
     def update_blade(self):
-        """
-        TODO docstring
+        """Generates geometry, keypoints, bill of materials, 
+        stacks database, and materials database based on the
+        blade definition. 
         """
         self.geometry.generate(self.definition)
         self.keypoints.generate(self.definition, self.geometry)
         self.bill_of_materials.generate(self.definition, self.keypoints)
-        self.stackdb.generate(self.keypoints)
-        self.materialdb.generate(self.materials)
+        self.stackdb.generate(self.keypoints, self.bill_of_materials)
+        self.materialdb.generate(self.definition.materials, self.stackdb)
         return self
 
     def expand_blade_geometry_te(self, min_edge_lengths):
@@ -117,7 +138,19 @@ class Blade:
         self.keypoints.generate(self.definition, self.geometry)
         return
 
-    def add_interpolated_station(self, span_location):
+    def add_interpolated_station(self, span_location: float):
+        """Adds an interpolated station to blade geometry
+
+        Parameters
+        ----------
+        span_location : float
+            location along span between 0 and 1.
+
+        Returns
+        -------
+        int
+            integer index where the new span was inserted
+        """
         x0 = self.ispan
 
         if span_location < self.ispan[-1] and span_location > 0:

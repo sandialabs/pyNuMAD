@@ -14,10 +14,6 @@ from pynumad.utils.interpolation import interpolator_wrap
 class Component:
     """ComponentDef:  A class definition for blade components.
 
-    Parameters
-    ----------
-    None
-
     Attributes
     ----------
     group : int
@@ -95,7 +91,6 @@ class Component:
             if getattr(self, attr) != getattr(other, attr):
                 return False
         return True
-
 
     def get_control_points(self):
         if self.pinnedends:
