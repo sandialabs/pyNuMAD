@@ -189,6 +189,7 @@ def excel_to_blade(blade, filename):
     afname = list(
         txt.iloc[xls_dict["geom"]["datarow1"] : lastrow, xls_dict["geom"]["afname"]]
     )
+    definition.stations = []
     for k in range(len(afspan)):
         if afspan[k] < np.amin(definition.span) or afspan[k] > np.amax(definition.span):
             raise Exception(

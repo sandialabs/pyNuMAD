@@ -147,7 +147,7 @@ def _add_stations(
     numstations = len(blade_outer_shape_bem["airfoil_position"]["labels"])
     tc = [None] * numstations
     aero_cent = [None] * numstations
-
+    definition.stations = []
     for i in range(numstations):
         _, _, iaf_temp = np.intersect1d(
             blade_outer_shape_bem["airfoil_position"]["labels"][i],
