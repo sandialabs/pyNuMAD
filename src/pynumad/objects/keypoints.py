@@ -69,6 +69,36 @@ class KeyPoints:
         self.web_width: list = None
         self.web_bonds: list = None
         
+        
+    def __eq__(self, other):
+        attrs = [
+            a
+            for a in dir(self)
+            if not a.startswith("__") and not callable(getattr(self, a))
+        ]
+        for attr in attrs:
+            self_attr = getattr(self, attr)
+            other_attr = getattr(other, attr)
+            if isinstance(self_attr, (int,)):
+                if self_attr != other_attr:
+                    return False
+            elif isinstance(self_attr, ndarray):
+                if (self_attr != other_attr).any():
+                    return False
+        return True
+    
+    def _compare(self, other):
+        """
+        Parameters
+        ----------
+        other : KeyPoints
+
+        Returns
+        -------
+        bool
+        """
+        return self == other
+        
     def initialize(self,num_areas,num_stations):
         self.key_points = np.zeros((num_areas - 2, 3, num_stations))
         self.key_arcs = np.zeros((num_areas + 1, num_stations))

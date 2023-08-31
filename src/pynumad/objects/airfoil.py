@@ -95,6 +95,24 @@ class Airfoil:
             self.coordinates = np.stack((xcoord, ycoord), axis=1)
         self.manageTE()
 
+    def __eq__(self, other):
+        attrs = [
+            a
+            for a in dir(self)
+            if not a.startswith("__") and not callable(getattr(self, a))
+        ]
+        for attr in attrs:
+            self_attr = getattr(self, attr)
+            other_attr = getattr(other, attr)
+            if isinstance(self_attr, (int, float, str)):
+                if self_attr != other_attr:
+                    return False
+            elif isinstance(self_attr, ndarray):
+                if (self_attr != other_attr).any():
+                    return False
+        return True
+
+        
     def _compare(self, other):
         """
         Parameters
@@ -105,15 +123,7 @@ class Airfoil:
         -------
         bool
         """
-        attrs = [
-            a
-            for a in dir(self)
-            if not a.startswith("__") and not callable(getattr(self, a))
-        ]
-        for attr in attrs:
-            if getattr(self, attr) != getattr(other, attr):
-                return False
-        return True
+        return self == other
 
     @property
     def x(self):

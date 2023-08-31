@@ -73,6 +73,36 @@ class Geometry:
         self._rotorspin: int = 1
         self._swtwisted: int = 0
         
+    def __eq__(self, other):
+        attrs = [
+            a
+            for a in dir(self)
+            if not a.startswith("__") and not callable(getattr(self, a))
+        ]
+        for attr in attrs:
+            self_attr = getattr(self, attr)
+            other_attr = getattr(other, attr)
+            if isinstance(self_attr, (int,)):
+                if self_attr != other_attr:
+                    return False
+            elif isinstance(self_attr, ndarray):
+                if (self_attr != other_attr).any():
+                    return False
+        return True
+    
+    def _compare(self, other):
+        """
+        Parameters
+        ----------
+        other : Geometry
+
+        Returns
+        -------
+        bool
+        """
+        return self == other
+    
+        
     def initialize_arrays(self, num_points: int, num_stations: int, num_istations: int):
         """_summary_
 
@@ -99,26 +129,6 @@ class Geometry:
         self.isweep = np.zeros(isize)
         
         
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : Geometry
-
-        Returns
-        -------
-        bool
-        """
-        attrs = [
-            a
-            for a in dir(self)
-            if not a.startswith("__") and not callable(getattr(self, a))
-        ]
-        for attr in attrs:
-            if getattr(self, attr) != getattr(other, attr):
-                return False
-        return True
-    
     def generate(self, definition):
         """Populates geometry attributes based on a given blade defintion
 

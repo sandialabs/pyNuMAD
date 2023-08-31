@@ -2,6 +2,9 @@
 from numpy import ndarray
 from pynumad.objects.airfoil import Airfoil
 from pynumad.objects.station import Station
+from pynumad.objects.component import Component
+from pynumad.objects.material import Material
+# from pynumad.objects.stackdb import Stack
 
 
 class Definition:
@@ -45,31 +48,44 @@ class Definition:
     te_type : list
     """
     def __init__(self):
-        self.components: list = None
+        self.components: dict[str,Component] = None
         self.shearweb: list = None
-        self.materials: list = None
+        self.materials: dict[str,Material] = None
+        self.stations: list[Station] = None
+        self.te_type: list[str] = None
         self.stacks: ndarray = None
-        self.swstacks: list = None
+        self.swstacks: ndarray = None
         self.ispan: ndarray = None
         self.aerocenter: ndarray = None
         self.chord: ndarray = None
         self.chordoffset: ndarray = None
         self.degreestwist: ndarray = None
-        self.leband: float = None
         self.percentthick: ndarray = None
         self.prebend: ndarray = None
         self.span: ndarray = None
         self.sparcapoffset: ndarray = None
         self.sparcapwidth: ndarray = None
-        self.stations: list = []
         self.sweep: ndarray = None
         self.teband: float = None
-        self.te_type: list = None
+        self.leband: float = None
 
         # init properties
         self._natural_offset: int = 1
         self._rotorspin: int = 1
         self._swtwisted: int = 0
+        
+    def __eq__(self, other):
+        attrs = vars(self).keys()
+        for attr in attrs:
+            self_attr = getattr(self, attr)
+            other_attr = getattr(other, attr)
+            if isinstance(self_attr, (int, float, str, list, dict)):
+                if self_attr != other_attr:
+                    return False
+            elif isinstance(self_attr, ndarray):
+                if (self_attr != other_attr).any():
+                    return False
+        return True
 
     @property
     def natural_offset(self):
@@ -155,7 +171,6 @@ class Definition:
         """
         new_station = Station(af)
         new_station.spanlocation = spanlocation
-        new_station.parent = self
         self.stations.append(new_station)
 
         return self

@@ -1,8 +1,4 @@
-########################################################################
-#                    Part of the SNL NuMAD Toolbox                     #
-#  Developed by Sandia National Laboratories Wind Energy Technologies  #
-#              See license.txt for disclaimer information              #
-########################################################################
+from numpy import ndarray
 
 
 class Material:
@@ -101,10 +97,30 @@ class Material:
         self.alp0: float = None
         self.etat: float = None
         self.etal: float = None
-        self.m: list = None
+        self.m: list[float] = None
         self.gamma_mf: list[float] = None
         self.gamma_ms: list[float] = None
+        
+    
+    def __eq__(self, other):
+        attrs = vars(self).keys()
 
+        for attr in attrs:
+            self_attr = getattr(self, attr)
+            other_attr = getattr(other, attr)
+            try:
+                if (self_attr != self_attr) & (other_attr != other_attr):
+                    continue
+            except ValueError:
+                pass
+            if isinstance(self_attr, (int,float,str,list)):
+                if self_attr != other_attr:
+                    return False
+            elif isinstance(self_attr, ndarray):
+                if (self_attr != other_attr).any():
+                    return False
+        return True
+    
     def _compare(self, other):
         """
         Parameters
@@ -115,12 +131,4 @@ class Material:
         -------
         bool
         """
-        attrs = [
-            a
-            for a in dir(self)
-            if not a.startswith("__") and not callable(getattr(self, a))
-        ]
-        for attr in attrs:
-            if getattr(self, attr) != getattr(other, attr):
-                return False
-        return True
+        return self == other
