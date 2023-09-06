@@ -1430,7 +1430,7 @@ def writeVABSinput(surfaceDict,blade,crosssectionParams,directory,fileName, surf
                 # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
                 # #######Only needed For Plotting Orientation Check#######
             ###Normal to curve
-                print(crossSectionNormal)
+                #print(crossSectionNormal)
                 axialDirection=crossSectionNormal #There will be a slight error here for highly tapeded regions
                 normalDirection=crossProd(axialDirection,tangentDirection)
                 # #######Only needed For Plotting Orientation Check#######

@@ -186,13 +186,17 @@ def cubit_make_cross_sections(blade, wt_name, settings, crosssectionParams, mode
                 raise NameError(f'Unknown beam cross-sectional solver: {settings["solver"]}')
 
             if settings['export'] is not None:
-                if 'g' in settings['export'].lower():
-                    cubit.cmd(f'export mesh "{pathName}.g" overwrite')
-                elif 'cub' in settings['export'].lower():
-                    cubit.cmd(f'delete curve {spanwiseMatOriCurve}')
-                    cubit.cmd(f'save as "{pathName}-{str(iStation)}.cub" overwrite')
+                if 'g' in settings['export'].lower() or 'cub' in settings['export'].lower():
+                    if 'g' in settings['export'].lower():
+                        cubit.cmd(f'export mesh "{pathName}.g" overwrite')
+                    if 'cub' in settings['export'].lower():
+                        cubit.cmd(f'delete curve {spanwiseMatOriCurve}')
+                        cubit.cmd(f'save as "{pathName}-{str(iStation)}.cub" overwrite')
+                elif len(settings['export'])==0:
+                    pass
                 else:
                     raise NameError(f'Unknown model export format: {settings["export"]}')
+
         
             #Import all cross-sections into one cub file
             if settings['export'] is not None and'cub' in settings['export'].lower():
