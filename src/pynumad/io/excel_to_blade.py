@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import os
 
-from pynumad.objects.Component import Component
-from pynumad.objects.Material import Material
+from pynumad.objects.definition import Definition
+from pynumad.objects.component import Component
+from pynumad.objects.material import Material
 from pynumad.utils.interpolation import interpolator_wrap
 from pynumad.paths import DATA_PATH
 
@@ -29,8 +30,12 @@ def excel_to_blade(blade, filename):
     blade = xlsBlade(FILENAME)
     """
 
+    # Initialize blade definition
+    definition = Definition()
+    blade.definition = definition
+
     MPa_to_Pa = 1000000.0
-    # Dictionary containing column indices
+    # Create dictionary containing column indices
     xls_dict = {}
 
     xls_dict["geom"] = {}
@@ -87,84 +92,84 @@ def excel_to_blade(blade, filename):
     txt = pd.read_excel(filename, sheet_name="Geometry", dtype=str, header=None)
 
     if txt.iloc[1, 1] == "T":
-        blade.naturaloffset = 1
+        definition.natural_offset = 1
     else:
-        blade.naturaloffset = 0
+        definition.natural_offset = 0
 
     if txt.iloc[2, 1] == "CW":
-        blade.rotorspin = 1
+        definition.rotorspin = 1
     else:
-        blade.rotorspin = -1
+        definition.rotorspin = -1
 
     if txt.iloc[3, 1] == "T":
-        blade.swtwisted = 1
+        definition.swtwisted = 1
     else:
-        blade.swtwisted = 0
+        definition.swtwisted = 0
 
-    blade.span = np.array(
+    definition.span = np.array(
         num.iloc[xls_dict["geom"]["datarow1"] :, xls_dict["geom"]["span"]], dtype=float
     )
     # Next two lines handle the case where the spreadsheet tab has data
     # elsewhere on the tab below the last span value
-    nans = np.nonzero(np.isnan(blade.span))
+    nans = np.nonzero(np.isnan(definition.span))
     if nans:
         lastrow = nans[0][0]
     else:
-        lastrow = blade.span.shape[0]
+        lastrow = definition.span.shape[0]
 
-    blade.span = blade.span[0:lastrow]
-    if np.any(np.isnan(blade.span)):
+    definition.span = definition.span[0:lastrow]
+    if np.any(np.isnan(definition.span)):
         raise Exception('xlsBlade: span column must not have "holes" in data')
 
     lastrow = lastrow + xls_dict["geom"]["datarow1"]
-    blade.degreestwist = np.array(
+    definition.degreestwist = np.array(
         num.iloc[xls_dict["geom"]["datarow1"] : lastrow, xls_dict["geom"]["twist"]],
         dtype=float,
     )
-    blade.chord = np.array(
+    definition.chord = np.array(
         num.iloc[xls_dict["geom"]["datarow1"] : lastrow, xls_dict["geom"]["chord"]],
         dtype=float,
     )
-    blade.percentthick = np.array(
+    definition.percentthick = np.array(
         num.iloc[xls_dict["geom"]["datarow1"] : lastrow, xls_dict["geom"]["thick"]],
         dtype=float,
     )
-    blade.chordoffset = np.array(
+    definition.chordoffset = np.array(
         num.iloc[xls_dict["geom"]["datarow1"] : lastrow, xls_dict["geom"]["offset"]],
         dtype=float,
     )
-    blade.aerocenter = np.array(
+    definition.aerocenter = np.array(
         num.iloc[
             xls_dict["geom"]["datarow1"] : lastrow, xls_dict["geom"]["aerocenter"]
         ],
         dtype=float,
     )
-    blade.sweep = np.zeros(blade.span.shape)
-    blade.prebend = np.zeros(blade.span.shape)
+    definition.sweep = np.zeros(definition.span.shape)
+    definition.prebend = np.zeros(definition.span.shape)
     props = ["degreestwist", "chord", "percentthick", "chordoffset", "aerocenter"]
     for prop in props:
         # For each of the input properties, interpolate where ever values
         # are missing.
-        ind = np.isnan(getattr(blade, prop))
+        ind = np.isnan(getattr(definition, prop))
         if np.any(ind):
             if not prop == "percentthick":
-                getattr(blade, prop)[ind] = interpolator_wrap(
-                    np.delete(blade.span, ind),
-                    np.delete(getattr(blade, prop), ind),
-                    blade.span[ind],
+                getattr(definition, prop)[ind] = interpolator_wrap(
+                    np.delete(definition.span, ind),
+                    np.delete(getattr(definition, prop), ind),
+                    definition.span[ind],
                     "pchip",
                 )
             else:
-                # jcb: note that blade.chord must be interpolated before
-                # blade.percentthick
-                absthick = np.multiply(blade.percentthick, blade.chord) / 100
+                # jcb: note that definition.chord must be interpolated before
+                # definition.percentthick
+                absthick = np.multiply(definition.percentthick, definition.chord) / 100
                 iabsthick = interpolator_wrap(
-                    np.delete(blade.span, ind),
+                    np.delete(definition.span, ind),
                     np.delete(absthick, ind),
-                    blade.span[ind],
+                    definition.span[ind],
                     "pchip",
                 )
-                blade.percentthick[ind] = iabsthick / blade.chord[ind] * 100
+                definition.percentthick[ind] = iabsthick / definition.chord[ind] * 100
             # The next two lines report when a property has been
             # interpolated.
             # rowstr = sprintf('#d,',find(ind==1));
@@ -178,33 +183,34 @@ def excel_to_blade(blade, filename):
     if nans:
         lastrow = nans[0][0]
     else:
-        lastrow = blade.span.shape[0]
+        lastrow = definition.span.shape[0]
     afspan = afspan[0:lastrow]
     lastrow = lastrow + xls_dict["geom"]["datarow1"]
     afname = list(
         txt.iloc[xls_dict["geom"]["datarow1"] : lastrow, xls_dict["geom"]["afname"]]
     )
+    definition.stations = []
     for k in range(len(afspan)):
-        if afspan[k] < np.amin(blade.span) or afspan[k] > np.amax(blade.span):
+        if afspan[k] < np.amin(definition.span) or afspan[k] > np.amax(definition.span):
             raise Exception(
                 "xlsBlade: location of airfoil #%d is outside given span distribution",
                 k,
             )
         affile = data_dir + "/airfoils/{}.txt".format(afname[k])
-        blade.addStation(affile, afspan[k])
-        blade.stations[-1].airfoil.resample(175, "cosine")
+        definition.add_station(affile, afspan[k])
+        definition.stations[-1].airfoil.resample(175, "cosine")
 
-    # afdb = np.array([blade.stations.airfoil])
+    # afdb = np.array([definition.stations.airfoil])
     # afdb.resample(175,'cosine')
-    blade.ispan = np.array(
+    definition.ispan = np.array(
         num.iloc[xls_dict["geom"]["datarow1"] :, xls_dict["geom"]["ispan"]], dtype=float
     )
-    nans = np.nonzero(np.isnan(blade.ispan))
+    nans = np.nonzero(np.isnan(definition.ispan))
     try:
         lastrow = nans[0][0]
     except IndexError:
-        lastrow = blade.ispan.shape[0]
-    blade.ispan = blade.ispan[0:lastrow]
+        lastrow = definition.ispan.shape[0]
+    definition.ispan = definition.ispan[0:lastrow]
 
     ## COMPONENTS
 
@@ -213,24 +219,24 @@ def excel_to_blade(blade, filename):
     txt = pd.read_excel(filename, sheet_name="Components", dtype=str, header=None)
     raw = pd.read_excel(filename, sheet_name="Components", dtype=object, header=None)
 
-    blade.sparcapwidth = num.iloc[
+    definition.sparcapwidth = num.iloc[
         xls_dict["cmpt"]["paramrow1"], xls_dict["cmpt"]["paramcol"]
     ]
-    blade.leband = num.iloc[
+    definition.leband = num.iloc[
         xls_dict["cmpt"]["paramrow1"] + 1, xls_dict["cmpt"]["paramcol"]
     ]
-    blade.teband = num.iloc[
+    definition.teband = num.iloc[
         xls_dict["cmpt"]["paramrow1"] + 2, xls_dict["cmpt"]["paramcol"]
     ]
     # ble: <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    blade.sparcapoffset = num.iloc[
+    definition.sparcapoffset = num.iloc[
         xls_dict["cmpt"]["paramrow1"] + 3, xls_dict["cmpt"]["paramcol"]
     ]
-    if np.isnan(blade.sparcapoffset):
-        blade.sparcapoffset = 0
+    if np.isnan(definition.sparcapoffset):
+        definition.sparcapoffset = 0
 
     # ble: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    blade.components = []
+    definition.components = []
     N = num.shape[0] - xls_dict["cmpt"]["datarow1"]
     for k in range(N):
         comp = Component()
@@ -250,12 +256,12 @@ def excel_to_blade(blade, filename):
         comp.lpextents = readstrlist(
             txt.iloc[xls_dict["cmpt"]["datarow1"] + k, xls_dict["cmpt"]["lpext"]]
         )
-        comp.cp = readnumlist(
+        comp.control_points = readnumlist(
             raw.iloc[xls_dict["cmpt"]["datarow1"] + k, xls_dict["cmpt"]["cpspan"]]
         )
-        comp.cp = np.stack(
+        comp.control_points = np.stack(
             (
-                comp.cp,
+                comp.control_points,
                 readnumlist(
                     raw.iloc[
                         xls_dict["cmpt"]["datarow1"] + k, xls_dict["cmpt"]["cpnlay"]
@@ -275,7 +281,7 @@ def excel_to_blade(blade, filename):
             raise Exception(
                 "xlsBlade: component #%d, length of lpextents must be 0, 1, or 2", k + 1
             )
-        blade.components.append(comp)
+        definition.components.append(comp)
 
     ## MATERIALS
 
@@ -283,7 +289,7 @@ def excel_to_blade(blade, filename):
     num = pd.read_excel(filename, sheet_name="Materials", header=None)
     txt = pd.read_excel(filename, sheet_name="Materials", dtype=str, header=None)
 
-    blade.materials = []
+    definition.materials = []
     N = num.shape[0] - xls_dict["mtrl"]["datarow1"]
     for k in range(N):
         mat = Material()
@@ -359,7 +365,7 @@ def excel_to_blade(blade, filename):
             mat.pryz = mat.prxy
         if not mat.prxz:
             mat.prxz = mat.prxy
-        blade.materials.append(mat)
+        definition.materials.append(mat)
 
     return blade
 
@@ -390,32 +396,3 @@ def readstrlist(strings=None):
     else:
         strlist = strings.split(",")
     return strlist
-
-
-"""
-readnumlist scratch code
-
-    # str = strreps(str,np.array(['[',']',',']),np.array(['','',' ']))
-    # numv = cell2mat(textscan(str,'%f'))
-
-
-def readstrlist(str = None): 
-    # read a list of string values
-    str = strreps(str,np.array(['[',']',',']),np.array(['','',' ']))
-    if len(str)==0:
-        str = ' '
-    
-    strvcell = textscan(str,'%s')
-    strv = transpose(strvcell[0])
-    return strv
-    
-    return blade
-
-def strreps(strin = None,oldsubstrcell = None,newsubstrcell = None): 
-    assert np.asarray(oldsubstrcell).size == np.asarray(newsubstrcell).size,'Lengths of substring cell arrays must be equal.'
-    strout = strin
-    for k in np.arange(1,np.asarray(oldsubstrcell).size+1).reshape(-1):
-        strout = strout.replace(oldsubstrcell[k],newsubstrcell[k])
-    
-    return strout
-"""

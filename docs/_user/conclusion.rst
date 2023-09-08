@@ -44,7 +44,7 @@ Other Issues
 -  The placement of the spar cap must never exceed the bounds of the
    spar cap keypoints.
 
--  ``blade.updateBOM`` fails for an unknown reason if the layer quantity
+-  ``blade.update_bom`` fails for an unknown reason if the layer quantity
    increases rather than decreases toward the tip.
 
 

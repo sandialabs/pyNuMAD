@@ -9,12 +9,12 @@ from pynumad.utils.misc_utils import copy_and_replace
 def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
     import pynumad.analysis.beam_utils as beam_utils
 
-#     #Runs VABS or OpenSG to homogenize
-#     #Makes beamDyn or GEBT files
+    #     #Runs VABS or OpenSG to homogenize
+    #     #Makes beamDyn or GEBT files
+    geometry = blade.geometry
 
 
-
-    radial_stations=blade.ispan/blade.ispan[-1]
+    radial_stations=geometry.ispan/geometry.ispan[-1]
     nStations=len(radial_stations)
     # #Run input files
 
@@ -73,10 +73,10 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
 ### Read inputs
     extension='K'
 
-    blade.ispan=np.delete(blade.ispan,-2)  #TEMP Need to delete the added station near tip
-    blade.idegreestwist=np.delete(blade.idegreestwist,-2)  #TEMP Need to delete the added station near tip
+    geometry.ispan=np.delete(geometry.ispan,-2)  #TEMP Need to delete the added station near tip
+    geometry.idegreestwist=np.delete(geometry.idegreestwist,-2)  #TEMP Need to delete the added station near tip
 
-    radial_stations=blade.ispan/blade.ispan[-1]
+    radial_stations=geometry.ispan/geometry.ispan[-1]
     beam_stiff = np.zeros([len(radial_stations), 6, 6])
     beam_inertia = np.zeros([len(radial_stations), 6, 6])
 
@@ -108,6 +108,8 @@ def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
     # radial_stations=blade.ispan/blade.ispan[-1]
     # nStations=len(radial_stations)
     # #Run input files
+    
+    materials = blade.definition.materials
 
     if 'sm' in settings['solver'].lower():
 
@@ -117,7 +119,7 @@ def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
         materialLines=f''
         blockLines=f''
         for materialName in materialsUsed:
-            material=blade.materials[materialName]
+            material=materials[materialName]
             print(material.name)
             materialLines+=f'begin property specification for material {material.name}\n'
             materialLines+=f'   DENSITY      = {material.density}\n'
@@ -165,7 +167,7 @@ def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
         materialLines=f''
         blockLines=f''
         for materialName in materialsUsed:
-            material=blade.materials[materialName]
+            material=materials[materialName]
             print(material.name)
             materialLines+=f'material {material.name}\n'
             materialLines+=f'orthotropic_prop\n'
