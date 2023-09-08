@@ -7,7 +7,7 @@
 import numpy as np
 
 
-def fullKeysFromSubStrings(key_list, subtring_list):
+def full_keys_from_substrings(key_list, subtring_list):
     """
     Example Usage:
     subString = ['B1N3TDx']
