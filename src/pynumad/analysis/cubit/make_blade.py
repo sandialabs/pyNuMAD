@@ -18,7 +18,7 @@ def cubit_make_cross_sections(
 ):
     geometry = blade.geometry
     stackdb = blade.stackdb
-    definition = blade.defintion
+    definition = blade.definition
     keypoints = blade.keypoints
 
     if stationList is None or len(stationList) == 0:
