@@ -4,7 +4,6 @@ import numpy.matlib
 from os.path import join
 import numpy as np
 
-from pynumad.objects.Subobjects import SkinArea
 from pynumad.utils.fatigue import *
 from pynumad.utils.interpolation import *
 

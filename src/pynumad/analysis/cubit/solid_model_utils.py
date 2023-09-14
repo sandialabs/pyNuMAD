@@ -1,6 +1,6 @@
 from cubit import *
 from PyCubed_Main import *
-from pynumad.analysis.cubit.cubitUtils import printSineCurveBetweenTwoVerts
+from pynumad.analysis.cubit.utils import printSineCurveBetweenTwoVerts
 import numpy as np
 import re
 
@@ -163,8 +163,11 @@ def verifyWebCuttingAmplitude(
     blade, amplitude, tolerance, iStationFirstWeb, iStationLastWeb
 ):
     # Check to make sure that the amplitude does not result sharp volumes by cutting near a station location
+    geometry = blade.geometry
     for iStationCheck in range(iStationFirstWeb + 1, iStationLastWeb + 1):
-        bladeSegmentLength = blade.ispan[iStationCheck] - blade.ispan[iStationFirstWeb]
+        bladeSegmentLength = (
+            geometry.ispan[iStationCheck] - geometry.ispan[iStationFirstWeb]
+        )
         gap = bladeSegmentLength - amplitude
         # print(f'bladeSegmentLength: {bladeSegmentLength}\ngap {gap}')
 
@@ -187,6 +190,8 @@ def makeBirdsMouth(
     #############################################################
 
     # This function must be ran before merging the volumes since "birdsMouthVerts" will change during mergeing
+
+    geometry = blade.geometry
 
     v1 = cubit.vertex(birdsMouthVerts[0])
     v2 = cubit.vertex(birdsMouthVerts[1])
@@ -227,7 +232,7 @@ def makeBirdsMouth(
     ]  # Pick the first surface in this list since all on same plane
     coords = cubit.get_center_point("surface", surfaceID)
     surfaceNormal = cubit.surface(surfaceID).normal_at(coords)
-    cutBlockLength = 5 * max(blade.ichord)
+    cutBlockLength = 5 * max(geometry.ichord)
     sweepDirection = np.array(vectNorm(crossProd(list(tangent), list(surfaceNormal))))
 
     cubit.cmd(
@@ -282,8 +287,9 @@ def getApproximateThicknessDirectionForVolume(volumeID):
 
         return np.mean(approximateThicknessDirection[sortIndex, :], 0)
     else:
+        cubit.cmd(f'save as "debug.cub" overwrite')
         raise ValueError(
-            "The number of thickness curves in volume is unexpected. Cannot assign material orientation"
+            f"The number of thickness curves in volume is unexpected. Cannot assign material orientation. nThicknessCurves: {nThicknessCurves}"
         )
 
     return

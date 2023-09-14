@@ -14,11 +14,11 @@ from pynumad.shell.shell_region import ShellRegion
 from pynumad.analysis.ansys.write import writeAnsysShellModel
 
 
-def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
+def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
     """
     This method generates a finite element shell mesh for the blade, based on what is
-    stored in blade.geometry, blade.keypoints, and blade.profiles.  Output is given as
-    a python dictionary.
+    stored in blade.geometry.coordinates, blade.keypoints.key_points, 
+    and blade.geometry.profiles.  Output is given as a python dictionary.
 
     Parameters
     -----------
@@ -73,7 +73,14 @@ def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
         name: 'adhesiveElements'
         labels: [0,1,2,3....(number of adhesive elements)]
     """
-    geomSz = blade.geometry.shape
+    geometry = blade.geometry
+    coordinates = geometry.coordinates
+    profiles = geometry.profiles
+    key_points = blade.keypoints.key_points
+    stacks = blade.stackdb.stacks
+    swstacks = blade.stackdb.swstacks
+    
+    geomSz = coordinates.shape
     lenGeom = geomSz[0]
     numXsec = geomSz[2]
     XSCurvePts = np.array([], dtype=int)
@@ -84,40 +91,40 @@ def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
         minDist = 1
         lePt = 0
         for j in range(lenGeom):
-            prof = blade.profiles[j, :, i]
+            prof = profiles[j, :, i]
             mag = np.linalg.norm(prof)
             if mag < minDist:
                 minDist = mag
                 lePt = j
 
         for j in range(5):
-            kpCrd = blade.keypoints[j, :, i]
-            minDist = blade.ichord[i]
+            kpCrd = key_points[j, :, i]
+            minDist = geometry.ichord[i]
             pti = 1
             for k in range(lePt):
-                ptCrd = blade.geometry[k, :, i]
+                ptCrd = coordinates[k, :, i]
                 vec = ptCrd - kpCrd
                 mag = np.linalg.norm(vec)
                 if mag < minDist:
                     minDist = mag
                     pti = k
             keyPts = np.concatenate((keyPts, [pti]))
-            blade.geometry[pti, :, i] = np.array(kpCrd)
+            coordinates[pti, :, i] = np.array(kpCrd)
 
         keyPts = np.concatenate((keyPts, [lePt]))
         for j in range(5, 10):
-            kpCrd = blade.keypoints[j, :, i]
-            minDist = blade.ichord[i]
+            kpCrd = key_points[j, :, i]
+            minDist = geometry.ichord[i]
             pti = 1
             for k in range(lePt, lenGeom):
-                ptCrd = blade.geometry[k, :, i]
+                ptCrd = coordinates[k, :, i]
                 vec = ptCrd - kpCrd
                 mag = np.linalg.norm(vec)
                 if mag < minDist:
                     minDist = mag
                     pti = k
             keyPts = np.concatenate((keyPts, [pti]))
-            blade.geometry[pti, :, i] = np.array(kpCrd)
+            coordinates[pti, :, i] = np.array(kpCrd)
 
         keyPts = np.concatenate((keyPts, [lenGeom - 1]))
         allPts = np.array([keyPts[0]])
@@ -131,15 +138,15 @@ def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
 
     ## Create longitudinal splines down the blade through each of the key X-section points
 
-    splineX = blade.geometry[XSCurvePts[0, :], 0, 0]
-    splineY = blade.geometry[XSCurvePts[0, :], 1, 0]
-    splineZ = blade.geometry[XSCurvePts[0, :], 2, 0]
+    splineX = coordinates[XSCurvePts[0, :], 0, 0]
+    splineY = coordinates[XSCurvePts[0, :], 1, 0]
+    splineZ = coordinates[XSCurvePts[0, :], 2, 0]
     for i in range(1, rws):
-        Xrow = blade.geometry[XSCurvePts[i, :], 0, i]
+        Xrow = coordinates[XSCurvePts[i, :], 0, i]
         splineX = np.vstack((splineX, Xrow.T))
-        Yrow = blade.geometry[XSCurvePts[i, :], 1, i]
+        Yrow = coordinates[XSCurvePts[i, :], 1, i]
         splineY = np.vstack((splineY, Yrow.T))
-        Zrow = blade.geometry[XSCurvePts[i, :], 2, i]
+        Zrow = coordinates[XSCurvePts[i, :], 2, i]
         splineZ = np.vstack((splineZ, Zrow.T))
 
     spParam = np.transpose(np.linspace(0, 1, rws))
@@ -296,19 +303,19 @@ def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
                 "quad3",
                 shellKp,
                 nEl,
-                name=blade.stacks[j, i].name,
+                name=stacks[j, i].name,
                 elType="quad",
                 meshMethod="structured",
             )
             newSec = dict()
             newSec["type"] = "shell"
             layup = list()
-            for pg in blade.stacks[j, i].plygroups:
+            for pg in stacks[j, i].plygroups:
                 totThick = pg.thickness * pg.nPlies
                 ply = [pg.materialid, totThick, pg.angle]
                 layup.append(ply)
             newSec["layup"] = layup
-            newSec["elementSet"] = blade.stacks[j, i].name
+            newSec["elementSet"] = stacks[j, i].name
             secList.append(newSec)
             stSp = stSp + 3
         stPt = stPt + 3
@@ -324,8 +331,8 @@ def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
             for j in range(rws - 1):
                 totalThick = 0
                 for k in range(3):
-                    tpp = 0.001 * blade.stacks[sec, j].plygroups[k].thickness
-                    npls = blade.stacks[sec, j].plygroups[k].nPlies
+                    tpp = 0.001 * stacks[sec, j].plygroups[k].thickness
+                    npls = stacks[sec, j].plygroups[k].nPlies
                     totalThick = totalThick + tpp * npls
                 for k in range(3):
                     vx = splineXi[stPt, tgtSp] - splineXi[stPt, spl]
@@ -345,7 +352,7 @@ def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
     web1Sets = np.array([])
     web2Sets = np.array([])
     for i in range(rws - 1):
-        if blade.swstacks[0][i].plygroups:
+        if swstacks[0][i].plygroups:
             shellKp = np.zeros((16, 3))
             shellKp[0, :] = np.array(
                 [splineXi[stPt, 12], splineYi[stPt, 12], splineZi[stPt, 12]]
@@ -399,21 +406,21 @@ def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
                 "quad3",
                 shellKp,
                 nEl,
-                name=blade.swstacks[0][i].name,
+                name=swstacks[0][i].name,
                 elType="quad",
                 meshMethod="structured",
             )
             newSec = dict()
             newSec["type"] = "shell"
             layup = list()
-            for pg in blade.swstacks[0][i].plygroups:
+            for pg in swstacks[0][i].plygroups:
                 totThick = pg.thickness * pg.nPlies
                 ply = [pg.materialid, totThick, pg.angle]
                 layup.append(ply)
             newSec["layup"] = layup
-            newSec["elementSet"] = blade.swstacks[0][i].name
+            newSec["elementSet"] = swstacks[0][i].name
             secList.append(newSec)
-        if blade.swstacks[1][i].plygroups:
+        if swstacks[1][i].plygroups:
             shellKp = np.zeros((16, 3))
             shellKp[0, :] = np.array(
                 [splineXi[stPt, 27], splineYi[stPt, 27], splineZi[stPt, 27]]
@@ -467,19 +474,19 @@ def shellMeshGeneral(blade, forSolid, includeAdhesive, elementSize):
                 "quad3",
                 shellKp,
                 nEl,
-                name=blade.swstacks[1][i].name,
+                name=swstacks[1][i].name,
                 elType="quad",
                 meshMethod="structured",
             )
             newSec = dict()
             newSec["type"] = "shell"
             layup = list()
-            for pg in blade.swstacks[1][i].plygroups:
+            for pg in swstacks[1][i].plygroups:
                 totThick = pg.thickness * pg.nPlies
                 ply = [pg.materialid, totThick, pg.angle]
                 layup.append(ply)
             newSec["layup"] = layup
-            newSec["elementSet"] = blade.swstacks[1][i].name
+            newSec["elementSet"] = swstacks[1][i].name
             secList.append(newSec)
         stPt = stPt + 3
 
@@ -585,7 +592,7 @@ def generateShellModel(blade, feaCode, includeAdhesive, meshData=None):
         filename = join(blade.paths["job"], APDLname)
         if not meshData:
             forSolid = 0
-            meshData = shellMeshGeneral(blade, forSolid, includeAdhesive)
+            meshData = shell_mesh_general(blade, forSolid, includeAdhesive)
 
         writeAnsysShellModel(blade, filename, meshData, config)
         if config["dbgen"]:
@@ -667,7 +674,7 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
     for i in range(0, len(layerNumEls)):
         nodeDist = np.zeros(numNds)
         nodeHitCt = np.zeros(numNds, dtype=int)
-        numSec, numStat = blade.stacks.shape
+        numSec, numStat = stacks.shape
         j = 0
         for es in elSets:
             layerThick = 0.001 * sectns[j]["layup"][i][1]
@@ -734,17 +741,17 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
     return solidMesh
 
 
-def getSolidMesh(blade, layerNumEls, elementSize):
+def get_solid_mesh(blade, layerNumEls, elementSize):
     ## Edit stacks to be usable for 3D solid mesh
-    blade.editStacksForSolidMesh()
+    blade.edit_stacks_for_solid_mesh()
     ## Create shell mesh as seed
     ## Note the new output structure of shellMeshGeneral, as a single python dictionary  -E Anderson
-    shellMesh = shellMeshGeneral(blade, 1, 1, elementSize)
+    shellMesh = shell_mesh_general(blade, 1, 1, elementSize)
     print("finished shell mesh")
     solidMesh = solidMeshFromShell(blade, shellMesh, layerNumEls)
     return solidMesh
 
 
-def getShellMesh(blade, includeAdhesive, elementSize):
-    meshData = shellMeshGeneral(blade, 0, includeAdhesive, elementSize)
+def get_shell_mesh(blade, includeAdhesive, elementSize):
+    meshData = shell_mesh_general(blade, 0, includeAdhesive, elementSize)
     return meshData

@@ -6,6 +6,8 @@ import os
 
 def addColor(blade, volumeOrSurface):
     # Adds color to volume or surfaces by material
+
+    materials = blade.definition.materials
     colorDict = {}
     colorDict["adhesive"] = "yellow"
     colorDict["carbon"] = "grey"
@@ -14,7 +16,7 @@ def addColor(blade, volumeOrSurface):
     colorDict["biax"] = "greenyellow"
     colorDict["foam"] = "khaki"
 
-    for matName in blade.materials:
+    for matName in materials:
         for color in colorDict.keys():
             if color in matName.lower():
                 parseString = f'with name "*{matName}*"'
@@ -62,11 +64,12 @@ def getCrossSectionNormalVector(xyz):
 
 
 def getBladeGeometryForStation(blade, iStation):
+    geometry = blade.geometry
     return np.array(
         [
-            blade.geometry[:, 0, iStation],
-            blade.geometry[:, 1, iStation],
-            blade.geometry[:, 2, iStation],
+            geometry.coordinates[:, 0, iStation],
+            geometry.coordinates[:, 1, iStation],
+            geometry.coordinates[:, 2, iStation],
         ]
     ).transpose()
     # xcoords=blade.profiles[:,0,iStation]*blade.ichord[iStation]
@@ -128,8 +131,9 @@ def extendCurveAtVertexToLength(curveToExtendID, extensionLength, curveStartOrEn
 
 
 def removeBadTEgeometry(blade, iStation, curveID, flatBackCurveID):
+    definition = blade.definition
     cubit.cmd(
-        f"split curve {curveID} distance {blade.chord[iStation]*0.002} from start "
+        f"split curve {curveID} distance {definition.chord[iStation]*0.002} from start "
     )
     cubit.cmd(f'delete curve {get_last_id("curve")-1}')
     curveID = get_last_id("curve")
@@ -367,6 +371,9 @@ def makeCrossSectionSurface(
 
     cubit.cmd(
         f'curve {surfaceDict[get_last_id("surface")]["curves"][1]} rename "layerThickness"'
+    )
+    cubit.cmd(
+        f'curve {surfaceDict[get_last_id("surface")]["curves"][-1]} rename "layerThickness"'
     )
     cubit.cmd(
         f'curve {surfaceDict[get_last_id("surface")]["verts"][-1]} rename "layerThickness"'
@@ -611,9 +618,10 @@ def splitKeyCurves(keyCurves, aftWebStack, foreWebStack, web_adhesive_width):
 
 
 def getMidLine(blade, iLE, iStation, geometryScaling):
-    X = blade.geometry[:, 0, iStation] * geometryScaling
-    Y = blade.geometry[:, 1, iStation] * geometryScaling
-    Z = blade.geometry[:, 2, iStation] * geometryScaling
+    geometry = blade.geometry
+    X = geometry.coordinates[:, 0, iStation] * geometryScaling
+    Y = geometry.coordinates[:, 1, iStation] * geometryScaling
+    Z = geometry.coordinates[:, 2, iStation] * geometryScaling
 
     ###### Get averge line
     xHP = X[1:iLE]
@@ -699,7 +707,7 @@ def makeCrossSectionLayerAreas_perimeter(
     for iPerimeter in range(
         nStationLayups - 1
     ):  # Skip the last stack since the current and the next stack are generated at the same time.
-        with open("cubitBlade.log", "a") as logFile:
+        with open("make_blade.log", "a") as logFile:
             logFile.write(f"\tlpHpside {lpHpside}, iPerimeter={iPerimeter}\n")
 
         currentStack = stationStacks[iPerimeter]
@@ -1512,20 +1520,14 @@ def writeCubitCrossSection(
     isFlatback,
     lastRoundStation,
     materialsUsed,
+    crossSectionNormal,
 ):
-    with open("cubitBlade.log", "a") as logFile:
+    geometry = blade.geometry
+    
+    with open("make_blade.log", "a") as logFile:
         logFile.write(f"Working on Station: {iStation}\n")
 
     partNameID = 0
-    crossSectionNormal = getCrossSectionNormalVector(
-        np.array(
-            [
-                blade.keypoints[2, :, iStationGeometry],
-                blade.keypoints[3, :, iStationGeometry],
-                blade.keypoints[7, :, iStationGeometry],
-            ]
-        )
-    )
 
     #### Step one create outer mold line
     xyz = getBladeGeometryForStation(blade, iStationGeometry) * geometryScaling
@@ -1571,7 +1573,7 @@ def writeCubitCrossSection(
     #### Extend flatback ###
     curveStartOrEnd = "start"
     extensionLength = (
-        100 * blade.ichord[iStationGeometry] * cubit.curve(flatBackCurveID).length()
+        100 * geometry.ichord[iStationGeometry] * cubit.curve(flatBackCurveID).length()
     )
     flatBackCurveID = extendCurveAtVertexToLength(
         flatBackCurveID, extensionLength, curveStartOrEnd
@@ -1599,7 +1601,7 @@ def writeCubitCrossSection(
         # Crate camber line
         offsetDistance = 0
         npts = 100
-        spacing = blade.ichord[iStationGeometry] * 0.5 / npts
+        spacing = geometry.ichord[iStationGeometry] * 0.5 / npts
 
         cubit.cmd(f"curve {flatBackCurveID} copy")
         flatBackOffsetCurveID = get_last_id("curve")
@@ -1706,13 +1708,13 @@ def writeCubitCrossSection(
         writeSplineFromCoordinatePoints(cubit, splinePoints)
         camberID = get_last_id("curve")
 
-    nStacks = len(blade.stacks)
+    nStacks = len(stackdb.stacks)
 
     LEHPstackThickness = (
-        sum(blade.stacks[int(nStacks / 2.0) - 1, iStation].layerThicknesses()) / 1000
+        sum(stackdb.stacks[int(nStacks / 2.0) - 1, iStation].layerThicknesses()) / 1000
     )
     LELPstackThickness = (
-        sum(blade.stacks[int(nStacks / 2.0), iStation].layerThicknesses()) / 1000
+        sum(stackdb.stacks[int(nStacks / 2.0), iStation].layerThicknesses()) / 1000
     )
 
     # Define variables with HP side in index 0, LP side in index 1
@@ -1734,7 +1736,7 @@ def writeCubitCrossSection(
     )
 
     keyCurves = splitCurveAtCoordintePoints(
-        blade.keypoints[1:5, :, iStationGeometry], hpKeyCurve
+        keypoints.key_points[1:5, :, iStationGeometry], hpKeyCurve
     )
     web_adhesive_width = crosssectionParams["Web_adhesive_width"][iStation]
     (
@@ -1742,7 +1744,7 @@ def writeCubitCrossSection(
         lpHpCurveDict["sparCapBaseCurves"][0],
     ) = splitKeyCurves(keyCurves, aftWebStack, foreWebStack, web_adhesive_width)
 
-    temp = np.flip(blade.keypoints[:, :, iStationGeometry], 0)
+    temp = np.flip(keypoints.key_points[:, :, iStationGeometry], 0)
     keyCurves = splitCurveAtCoordintePoints(temp[1:5, :], lpKeyCurve)
     (
         lpHpCurveDict["baseCurveIDs"][1],
@@ -1776,7 +1778,7 @@ def writeCubitCrossSection(
     partNameID, lpHpCurveDict = makeCrossSectionLayerAreas_perimeter(
         surfaceDict,
         iStation,
-        blade.stacks[1:6, iStation],
+        stackdb.stacks[1:6, iStation],
         crosssectionParams,
         thicknessScaling,
         lpHpside,
@@ -1791,7 +1793,7 @@ def writeCubitCrossSection(
     )
 
     lpHpside = "LP"
-    temp = blade.stacks[:, iStation]
+    temp = stackdb.stacks[:, iStation]
     temp = np.flip(temp)
     partNameID, lpHpCurveDict = makeCrossSectionLayerAreas_perimeter(
         surfaceDict,
@@ -1876,6 +1878,7 @@ def writeVABSinput(
     fileName,
     surfaceIDs,
     materialsUsed,
+    crossSectionNormal,
 ):
     # Write VABS inputfile
     if crosssectionParams["elementShape"].lower() == "quad":
@@ -1941,8 +1944,8 @@ def writeVABSinput(
                 # #######For Plotting - find the larges element side length #######
                 # distances=[]
                 # for iNd,nodeID in enumerate(nodesIDs):
-                # for jNd,nodeIDj in enumerate(nodesIDs):
-                # distances.append(norm(vectSub(coords[iNd],coords[jNd])))
+                #     for jNd,nodeIDj in enumerate(nodesIDs):
+                #         distances.append(norm(vectSub(coords[iNd],coords[jNd])))
                 # length=max(distances)
                 # #######For Plotting - find the larges element side length #######
                 coords = np.mean(coords, 0)
@@ -1973,14 +1976,14 @@ def writeVABSinput(
                 # iVert2=get_last_id("vertex")
                 # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
                 # #######Only needed For Plotting Orientation Check#######
-            ####Normal to curve
-            # axialDirection=crossSectionNormal #There will be a slight error here for highly tapeded regions
-            # normalDirection=crossProd(axialDirection,tangentDirection)
-            # #######Only needed For Plotting Orientation Check#######
-            # cubit.create_vertex(coords[0]+length*normalDirection[0],coords[1]+length*normalDirection[1],coords[2]+length*normalDirection[2])
-            # c
-            # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
-            # #######Only needed For Plotting Orientation Check#######
+                ###Normal to curve
+                # print(crossSectionNormal)
+                axialDirection = crossSectionNormal  # There will be a slight error here for highly tapeded regions
+                normalDirection = crossProd(axialDirection, tangentDirection)
+                # #######Only needed For Plotting Orientation Check#######
+                # cubit.create_vertex(coords[0]+length*normalDirection[0],coords[1]+length*normalDirection[1],coords[2]+length*normalDirection[2])
+                # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
+                # #######Only needed For Plotting Orientation Check#######
         # Define Plies
         for iSurface, surfaceID in enumerate(surfaceIDs):
             materialID = (
