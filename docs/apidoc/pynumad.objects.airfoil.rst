@@ -1,7 +1,7 @@
-Airfoil Object
+Airfoil
 ==============
 
-.. automodule:: pynumad.objects.Airfoil
+.. automodule:: pynumad.objects.airfoil
     :members:
     :no-undoc-members:
     :show-inheritance:

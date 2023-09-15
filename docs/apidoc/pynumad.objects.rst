@@ -1,4 +1,4 @@
-pynumad.objects module
+Objects module
 =========================
 
 .. automodule:: pynumad.objects
@@ -12,9 +12,14 @@ Submodules
 .. toctree::
     :maxdepth: 1
     
-    pynumad.objects.Airfoil
-    pynumad.objects.Blade
-    pynumad.objects.Component
-    pynumad.objects.Material
-    pynumad.objects.Station
-    pynumad.objects.Subobjects
+    pynumad.objects.airfoil
+    pynumad.objects.blade
+    pynumad.objects.bom
+    pynumad.objects.component
+    pynumad.objects.definition
+    pynumad.objects.geometry
+    pynumad.objects.keypoints
+    pynumad.objects.material
+    pynumad.objects.materialdb
+    pynumad.objects.stackdb
+    pynumad.objects.station
