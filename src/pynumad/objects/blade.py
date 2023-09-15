@@ -1,8 +1,6 @@
 # for type hints
 from numpy import ndarray
 
-from copy import copy
-
 import numpy as np
 
 from pynumad.io.yaml_to_blade import yaml_to_blade
@@ -12,12 +10,9 @@ from pynumad.objects.geometry import Geometry
 from pynumad.objects.settings import BladeSettings
 from pynumad.objects.keypoints import KeyPoints
 from pynumad.objects.definition import Definition
-from pynumad.objects.bom import BillOfMaterials, BillOfMaterialsEntry, find_layer_extents
-from pynumad.objects.materialdb import MaterialDatabase, MaterialDatabaseEntry, Layer
-from pynumad.objects.stackdb import StackDatabase, Ply, Stack
-
-
-
+from pynumad.objects.bom import BillOfMaterials
+from pynumad.objects.materialdb import MaterialDatabase
+from pynumad.objects.stackdb import StackDatabase
 
 
 class Blade:
