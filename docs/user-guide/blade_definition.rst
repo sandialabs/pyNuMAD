@@ -24,17 +24,17 @@ adding additional stations or changing material assignments, before
 generating downstream data.
 
 In pyNuMAD, a blade is defined with the ``Definition`` object, or blade
-object for short.
+object for short.S
 many of the properties are parameterized by spanwise location. Refer to
-:ref:`bladeClass` for a complete listing of ``BladeDef`` properties.
+X for a complete listing of ``BladeDef`` properties.
 
 First and foremost there are *stations*. A station is an airfoil at a
 specified span location. The airfoil is partitioned by *keypoints*,
-shown in :numref:`bladeKeyPoints`. Various blade properties such as ``blade.leband``,
+shown in X. Various blade properties such as ``blade.leband``,
 ``blade.teband``, ``blade.sparcapwidth``, and ``blade.sparcapoffset`` help to
 position the keypoints precisely. For example, ``blade.leband`` is the
 arclength from the *le* keypoint to the keypoint *a*. *Regions* are
-defined between the keypoints as listed in :numref:`defineRegions`. An adjacent
+defined between the keypoints as listed in X. An adjacent
 station helps define these regions as areas. Spanwise lines emanating
 from each keypoint are connected to the corresponding keypoints on an
 adjacent station; thus bounding the region with four curves. A suffix of
