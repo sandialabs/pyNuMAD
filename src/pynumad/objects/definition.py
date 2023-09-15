@@ -1,20 +1,28 @@
 # for type hints
 from numpy import ndarray
+
 from pynumad.objects.airfoil import Airfoil
 from pynumad.objects.station import Station
 from pynumad.objects.component import Component
 from pynumad.objects.material import Material
-# from pynumad.objects.stackdb import Stack
 
 
 class Definition:
-    """Contains the definition of a blade object
+    """Definition Class
+    
+    A Definition object is designed to contain the
+    basic defining features of a blade, which can
+    be populated manually or by reading a blade file.
 
     Attributes
     ----------
-    components : list
+    components : dict
+        Dictionary of components indexed by component name
     shearweb : list
+        List of shearwebs. len(shearweb) == number of shearwebs.
+        shearweb[i] gives an array defining the ith shearweb.
     materials : dict
+        Dictionary of material objects indexed by material name.
     stacks : ndarray
     swstacks : array
     ispan : ndarray
@@ -27,8 +35,6 @@ class Definition:
         Chordwise offset (in addition to natural offset)
     degreestwist : ndarray
         Twist distribution [degrees]
-    leband : float
-        Location of keypoint a
     percentthick : ndarray
         Percent thickness of airfoil [%]
     prebend : ndarray
@@ -41,10 +47,13 @@ class Definition:
         between keypoints b & c [mm]. First entry is the HP spar cap.
         Second entry is the LP spar cap
     stations : list
-        list of station objects
+        List of station objects
     sweep : ndarray
-        Blade Sweep, Reference axis location along x1 [m]
+        Blade sweep, reference axis location along x1 [m]
     teband : float
+        Location of keypoint e
+    leband : float
+        Location of keypoint a
     te_type : list
     """
     def __init__(self):
@@ -105,7 +114,9 @@ class Definition:
     @property
     def rotorspin(self):
         """
-        Rotor Spin, 1= CW rotation looking downwind, -1= CCW rotation
+        Rotor Spin, 
+        1 = CW rotation looking downwind, 
+        -1 = CCW rotation
         """
         return self._rotorspin
 
@@ -132,27 +143,10 @@ class Definition:
         else:
             self._swtwisted = new_swtwisted
 
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : Definition
-
-        Returns
-        -------
-        bool
-        """
-
-        # compare components
-
-        # compare shearweb
-
-        # compare materials
-
     def add_station(self, af: Airfoil, spanlocation: float):
         """This method adds a station
 
-        Specifically, the station object is created
+        Specifically, a station object is created
         and appended to self.stations.
 
         Parameters
@@ -167,7 +161,7 @@ class Definition:
         Example
         -------
         ``blade.add_station(af,spanlocation)`` where  ``af`` = airfoil filename
-        or ``AirfoilDef`` object
+        or ``Airfoil`` object
         """
         new_station = Station(af)
         new_station.spanlocation = spanlocation

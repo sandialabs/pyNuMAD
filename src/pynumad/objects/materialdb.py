@@ -1,7 +1,7 @@
 import logging
+
 from pynumad.objects.stackdb import StackDatabase
 
-from numpy import ndarray
 
 class MaterialDatabase(dict):
     def __init__(self):
@@ -9,6 +9,15 @@ class MaterialDatabase(dict):
     
     def generate(self, materials: dict, stackdb: StackDatabase):
         """Adds material and composites information to MatDB
+
+        Parameters
+        ----------
+        materials : dict
+        stackdb : StackDatabase
+
+        Returns
+        -------
+        Self
         """
         mm_to_m = 0.001
         stacks = stackdb.stacks

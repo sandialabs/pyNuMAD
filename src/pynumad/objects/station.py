@@ -1,12 +1,4 @@
-import numpy as np
-
-# typing
-from numpy import ndarray
-
-import numpy as np
-import os
 from pynumad.objects.airfoil import Airfoil
-from pynumad.utils.interpolation import interpolator_wrap
 
 
 class Station:
@@ -17,8 +9,6 @@ class Station:
         Airfoil corresponding to the station
     spanlocation
         Spanwise location where station is defined [m]
-    parent
-    hgProfiile
     """
 
     def __init__(self, af=None):
@@ -30,7 +20,6 @@ class Station:
         """
         self.airfoil = None
         self.spanlocation = None
-        # self.parent = None
 
         if isinstance(af, str):
             self.airfoil = Airfoil(filename=af)
@@ -45,19 +34,9 @@ class Station:
             if getattr(self, attr) != getattr(other, attr):
                 return False
         return True
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : Station
-
-        Returns
-        -------
-        bool
-        """
-        return self == other
 
 
+# unsure if these are needed in pynumad -kb
     # @property
     # def degreestwist(self):
     #     """

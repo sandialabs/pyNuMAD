@@ -1,19 +1,18 @@
-import re
-import numpy as np
+from numpy import ndarray
 
 import os
-import matplotlib.pyplot as plt
 import warnings
+
+import numpy as np
 import scipy as sp
 
 from pynumad.io.xml_to_airfoil import xml_to_airfoil
 from pynumad.utils.interpolation import interpolator_wrap
 
-from numpy import ndarray
 
 
 class Airfoil:
-    """Airfoil object
+    """Airfoil class
 
     Attributes
     ----------
@@ -42,16 +41,15 @@ class Airfoil:
     """
 
     def __init__(self, filename: str = None, coords: ndarray = None, reference: str = None):
-        """_summary_
-
+        """
         Parameters
         ----------
         filename : string
             path to filename of airfoil (xml somewhat supported)
         coords : array
+            coordinate array
         reference : string
             Name of airfoil reference
-
         """
         
         self.name: str = None
@@ -112,18 +110,6 @@ class Airfoil:
                     return False
         return True
 
-        
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : Airfoil
-
-        Returns
-        -------
-        bool
-        """
-        return self == other
 
     @property
     def x(self):
@@ -150,15 +136,22 @@ class Airfoil:
         hp = self.camber - (self.thickness / 2)
         return np.concatenate(([0], np.flipud(hp), lp[1:], [0]))
 
-    def read_xml(self, filename):
-        """
-        TODO docstring
+    def read_xml(self, filename: str):
+        """Populate airfoil object with data from airfoil xml 
+
+        Parameters
+        ----------
+        filename : str
+
+        Returns
+        -------
+        Self
         """
         xml_to_airfoil(self, filename)
         return self
 
     def manageTE(self):
-        """Modifies self.te_type and self.coordinates
+        """Updates te_type
 
         Parameters
         ----------
@@ -166,7 +159,7 @@ class Airfoil:
         Returns
         -------
         """
-
+        # Modifies self.te_type and self.coordinates
         unitNormals = get_airfoil_normals(self.coordinates)
         angleChange = get_airfoil_normals_angle_change(unitNormals)
         discontinuities = np.flatnonzero(angleChange > 45)
@@ -200,7 +193,7 @@ class Airfoil:
 
         Returns
         -------
-        None
+        Self
 
         Example
         -------
