@@ -13,7 +13,7 @@ Documentation for pynumad is accessible at https://sandialabs.github.io/pyNuMAD/
 
 ## Examples
 
-Step-by-step examples are located in the [examples](XXX) folder. Follow allong in the documentation.
+Step-by-step examples are located in the [examples](https://github.com/sandialabs/pyNuMAD/tree/main/examples) folder. Follow allong in the documentation.
 
 ## License
 
