@@ -2,7 +2,7 @@ from numpy import ndarray
 
 
 class Material:
-    """MaterialDef:  A class for blade materials.
+    """Material class
 
     Attributes
     ----------
@@ -120,15 +120,3 @@ class Material:
                 if (self_attr != other_attr).any():
                     return False
         return True
-    
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : Material
-
-        Returns
-        -------
-        bool
-        """
-        return self == other

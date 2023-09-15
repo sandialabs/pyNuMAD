@@ -1,7 +1,7 @@
-Station
+Keypoints
 ==============
 
-.. automodule:: pynumad.objects.station
+.. automodule:: pynumad.objects.keypoints
     :members:
     :no-undoc-members:
     :show-inheritance:

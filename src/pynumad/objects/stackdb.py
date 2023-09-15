@@ -1,7 +1,8 @@
 from copy import deepcopy
 
-from numpy import ndarray
 import numpy as np
+from numpy import ndarray
+
 from pynumad.objects.keypoints import KeyPoints
 from pynumad.objects.bom import BillOfMaterials
 
@@ -10,6 +11,26 @@ class StackDatabase:
         self.stacks: ndarray = None
         self.swstacks: ndarray = None
         
+    def __eq__(self, other):
+        assert self.stacks.shape == other.stacks.shape
+        
+        assert self.swstacks.shape == other.swstacks.shape
+        
+        self_flat_stacks = self.stacks.flatten()
+        other_flat_stacks = other.stacks.flatten()
+        for i in range(self_flat_stacks.shape[0]):
+            self_stack = self_flat_stacks[i]
+            other_stack = other_flat_stacks[i]
+            if self_stack != other_stack:
+                return False
+        self_flat_stacks = self.swstacks.flatten()
+        other_flat_stacks = other.swstacks.flatten()
+        for i in range(self_flat_stacks.shape[0]):
+            self_stack = self_flat_stacks[i]
+            other_stack = other_flat_stacks[i]
+            if self_stack != other_stack:
+                return False
+        return True
     def generate(self, keypoints: KeyPoints, bom: BillOfMaterials):
         # build the material stack for each area
         n_segments = keypoints.key_areas.shape[0]
@@ -108,12 +129,11 @@ class StackDatabase:
                     self.swstacks[k_web, k_stat].addply(deepcopy(cur_ply))
         
     def edit_stacks_for_solid_mesh(self):
-        """_summary_
+        """
 
         Returns
         -------
-        _type_
-            _description_
+        Self
         """
         numSec, numStat = self.stacks.shape
         for i in range(numSec):
@@ -211,6 +231,19 @@ class Stack:
         self.name: str = ""
         self.indices = []
         self.plygroups: list = []
+        
+    def __eq__(self, other):
+        attrs = vars(self).keys()
+        for attr in attrs:
+            self_attr = getattr(self, attr)
+            other_attr = getattr(other, attr)
+            if isinstance(self_attr, (int, float, str, list, dict)):
+                if self_attr != other_attr:
+                    return False
+            elif isinstance(self_attr, ndarray):
+                if (self_attr != other_attr).any():
+                    return False
+        return True
 
     def addply(self, ply):
         """This method adds a Ply object to stack
@@ -276,5 +309,12 @@ class Ply:
         self.angle: float = None
         self.nPlies: int = None
 
-    def _compare(self, other):
-        pass
+    def __eq__(self, other):
+        attrs = vars(self).keys()
+        for attr in attrs:
+            self_attr = getattr(self, attr)
+            other_attr = getattr(other, attr)
+            if isinstance(self_attr, (int, float, str)):
+                if self_attr != other_attr:
+                    return False
+        return True

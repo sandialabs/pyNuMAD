@@ -1,4 +1,4 @@
-pynumad.io module
+IO module
 =====================
 
 .. automodule:: pynumad.io

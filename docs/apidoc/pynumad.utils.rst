@@ -1,4 +1,4 @@
-pynumad.utils module
+Utils Module
 =====================
 
 .. automodule:: pynumad.utils.affinetrans

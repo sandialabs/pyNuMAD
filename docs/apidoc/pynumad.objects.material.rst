@@ -1,7 +1,7 @@
-Material Object
+Material
 ===============
 
-.. automodule:: pynumad.objects.Material
+.. automodule:: pynumad.objects.material
     :members:
     :no-undoc-members:
     :show-inheritance:

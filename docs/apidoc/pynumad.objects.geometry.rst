@@ -1,7 +1,7 @@
-Station
+Geometry
 ==============
 
-.. automodule:: pynumad.objects.station
+.. automodule:: pynumad.objects.geometry
     :members:
     :no-undoc-members:
     :show-inheritance:

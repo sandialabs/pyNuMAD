@@ -17,7 +17,8 @@ def docs(session):
     session.install("sphinx")
     session.install("sphinx_rtd_theme")
     session.install("sphinxcontrib-bibtex")
-    session.run("sphinx-build", "-M", "html", "docs/", "docs/_build")
+    session.run("cd docs/")
+    session.run("make html")
 
 @nox.session
 def serve(session):

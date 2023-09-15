@@ -9,8 +9,6 @@ modifying its parameters and attributes, and generating structural models
 for analysis. Tips for implementation are given to ensure the smoothest
 execution.
 
-.. _bladeGen:
-
 Blade Generation
 ----------------
 
@@ -65,7 +63,7 @@ commands
     >> 	updateFASTFromBLADEDef(IEC,blade)
 
 ``inputFileName`` refers to the path/name of the input file containing variables 
-related to the aeroelastic analysis and simulation (see :ref:`runIEC` for more 
+related to the aeroelastic analysis and simulation (see x for more 
 details).
 
 After all desired analyses and modifications are complete, a new,

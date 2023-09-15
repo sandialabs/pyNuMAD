@@ -1,7 +1,7 @@
-Station
+Definition
 ==============
 
-.. automodule:: pynumad.objects.station
+.. automodule:: pynumad.objects.definition
     :members:
     :no-undoc-members:
     :show-inheritance:
