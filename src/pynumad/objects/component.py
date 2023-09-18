@@ -1,12 +1,10 @@
-from matplotlib import pyplot as plt
 import numpy as np
-import matplotlib.pyplot as plt
 
 from pynumad.utils.interpolation import interpolator_wrap
 
 
 class Component:
-    """ComponentDef:  A class definition for blade components.
+    """ Component class
 
     Attributes
     ----------
@@ -29,13 +27,6 @@ class Component:
     pinnedends
     hCtrl
     hLine
-
-    Examples:
-
-        ``comp_self = ComponentDef();``
-
-        ``comp_self = ComponentDef(comp_struct);``
-
     """
 
     def __init__(self):

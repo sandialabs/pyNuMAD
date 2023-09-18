@@ -24,7 +24,7 @@ OpenFAST cross-sectional stress resultant forces and moments at various
 spanwise positions. These forces and moments are in coordinate systems
 that are aligned with the local principal axes (structural) of the
 cross-section in the deformed configuration. Thus, those coordinate
-systems change with respect to span. :numref:`numadFASTcsys` contrasts the FAST
+systems change with respect to span. X contrasts the FAST
 results coordinate basis vectors,
 :math:`v_{i}^{(j)}\ (j = 1,2,3,\ldots,k)`, with those of the NuMAD loads
 system, :math:`w_{i}`, and the ANSYS coordinate system, :math:`x_{i}`,
@@ -289,7 +289,7 @@ on it to
 
 The required inputs are a blade object, the ``loadsTable``, and the ``config``
 variable. The script knows which analysis types it should run based on
-config. See :numref:`configTable` for the structure and usage of the ``config``
+config. See X for the structure and usage of the ``config``
 variable. The ``IECDef`` class defintion is only needed when the fatigue flage is activated.
 
 
@@ -361,7 +361,7 @@ Failure
 ~~~~~~~
 
 If material failure is being considered in an analysis, set
-``config.failure`` equal to any one of the entries in :numref:`failureCriteriaOptions`. An
+``config.failure`` equal to any one of the entries in X. An
 empty string will skip any material failure analyses.
 
 
@@ -461,10 +461,10 @@ gages.
 
 The end-user has the ability to either obtain a single fatigue damage
 fraction at each spanwise fatigue location or several fatigue damage
-fractions each corresponding to a region in :numref:`bladeKeyPoints`. The former is
+fractions each corresponding to a region in x. The former is
 accomplished by setting ``config.analysisFlags.fatigue = ["ALL"]``.
 The latter is accomplished by setting ``config.analysisFlags.fatigue``
-to a MATLAB string array where any and all Region Names in :numref:`regionNames` are allowed.
+to a MATLAB string array where any and all Region Names in x are allowed.
 
 
 .. _regionNames:

@@ -10,7 +10,7 @@ from pynumad.objects.geometry import Geometry
 
 
 class KeyPoints:
-    """This class holds keypoint information of a blade
+    """Keypoints class
 
     Attributes
     ----------
@@ -87,17 +87,6 @@ class KeyPoints:
                     return False
         return True
     
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : KeyPoints
-
-        Returns
-        -------
-        bool
-        """
-        return self == other
         
     def initialize(self,num_areas,num_stations):
         self.key_points = np.zeros((num_areas - 2, 3, num_stations))
@@ -109,8 +98,8 @@ class KeyPoints:
         return self
     
     def generate(self, definition: Definition, geometry: Geometry):
-        """This method updates the keypoints (a,b,c,...) which define the blade
-        regions.
+        """This method generates the keypoints (a,b,c,...) which define the blade
+        regions given by a definition and geometry object.
         
         Parameters
         ----------
@@ -119,13 +108,7 @@ class KeyPoints:
 
         Returns
         -------
-
-        self
-
-        Example:
-          ``blade.update_keypoints``
-
-        find the curves which bound each blade region
+        Self
         """
         mm_to_m = 0.001
 

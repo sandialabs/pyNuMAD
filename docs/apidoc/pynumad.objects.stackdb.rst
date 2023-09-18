@@ -1,7 +1,7 @@
-Other Objects
+StackDatabase
 =============
 
-.. automodule:: pynumad.objects.Subobjects
+.. automodule:: pynumad.objects.stackdb
     :members:
     :no-undoc-members:
     :show-inheritance:

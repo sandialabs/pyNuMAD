@@ -1,6 +1,7 @@
-import re, warnings
+# for type hints
+from numpy import ndarray
+
 import numpy as np
-from copy import deepcopy
 
 from pynumad.io.yaml_to_blade import yaml_to_blade
 from pynumad.io.excel_to_blade import excel_to_blade
@@ -13,13 +14,16 @@ from pynumad.objects.bom import BillOfMaterials
 from pynumad.objects.materialdb import MaterialDatabase
 from pynumad.objects.stackdb import StackDatabase
 
-# for type hints
-from numpy import ndarray
-
 
 class Blade:
-    """BladeDef A class definition for wind & water turbine blades.
-
+    """Blade class
+    
+    Parameters
+    ----------
+    filename : str, optional
+        Directory and filename of blade input file to load into the
+        Blade object.
+        
     Attributes
     ----------
     name : str
@@ -39,17 +43,11 @@ class Blade:
 
     Example
     -------
+    
     blade = Blade("path/to/blade.yaml")
     """
 
     def __init__(self, filename: str = None):
-        """
-        Parameters
-        ----------
-        filename : str, optional
-            Directory and filename of blade input file to load into the
-            Blade object.
-        """
         self.name: str = None
         self.definition: Definition = Definition()
         self.ispan: ndarray = None
@@ -120,7 +118,7 @@ class Blade:
 
     def update_blade(self):
         """Generates geometry, keypoints, bill of materials, 
-        stacks database, and materials database based on the
+        stack database, and material database based on the
         blade definition. 
         """
         self.geometry.generate(self.definition)

@@ -5,6 +5,17 @@ from pynumad.objects.definition import Definition
 from pynumad.objects.keypoints import KeyPoints
 
 class BillOfMaterials(dict):
+    """Bill of Materials class
+    
+    This class is designed replicate the bom
+    blade attribute from NuMAD. It is currently
+    not used in pyNuMAD analyses and isn't actively
+    maintained.
+
+    Attributes
+    ----------
+    indices : dict
+    """
     def __init__(self):
         self.indices: dict = None
         pass
@@ -53,7 +64,7 @@ class BillOfMaterials(dict):
             num_layers = np.round(num_layers)
 
             for k_layer in range(1, int(np.max(num_layers)) + 1):
-                begin_station, end_station = self.find_layer_extents(
+                begin_station, end_station = find_layer_extents(
                     num_layers, k_layer
                 )
                 ks_max = np.amin((len(begin_station), len(end_station)))
@@ -142,7 +153,7 @@ class BillOfMaterials(dict):
             num_layers = np.round(num_layers)
 
             for k_layer in range(1, int(np.max(num_layers)) + 1):
-                begin_station, end_station = self.find_layer_extents(
+                begin_station, end_station = find_layer_extents(
                     num_layers, k_layer
                 )
                 ks_max = np.amin((len(begin_station), len(end_station)))
@@ -201,26 +212,26 @@ class BillOfMaterials(dict):
         return self
     
     # Supporting function for update_bom
-    def find_layer_extents(self, layer_dist, layer_n):
-        """
-        TODO docstring
-        """
-        assert np.isscalar(layer_n), 'second argument "layer_n" must be a scalar'
-        sta_logical = layer_dist >= layer_n
-        prev = 0
-        begin_station = []
-        end_station = []
-        for k in range(len(sta_logical)):
-            if sta_logical[k] == 1 and prev == 0:
-                begin_station.append(k)
-            if sta_logical[k] == 0 and prev == 1:
-                end_station.append(k)
-            elif k == len(sta_logical) - 1 and prev == 1:
-                end_station.append(k)
-            prev = sta_logical[k]
+def find_layer_extents(layer_dist, layer_n):
+    """
+    TODO docstring
+    """
+    assert np.isscalar(layer_n), 'second argument "layer_n" must be a scalar'
+    sta_logical = layer_dist >= layer_n
+    prev = 0
+    begin_station = []
+    end_station = []
+    for k in range(len(sta_logical)):
+        if sta_logical[k] == 1 and prev == 0:
+            begin_station.append(k)
+        if sta_logical[k] == 0 and prev == 1:
+            end_station.append(k)
+        elif k == len(sta_logical) - 1 and prev == 1:
+            end_station.append(k)
+        prev = sta_logical[k]
 
-        return begin_station, end_station
-    
+    return begin_station, end_station
+
     
 class BillOfMaterialsEntry:
     """A simple class to organize the attributes of a Bill of Materials

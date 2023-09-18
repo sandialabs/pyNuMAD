@@ -1,17 +1,19 @@
 ![](docs/source/_static/images/NuMAD-header.png) 
-# Numerical Manufacturing And Design (NuMAD) Tool 
-[NuMAD (Numerical Manufacturing And Design)](XXX) is an object-oriented, open-source software program written in Python which simplifies the process of creating a three-dimensional model of a wind turbine blade. The tool organizes all blade information including aerodynamic and material properties as well as material placement into an
+# Numerical Manufacturing And Design (pyNuMAD)
+[pyNuMAD (Python Numerical Manufacturing And Design)](https://github.com/sandialabs/pyNuMAD) is an object-oriented, open-source software program written in Python which simplifies the process of creating a three-dimensional model of a wind turbine blade. The tool organizes all blade information including aerodynamic and material properties as well as material placement into an
 intuitive API for use with other softwares. The purpose of pyNuMAD is to provide an intermediary between raw blade data in the form of yaml, excel, xml files and analytical platforms
 (ANSYS, cubit, openFAST, etc).
 
 For any questions or support [create a new issue](https://github.com/sandialabs/pyNuMAD/issues/new) on GitHub.
 
+## Documentation
+Documentation for pynumad is accessible at https://sandialabs.github.io/pyNuMAD/.
 
 ![](docs/_static/images/NuMADoverview.png)
 
 ## Examples
 
-Step-by-step examples are located in the [examples](XXX) folder. Follow allong in the documentation.
+Step-by-step examples are located in the [examples](https://github.com/sandialabs/pyNuMAD/tree/main/examples) folder. Follow allong in the documentation.
 
 ## License
 

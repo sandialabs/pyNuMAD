@@ -7,11 +7,12 @@ from pynumad.objects.airfoil import (
     get_airfoil_normals_angle_change,
 )
 from pynumad.utils.affinetrans import rotation, translation
-from pynumad.objects.settings import BladeSettings
 
 
 class Geometry:
-    """Contains the geometry of a blade object
+    """Geometry class
+    
+    Contains the interpolated geometry of a blade
 
     Attributes
     ----------
@@ -89,18 +90,6 @@ class Geometry:
                 if (self_attr != other_attr).any():
                     return False
         return True
-    
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : Geometry
-
-        Returns
-        -------
-        bool
-        """
-        return self == other
     
         
     def initialize_arrays(self, num_points: int, num_stations: int, num_istations: int):
@@ -314,7 +303,7 @@ class Geometry:
         return self
 
     def update_airfoil_profile(self, k):
-        """_summary_
+        """Updates kth airfoil profile
 
         Parameters
         ----------
@@ -344,11 +333,18 @@ class Geometry:
         self.profiles[:, :, k] = profile
         return self
 
-    def expand_blade_geometry_te(self, min_edge_lengths):
+    def expand_blade_geometry_te(self, min_edge_lengths: ndarray):
         """Adjusts trailing edges for solid models.
 
         Opens trailing edge
-        TODO: docstring
+
+        Parameters
+        ----------
+        min_edge_lengths : ndarray
+
+        Returns
+        -------
+        Self
         """
         nStations = self.coordinates.shape[2]
 
