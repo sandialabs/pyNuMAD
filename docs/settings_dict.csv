@@ -1,0 +1,3 @@
+﻿Key,Description
+``make_input_for``,"Type: str.  ""SM"", ""SD"", ""VABS"", ""ANBA"", or None. It should all be in one string such as ""vabssm"". Letter case agnostic."
+``export``,"Type: str. ""cub"", ""g"", or None. It should all be in one string such as ""cubg""."

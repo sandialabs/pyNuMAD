@@ -743,14 +743,14 @@ def makeCrossSectionLayerAreas_perimeter(
 
             adjacentLayerMissmatch = abs(currentStackLayerOffset - nextStackLayerOffset)
 
-            if adjacentLayerMissmatch > params["minimumTransitionLength"][iStation]:
+            if adjacentLayerMissmatch > params["minimum_layer_transition_length"][iStation]:
                 layerThicknessTransitionLengths.append(
                     adjacentLayerMissmatch
-                    / tan(math.radians(params["transitionTaperAngle"]))
+                    / tan(math.radians(params["layer_transition_angle"]))
                 )
             else:
                 layerThicknessTransitionLengths.append(
-                    params["minimumTransitionLength"][iStation]
+                    params["minimum_layer_transition_length"][iStation]
                 )
 
             # Also find the thinest layer in stack for meshing purposes
@@ -814,7 +814,7 @@ def makeCrossSectionLayerAreas_perimeter(
 
             # offset camber to make gap
             cubit.cmd(
-                f'create curve offset curve {lpHpCurveDict["camberID"]} distance {camberOffsetSign*offsetSign_camberID*params["TE_adhesive"][iStation]/2} extended'
+                f'create curve offset curve {lpHpCurveDict["camberID"]} distance {camberOffsetSign*offsetSign_camberID*params["TE_adhesive_thickness"][iStation]/2} extended'
             )
             camberOffset = get_last_id("curve")
 
@@ -983,7 +983,7 @@ def makeCrossSectionLayerAreas_perimeter(
                 )
 
             cubit.cmd(
-                f'create curve offset curve {lpHpCurveDict["camberID"]} distance {camberOffsetSign*offsetSign_camberID*params["TE_adhesive"][iStation]/2} extended'
+                f'create curve offset curve {lpHpCurveDict["camberID"]} distance {camberOffsetSign*offsetSign_camberID*params["TE_adhesive_thickness"][iStation]/2} extended'
             )
             camberOffset = get_last_id("curve")
 
@@ -1390,7 +1390,7 @@ def makeCrossSectionLayerAreas_web(
     aftWebStack,
     foreWebStack,
     webInterfaceCurves,
-    crosssectionParams,
+    cs_params,
     partNameID,
     crossSectionNormal,
     nModeledLayers,
@@ -1417,12 +1417,12 @@ def makeCrossSectionLayerAreas_web(
 
             if iCurve < nBaseCurvesWeb / 2:
                 layerThicknesses = [
-                    crosssectionParams["Web_aft_adhesive"][iStation],
+                    cs_params["web_aft_adhesive_thickness"][iStation],
                     aftWebOverwrapThickness,
                 ]
             else:
                 layerThicknesses = [
-                    crosssectionParams["Web_fore_adhesive"][iStation],
+                    cs_params["web_fore_adhesive_thickness"][iStation],
                     foreWebOverwrapThickness,
                 ]
 
@@ -1433,7 +1433,7 @@ def makeCrossSectionLayerAreas_web(
                 topCurve = get_last_id("curve")
 
                 if it == 0:
-                    materialName = crosssectionParams["adhesiveMatID"]
+                    materialName = cs_params["adhesive_mat_name"]
                     plyAngle = 0
 
                 else:
@@ -1474,12 +1474,12 @@ def makeCrossSectionLayerAreas_web(
         vHP, _ = selCurveVerts(webInterfaceCurves[0][iCurve])
         vLP, _ = selCurveVerts(webInterfaceCurves[1][iCurve])
         topCurve = printSineCurveBetweenTwoVerts(
-            vHP, vLP, crosssectionParams["maxWebImperfectionDistance"][iStation], "x"
+            vHP, vLP, cs_params["max_web_imperfection_distance"][iStation], "x"
         )
         _, vHP = selCurveVerts(webInterfaceCurves[0][iCurve])
         _, vLP = selCurveVerts(webInterfaceCurves[1][iCurve])
         bottomCurve = printSineCurveBetweenTwoVerts(
-            vHP, vLP, crosssectionParams["maxWebImperfectionDistance"][iStation], "x"
+            vHP, vLP, cs_params["max_web_imperfection_distance"][iStation], "x"
         )
 
         if iCurve < nBaseCurvesWeb / 2:
@@ -1514,7 +1514,7 @@ def writeCubitCrossSection(
     aftWebStack,
     foreWebStack,
     iLE,
-    crosssectionParams,
+    cs_params,
     geometryScaling,
     thicknessScaling,
     isFlatback,
@@ -1523,6 +1523,8 @@ def writeCubitCrossSection(
     crossSectionNormal,
 ):
     geometry = blade.geometry
+    stackdb=blade.stackdb
+    keypoints=blade.keypoints
     
     with open("make_blade.log", "a") as logFile:
         logFile.write(f"Working on Station: {iStation}\n")
@@ -1593,9 +1595,9 @@ def writeCubitCrossSection(
     TEangle = getTEangle(hpKeyCurve, lpKeyCurve, curveFraction)
     print(f"station {iStation}")
     print(f"edgeLength={flatBackLength*1000}")
-    print(crosssectionParams)
-    print(f'athickness={crosssectionParams["TE_adhesive"][iStation]*1000}')
-    print(f'TE_adhesive_width {crosssectionParams["TE_adhesive_width"][iStation]*1000}')
+    print(cs_params)
+    print(f'athickness={cs_params["TE_adhesive_thickness"][iStation]*1000}')
+    print(f'TE_adhesive_width {cs_params["TE_adhesive_width"][iStation]*1000}')
     print(f"TEangle {TEangle}")
     if isFlatback:
         # Crate camber line
@@ -1729,7 +1731,7 @@ def writeCubitCrossSection(
     hpKeyCurve, lpKeyCurve, lpHpCurveDict["LEadhesiveCurveIDs"] = writeLEAdhesiveCurves(
         LEHPstackThickness,
         LELPstackThickness,
-        crosssectionParams["LE_adhesive"][iStation],
+        cs_params["LE_adhesive_thickness"][iStation],
         hpKeyCurve,
         lpKeyCurve,
         crossSectionNormal,
@@ -1738,7 +1740,7 @@ def writeCubitCrossSection(
     keyCurves = splitCurveAtCoordintePoints(
         keypoints.key_points[1:5, :, iStationGeometry], hpKeyCurve
     )
-    web_adhesive_width = crosssectionParams["Web_adhesive_width"][iStation]
+    web_adhesive_width = cs_params["web_adhesive_width"][iStation]
     (
         lpHpCurveDict["baseCurveIDs"][0],
         lpHpCurveDict["sparCapBaseCurves"][0],
@@ -1779,7 +1781,7 @@ def writeCubitCrossSection(
         surfaceDict,
         iStation,
         stackdb.stacks[1:6, iStation],
-        crosssectionParams,
+        cs_params,
         thicknessScaling,
         lpHpside,
         isFlatback,
@@ -1799,7 +1801,7 @@ def writeCubitCrossSection(
         surfaceDict,
         iStation,
         temp[1:6],
-        crosssectionParams,
+        cs_params,
         thicknessScaling,
         lpHpside,
         isFlatback,
@@ -1818,7 +1820,7 @@ def writeCubitCrossSection(
         surfaceDict,
         partName,
         lpHpCurveDict["LEadhesiveCurveList"],
-        crosssectionParams["adhesiveMatID"],
+        cs_params["adhesive_mat_name"],
         partNameID,
         nModeledLayers,
         materialsUsed,
@@ -1835,7 +1837,7 @@ def writeCubitCrossSection(
         surfaceDict,
         partName,
         lpHpCurveDict["TEadhesiveCurveList"],
-        crosssectionParams["adhesiveMatID"],
+        cs_params["adhesive_mat_name"],
         partNameID,
         nModeledLayers,
         materialsUsed,
@@ -1851,7 +1853,7 @@ def writeCubitCrossSection(
             aftWebStack,
             foreWebStack,
             lpHpCurveDict["webInterfaceCurves"],
-            crosssectionParams,
+            cs_params,
             partNameID,
             crossSectionNormal,
             nModeledLayers,
@@ -1873,7 +1875,7 @@ def writeCubitCrossSection(
 def writeVABSinput(
     surfaceDict,
     blade,
-    crosssectionParams,
+    cs_params,
     directory,
     fileName,
     surfaceIDs,
@@ -1881,13 +1883,13 @@ def writeVABSinput(
     crossSectionNormal,
 ):
     # Write VABS inputfile
-    if crosssectionParams["elementShape"].lower() == "quad":
+    if cs_params["element_shape"].lower() == "quad":
         expandedConnectivityString = "face"
-    elif crosssectionParams["elementShape"].lower() == "tri":
+    elif cs_params["element_shape"].lower() == "tri":
         expandedConnectivityString = "tri"
     else:
         raise NameError(
-            f'Element type: {crosssectionParams["elementShape"]} not supported'
+            f'Element type: {cs_params["element_shape"]} not supported'
         )
 
     ######Write VABS input file
@@ -1917,7 +1919,7 @@ def writeVABSinput(
         for iEl in range(nelem):
             elementID = iEl + 1
             nodesIDs = cubit.get_expanded_connectivity(
-                crosssectionParams["elementShape"], elementID
+                cs_params["element_shape"], elementID
             )
 
             if nodesIDs[0] == 0 or nodesIDs[0] == 0.0:
@@ -1949,7 +1951,7 @@ def writeVABSinput(
                 # length=max(distances)
                 # #######For Plotting - find the larges element side length #######
                 coords = np.mean(coords, 0)
-                # coords=cubit.get_center_point(crosssectionParams['elementShape'], elementID)
+                # coords=cubit.get_center_point(cs_params['element_shape'], elementID)
 
                 #                             minDist=inf #initialize
                 #                             closestCurveID=nan #initialize

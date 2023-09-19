@@ -18,7 +18,7 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
     nStations=len(radial_stations)
     # #Run input files
 
-    if 'vabs' in settings['solver'].lower():
+    if 'vabs' in settings['make_input_for'].lower():
 
         log.info(f'\n\n\nRunning VABS homogenization.')
         
@@ -65,7 +65,7 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
         # if fileCount != nStations:
         #     raise Exception('Error. Not enough VABS input files:')
 
-    elif 'anba' in settings['solver'].lower():
+    elif 'anba' in settings['make_input_for'].lower():
         raise ValueError('ANBA currently not supported')
 
 
@@ -89,7 +89,7 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
         beam_stiff[iStation,:,:],beam_inertia[iStation,:,:]=beam_utils.readVABShomogenization(fileName)
     
 
-    if 'beamdyn' in settings['beamSolver'].lower():
+    if 'beamdyn' in settings['make_input_for'].lower():
         beam_stiff,beam_inertia=beam_utils.transformMatrixToBeamDyn(beam_stiff,beam_inertia)
         axisFileName=beam_utils.write_beamdyn_axis(directory, wt_name, blade,radial_stations)
         propFileName=beam_utils.write_beamdyn_prop(directory, wt_name, radial_stations, beam_stiff, beam_inertia, mu)
@@ -111,7 +111,7 @@ def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
     
     materials = blade.definition.materials
 
-    if 'sm' in settings['solver'].lower():
+    if 'sm' in settings['make_input_for'].lower():
 
         templateFileName='sm.i.template'
         adagioFileName='sm.i'
@@ -160,7 +160,7 @@ def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
                 'WT_NAME':wt_name+'.g',
                 'BLADE_BLOCKS': blockLines,
             })
-    if 'sd' in settings['solver'].lower():
+    if 'sd' in settings['make_input_for'].lower():
         templateFileName='sd.i.template'
         adagioFileName='sd.i'
 

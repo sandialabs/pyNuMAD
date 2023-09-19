@@ -3,7 +3,7 @@
 Citing NuMAD
 ===============
 
-To cite NuMAD v3.0, please utilize the reference below.
+To cite pyNuMAD v0.1, please utilize the reference below.
 
 [1] Camarena, E., Anderson, E., Paquette, J., Bortolotti, P., Feil, R.,
 & Johnson, N. (2021). Land-based wind turbines with flexible rail
