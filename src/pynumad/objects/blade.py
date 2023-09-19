@@ -162,13 +162,14 @@ class Blade:
             )
 
         self.ispan = np.insert(self.ispan, insertIndex, np.array([span_location]))
+        self.definition.ispan = np.insert(self.definition.ispan, insertIndex, np.array([span_location]))
 
-        self.leband = interpolator_wrap(x0, self.leband, self.ispan)
-        self.teband = interpolator_wrap(x0, self.teband, self.ispan)
-        self.sparcapwidth_hp = interpolator_wrap(x0, self.sparcapwidth_hp, self.ispan)
-        self.sparcapwidth_lp = interpolator_wrap(x0, self.sparcapwidth_lp, self.ispan)
-        self.sparcapoffset_hp = interpolator_wrap(x0, self.sparcapoffset_hp, self.ispan)
-        self.sparcapoffset_lp = interpolator_wrap(x0, self.sparcapoffset_lp, self.ispan)
+        self.definition.leband = interpolator_wrap(x0, self.definition.leband, self.ispan)
+        self.definition.teband = interpolator_wrap(x0, self.definition.teband, self.ispan)
+        self.definition.sparcapwidth_hp = interpolator_wrap(x0, self.definition.sparcapwidth_hp, self.ispan)
+        self.definition.sparcapwidth_lp = interpolator_wrap(x0, self.definition.sparcapwidth_lp, self.ispan)
+        self.definition.sparcapoffset_hp = interpolator_wrap(x0, self.definition.sparcapoffset_hp, self.ispan)
+        self.definition.sparcapoffset_lp = interpolator_wrap(x0, self.definition.sparcapoffset_lp, self.ispan)
 
         self.update_blade()
         return insertIndex

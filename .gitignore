@@ -180,3 +180,6 @@ cython_debug/
 
 # etc
 *.log
+
+# pynumad
+src/pynumad/software_paths.json

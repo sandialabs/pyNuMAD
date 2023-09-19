@@ -412,6 +412,8 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
     key_list = full_keys_from_substrings(component_dict.keys(), ["shell"])
     if len(key_list) == 2:
         component_dict[key_list[0]].hpextents = ["le", "te"]
+        component_dict[key_list[0]].lpextents = ["le", "te"]
+        component_dict[key_list[1]].hpextents = ["le", "te"]
         component_dict[key_list[1]].lpextents = ["le", "te"]
     else:
         raise ValueError("Incorrect number of shell components")

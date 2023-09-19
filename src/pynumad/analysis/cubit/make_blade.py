@@ -144,7 +144,7 @@ def cubit_make_cross_sections(
         writeSplineFromCoordinatePoints(cubit, refLineCoords)
         iStationGeometry = iStation
         if iStation == len(geometry.ispan) - 1:  # Only do this for the last station
-            geometry.add_interpolated_station(geometry.ispan[-1] * 0.999)
+            blade.add_interpolated_station(geometry.ispan[-1] * 0.999)
             stackdb.edit_stacks_for_solid_mesh()
             expandTEthicknesses.append(expandTEthicknesses[-1])
             blade.expand_blade_geometry_te(expandTEthicknesses)
