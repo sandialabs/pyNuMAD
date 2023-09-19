@@ -1523,8 +1523,8 @@ def writeCubitCrossSection(
     crossSectionNormal,
 ):
     geometry = blade.geometry
-    stackdb=blade.stackdb
-    keypoints=blade.keypoints
+    stackdb = blade.stackdb
+    keypoints = blade.keypoints
     
     with open("make_blade.log", "a") as logFile:
         logFile.write(f"Working on Station: {iStation}\n")
