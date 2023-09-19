@@ -6,6 +6,7 @@ import re
 
 
 def getOrderedList(partName):
+
     orderedList = []
     surfacesToConnect = [1]  # Initialize to enter loop
     iSurface = -1  # Initialize
@@ -184,7 +185,7 @@ def verifyWebCuttingAmplitude(
 
 
 def makeBirdsMouth(
-    blade, birdsMouthVerts, amplitudeFraction, iStationFirstWeb, iStationLastWeb
+    blade, birdsMouthVerts, birds_mouth_amplitude_fraction, iStationFirstWeb, iStationLastWeb
 ):
     ### Make birds mouth volume that will cut the web volumes ###
     #############################################################
@@ -209,7 +210,7 @@ def makeBirdsMouth(
     v2 = cubit.vertex(get_last_id("vertex"))
     straightLine = create_curve(v1, v2)
 
-    amplitude = amplitudeFraction * distance
+    amplitude = birds_mouth_amplitude_fraction * distance
     tolerance = distance * 0.05
 
     amplitude = verifyWebCuttingAmplitude(

@@ -22,7 +22,7 @@ Below is a summary of key features currently available:
 A stable version of PyNuMAD is still in development. Future goals include:
 
 - Expanding the YAML reading functionality to handle a wider variety of inputs.
-- Driver codes for connecting PyNuMAD directly to other design softwares.
+- Driver codes for connecting pyNuMAD directly to other design softwares.
 - Optimization tools for blade design.
 
 .. _NuMADv3:

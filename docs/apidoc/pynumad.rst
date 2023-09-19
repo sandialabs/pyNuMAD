@@ -17,5 +17,6 @@ Subpackages
     pynumad.objects
     pynumad.utils
     pynumad.io
+    pynumad.analysis.cubit
 
 

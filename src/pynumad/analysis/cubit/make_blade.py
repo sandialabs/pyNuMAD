@@ -11,11 +11,68 @@ def cubit_make_cross_sections(
     blade,
     wt_name,
     settings,
-    crosssectionParams,
+    cs_params,
     model2Dor3D,
     stationList=None,
     directory=".",
 ):
+    
+    """Directs Cubit to make cross sections from blade object data.
+
+    Parameters
+    ----------
+    blade : blade object
+        pyNuMAD blade object
+    wt_name : str
+        Used to name any files that are generated.
+    settings : dict
+        _description_
+    cs_params : dict
+        _description_
+    model2Dor3D : str
+        Users should set this '2d'. Functions such as cubit_make_solid_blade set this to '3d'.
+    stationList : list, optional
+        Integer list of stations user wants cross sections. By default None or empty list makes all the statations.
+    directory : str
+        Name of the directory to store all generated files.
+
+    Returns
+    -------
+    cubit: cubit object
+        cubit session data
+    blade: blade object
+        returns the modified blade object
+    surfaceDict: dict
+        Keys are integers for the Cubit surface IDs for the cross sections. Each surface has
+        it's own dictionary with the following keys: 'curves', 'verts', 'materialName', 'plyAngle'.
+        
+        e.g. 
+        >> surfaceDict[9]
+            {'curves': [131, 164, 129, 163], 'verts': [500, 501, 497, 496], 'materialName': 'glass_triax', 'plyAngle': 0}
+
+    birdsMouthVerts: tuple
+        Used internally.
+    iStationFirstWeb: int
+        Used internally.
+    iStationLastWeb: int
+        Used internally. 
+    materialsUsed: set
+        Used for in FEA input file generation to define unique materials.
+    spanwiseMatOriCurve: int
+        Cubit curve ID for the main spanwise spline corresponding to the curvilinear blade axis.
+
+
+    Raises
+    ------
+    ValueError
+       'Presweep is untested for cross-sectional meshing'
+    ValueError
+        'ANBA currently not supported'
+    NameError
+       f'Unknown beam cross-sectional solver: {settings["make_input_for"]}'
+    NameError
+        f'Unknown model export format: {settings["export"]}'
+    """
     geometry = blade.geometry
     stackdb = blade.stackdb
     definition = blade.definition
@@ -43,8 +100,8 @@ def cubit_make_cross_sections(
     # Modify blade object to accomodate actual layer thicknesses
 
     expandTEthicknesses = list(
-        crosssectionParams["TE_adhesive"]
-        + 6 * crosssectionParams["minimumLayerThickness"]
+        cs_params["TE_adhesive_thickness"]
+        + 6 * cs_params["minimum_layer_thickness"]
     )
     blade.expand_blade_geometry_te(expandTEthicknesses)
 
@@ -145,7 +202,7 @@ def cubit_make_cross_sections(
                 aftWebStack,
                 foreWebStack,
                 iLE,
-                crosssectionParams,
+                cs_params,
                 geometryScaling,
                 thicknessScaling,
                 isFlatback,
@@ -163,7 +220,7 @@ def cubit_make_cross_sections(
                 aftWebStack,
                 foreWebStack,
                 iLE,
-                crosssectionParams,
+                cs_params,
                 geometryScaling,
                 thicknessScaling,
                 isFlatback,
@@ -215,13 +272,13 @@ def cubit_make_cross_sections(
 
             # Mesh the cross-section
             cubit.cmd(
-                f'curve with name "layerThickness*" interval {crosssectionParams["nelPerLayer"]}'
+                f'curve with name "layerThickness*" interval {cs_params["nel_per_layer"]}'
             )
             # cubit.cmd(f'imprint volume {l2s(surfaceIDs)}')
             cubit.cmd(f"merge volume {l2s(volumeIDs)}")
             cubit.cmd(f"set default autosize on")
 
-            if crosssectionParams["elementShape"].lower() == "tri":
+            if cs_params["element_shape"].lower() == "tri":
                 cubit.cmd(f"surface {l2s(volumeIDs)} scheme tri")
             else:
                 cubit.cmd(f"surface {l2s(volumeIDs)} scheme map")
@@ -233,12 +290,12 @@ def cubit_make_cross_sections(
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
-            if settings["solver"] is not None:
-                if "vabs" in settings["solver"].lower():
+            if settings["make_input_for"] is not None:
+                if "vabs" in settings["make_input_for"].lower():
                     writeVABSinput(
                         surfaceDict,
                         blade,
-                        crosssectionParams,
+                        cs_params,
                         directory,
                         fileName,
                         volumeIDs,
@@ -246,11 +303,11 @@ def cubit_make_cross_sections(
                         crossSectionNormal,
                     )
 
-            elif "anba" in settings["solver"].lower():
+            elif "anba" in settings["make_input_for"].lower():
                 raise ValueError("ANBA currently not supported")
             else:
                 raise NameError(
-                    f'Unknown beam cross-sectional solver: {settings["solver"]}'
+                    f'Unknown beam cross-sectional solver: {settings["make_input_for"]}'
                 )
 
             if settings["export"] is not None:
@@ -295,8 +352,33 @@ def cubit_make_cross_sections(
 
 
 def cubit_make_solid_blade(
-    blade, wt_name, settings, crosssectionParams, stationList=None
+    blade, wt_name, settings, cs_params, stationList=None
 ):
+    """_summary_
+
+    Parameters
+    ----------
+    blade : blade object
+        pyNuMAD blade object
+    wt_name : str
+        Used to name any files that are generated.
+    settings : dict
+        _description_
+    cs_params : dict
+        _description_
+    stationList : list, optional
+        Integer list of stations user wants cross sections. By default None or empty list makes all the statations.
+
+    Returns
+    -------
+    materialsUsed: set
+        Used for in FEA input file generation to define unique materials.
+
+    Raises
+    ------
+    ValueError
+        "Need more that one cross section to make a solid model"
+    """
     if stationList is None or len(stationList) == 0:
         stationList = list(range(len(blade.ispan)))
     elif len(stationList) == 1:
@@ -312,7 +394,7 @@ def cubit_make_solid_blade(
         materialsUsed,
         spanwiseMatOriCurve,
     ) = cubit_make_cross_sections(
-        blade, wt_name, settings, crosssectionParams, "3D", stationList
+        blade, wt_name, settings, cs_params, "3D", stationList
     )
 
     iStationStart = stationList[0]
@@ -349,13 +431,13 @@ def cubit_make_solid_blade(
     if (
         orderedListWeb
         and len(orderedListWeb[0]) > 1
-        and crosssectionParams["amplitudeFraction"]
+        and cs_params["birds_mouth_amplitude_fraction"]
         and birdsMouthVerts
     ):
         makeBirdsMouth(
             blade,
             birdsMouthVerts,
-            crosssectionParams["amplitudeFraction"],
+            cs_params["birds_mouth_amplitude_fraction"],
             iStationFirstWeb,
             iStationLastWeb,
         )
@@ -365,7 +447,7 @@ def cubit_make_solid_blade(
 
     cubit.cmd(f"delete surface with Is_Free")
     cubit.cmd("vol all size 0.2")
-    # cubit.cmd(f'curve with name "layerThickness*" interval {crosssectionParams["nelPerLayer"]}')
+    # cubit.cmd(f'curve with name "layerThickness*" interval {cs_params["nel_per_layer"]}')
     cubit.cmd("set default autosize on")
     cubit.cmd(f"mesh volume {l2s(meshVolList)}")
     cubit.cmd(f"draw volume {l2s(meshVolList)}")
