@@ -37,7 +37,7 @@ def read_ansys_deflections(blade, config, iLoad, deflectionFilename):
     data = np.zeros((nSpan,6))
     
     for iSpan in range(nSpan):
-        fileName = deflectionFilename+'-'+str(iSpan)+'.out'
+        fileName = deflectionFilename+'-'+str(iSpan)+'.txt'
         temp_results = txt2mat(fileName)
         #Displacement
         for k in range(3):

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import subprocess
 import time
-import os
+import os,glob
 
 from pynumad.analysis.ansys.utility import *
 from pynumad.analysis.ansys.read import *
@@ -141,7 +141,7 @@ def main_ansys_analysis(
         if mass_flag:
             #Get Mass Here
             fid.write('*GET, Z_mass, ELEM, 0, MTOT, X\n' % ())
-            fid.write('/output, mass,txt\n' % ())
+            fid.write('/output, results_mass,txt\n' % ())
             fid.write('*status,Z_mass\n' % ())
             fid.write('/output\n' % ())
             fid.write('finish\n' % ())
@@ -192,8 +192,7 @@ def main_ansys_analysis(
         ## ************************************************************************
         # ================= READ MASS RESULTS  =================
         if mass_flag:
-            results['mass'] = read_1_ANSYSoutput('mass.txt')
-            # delete mass.txt
+            results['mass'] = read_1_ANSYSoutput('results_mass.txt')
         ## ************************************************************************
         # ================= READ DEFLECTION RESULTS   =================
         if flags['deflection']:
@@ -201,16 +200,14 @@ def main_ansys_analysis(
         ## ************************************************************************
         # ================= READ STRESS RESULTANTS   =================
         if flags['resultants']:
-            fileName = 'resultants.txt'
+            fileName = 'results_resultants.txt'
             results['resultants'][iLoad] = txt2mat(fileName)
-            #os.delete(fileName)
 
         ## ************************************************************************
         # ================= READ LINEAR BUCKLING RESULTS =================
         # read buckling results
         if flags['globalBuckling']:
             linearLoadFactors = readAnsysLinearBuckling(analysis_config["analysisFlags"]["globalBuckling"],bucklingFilename)
-            #os.delete(bucklingFilename+'.out')
         ## ************************************************************************
         # ================= WRITE NON-LINEAR BUCKLING/WRINKLING ANALYSIS COMMANDS =================
         # Perform nonlinear buckling here if required (and writeANSYSgetFaceStresses
@@ -235,7 +232,6 @@ def main_ansys_analysis(
             for k in range(len(linearLoadFactors)):
                 #disp(strcat('-',marker(j),'k'))
                 plt.plot(imperfection * 1000,nonlinearLoadFactors[k,:],marker[k])
-                hold('on')
             plt.legend('Mode-' + str(np.arange(len(linearLoadFactors))))
             plt.title('Imperfection Study (Linear Elements) SNL3p0-148-mk0p2-s1-fiberglass')
             plt.xlabel('Max Imperfection Size [mm]')
@@ -257,9 +253,8 @@ def main_ansys_analysis(
         ## ************************************************************************
         # ================= READ FAILURE RESULTS   =================
         if flags['failure']:
-            fileName = failureFilename+'.out'
+            fileName = failureFilename+'.txt'
             results['failure'][iLoad] = read_1_ANSYSoutput(fileName)
-            #os.delete(fileName)
             print('')
     
     ## ************************************************************************
@@ -275,7 +270,8 @@ def main_ansys_analysis(
     #         results.fatigue = postprocessANSYSfatigue(blade,mesh_data,wt,rccdata,IEC,loads_table,analysis_config)
     #     else:
     #         raise Exception('IECDef required to run fatigue analysis in main_ansys_analysis')
-    
+    for f in glob.glob("results*.txt"):
+        os.remove(f)
     return results
     
     

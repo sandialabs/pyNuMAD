@@ -29,7 +29,7 @@ def writeAnsysDeflections(blade, config, iLoad, fid, deflectionFilename):
     
     fid.write('seltol,0.05\n')
     for i in range(blade.ispan.size):
-        fid.write('*CFOPEN, %s,out\n' % (deflectionFilename+'-'+str(i)))
+        fid.write('*CFOPEN, %s,txt\n' % (deflectionFilename+'-'+str(i)))
         fid.write('ESEL,S,SEC,,1,%i   \n' % (webSectionIDstart))
         #fprintf(fid,'ESEL,S,SEC,,1,999   \n');    #Selects aero shell only
         fid.write('nsle,S,   \n')
@@ -124,7 +124,7 @@ def writeAnsysFatigue(fid, iLoad):
     fid.write('ETABLE, kapa12,SMISC,14 \n')
     fid.write('ETABLE, gamma13,SMISC,15 \n')
     fid.write('ETABLE, gamma23,SMISC,16 \n')
-    fid.write('/output,plateStrains-all-%s,txt\n' % (str(iLoad)))
+    fid.write('/output,results_plateStrains-all-%s,txt\n' % (str(iLoad)))
     fid.write('PRETAB,zcent,eps11,eps22,eps12,kapa11,kapa22,kapa12,gamma12,gamma13,gamma23\n')
     fid.write('ETABLE,ERAS\n\n')
     fid.write('finish\n')
@@ -441,7 +441,7 @@ def writeAnsysResultants(blade, config, iLoad, fid,elementSize):
     fid.write(f'nz=nint({blade.ispan[-1]}/elsize) !Integer number of points to output resultant loads\n')
     fid.write('zloc=0\n')
     fid.write('delta=0.1\n')
-    fid.write('*CFOPEN, resultants,txt\n')
+    fid.write('*CFOPEN, results_resultants,txt\n')
     fid.write('*do,I,1,nz+1\n')
     fid.write('allsel\n')
     fid.write('nsel,s,loc,z,0,zloc+delta\n')
@@ -539,10 +539,10 @@ def writeAnsysRupture(antype, iLoad, fid, failureFilename):
         fid.write('findex=Mfindex\n')
         fid.write('*ENDIF\n')
     
-    fid.write(f'/output, {failureFilename},out\n')
+    fid.write(f'/output, {failureFilename},txt\n')
     fid.write('*status,findex\n')
     fid.write('/output\n')
-    fid.write(f'/output,allElemFailureResults{str(iLoad)},out\n')
+    fid.write(f'/output,allElemFailureResults{str(iLoad)},txt\n')
     fid.write('PRESOL,FAIL\n')
     fid.write('/output\n')
     fid.write('finish\n')
