@@ -16,7 +16,6 @@ adhes = 1
 
 meshData = get_shell_mesh(blade, includeAdhesive=adhes, elementSize=elementSize)
 config = dict()
-config["BoundaryCondition"] = 'cantilevered'
 config["elementType"] = '181'
 config["MultipleLayerBehavior"] = 'multiply'
 config["dbgen"] = 1

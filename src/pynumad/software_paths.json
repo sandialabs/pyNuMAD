@@ -1,6 +1,6 @@
 {
 "numad_path" : "",
-"ansys_path" : "",
+"ansys_path" : "mapdl",
 "cubit" : "",
 "cubitEnhancements" : "",
 "openFast" : "",
