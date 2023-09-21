@@ -8,6 +8,8 @@ import cubit
 from pynumad.analysis.cubit.make_blade import *
 import numpy as np
 
+from pynumad.analysis.make_models import write_beam_model
+
 
 
 def get_cs_params():
@@ -76,11 +78,12 @@ dirName='.'
 
 cs_params=get_cs_params()
 settings={}
-settings['make_input_for']='VABSSd'  #SM, VABS, ANBA, or None
+settings['make_input_for']='VABS'  #SM, VABS, ANBA, or None
 settings['export']='cubg' #cub, g, or None
 
-#Do one of the following:
-cubit_make_cross_sections(blade,wt_name,settings,cs_params,'2D',stationList=[5,6],directory=dirName) #Note an empyt list for stationList will make all cross sections.
-#materialsUsed=cubit_make_solid_blade(blade, wt_name, settings, cs_params, stationList=[2,3])
+
+cubit_make_cross_sections(blade,wt_name,settings,cs_params,'2D',stationList=[],directory=dirName) #Note an empty list for stationList will make all cross sections.
     
 
+mu=[0.00257593, 0.0017469,  0.0017469,  0.0017469,  0.00257593, 0.0017469]
+fileNames=write_beam_model(wt_name,settings,blade,mu,log,directory=dirName)
