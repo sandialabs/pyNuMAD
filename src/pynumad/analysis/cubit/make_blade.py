@@ -448,7 +448,7 @@ def cubit_make_solid_blade(
     cubit.cmd(f"delete surface with Is_Free")
     #cubit.cmd("vol all size 0.2")
     # cubit.cmd(f'curve with name "layerThickness*" interval {cs_params["nel_per_layer"]}')
-    cubit.cmd("set default autosize on")
+    #cubit.cmd("set default autosize on")
     cubit.cmd(f"mesh volume {l2s(meshVolList)}")
     cubit.cmd(f"draw volume {l2s(meshVolList)}")
 
