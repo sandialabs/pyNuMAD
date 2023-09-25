@@ -5,25 +5,23 @@ Release Notes
 
 .. _pyNuMADv0x:
 
-pyNuMAD 0.X
+pyNuMAD 0.1
 -----------
 
-Core functionality from previous incarnations of the NuMAD software
+Core functionality from previous versions of the NuMAD software
 framework have been translated to the Python programming language
-under the name PyNuMAD. Following the changes made in NuMAD 3.0,
-PyNuMAD focuses on an object-oriented approach to blade design. 
+under the name pyNuMAD. Following the changes made in NuMAD 3.0,
+pyNuMAD focuses on an object-oriented approach to blade design. 
 
 Below is a summary of key features currently available:
 
-- Reading in blade definitions from YAML and Excel files to a Blade object.
-- Creation of FEA mesh for use in analytical tools such as Abaqus or Cubit.
-- Limited visualization tools for exploring a blade object's attributes.
+- Reading in blade definitions from the `windIO  yaml format <https://windio.readthedocs.io/en/latest/>`__. 
+  Legacy NuMAD Excel input files are also supported.
+- Creation of wind blades made from shell and/or solid elements.
+- Optional details such as adhesive bonds. 
+- 2D cross sectional meshes for tools like VABS/ANBA/OpenSG
 
-A stable version of PyNuMAD is still in development. Future goals include:
-
-- Expanding the YAML reading functionality to handle a wider variety of inputs.
-- Driver codes for connecting pyNuMAD directly to other design softwares.
-- Optimization tools for blade design.
+The GUI and `.nmd` legacy input files are discontinued for now.
 
 .. _NuMADv3:
 
