@@ -22,7 +22,7 @@ Namely,
 
 - In-house mesher for pure shell, pure solid, or shell + solid adhesive
 - Cubit mesher for contiguous solid meshes and cross-sectional analysis
-
+ 
 Supported input files: 
 - yaml files from the `IEA Ontology <https://windio.readthedocs.io/en/latest/>__
 - Excel files from the legacy version of NuMAD 

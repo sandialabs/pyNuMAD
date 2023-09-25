@@ -131,8 +131,7 @@ that are needed by the Sierra codes.
 Troubleshooting issues with Cubit meshing is facilitated by "make_blade.log". There you will generally 
 be able to see what parts of the blade have been created and where the code stopped.
 
-.. Note:: 
-    The following files can be ignored for now: "euler", "directions"
+
 
 
 

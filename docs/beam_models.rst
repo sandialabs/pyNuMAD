@@ -1,6 +1,6 @@
 .. _meshing:
 
-Beam Models
+Making Beam Models
 ==================================
 
 Currently, only BeamDyn powered by VABS beam properties is supported. After meshing 
