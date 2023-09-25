@@ -3,6 +3,7 @@ Pure shell model, Yes, No
 Shell model with solid TE adhesive, Yes, No
 Pure solid model, Yes, Yes
 Beam model, No, Yes
+Meshing scheme, Grows solid meshes from OML, Grows solid meshes from cross sections
 Availability,Open to anyone,.gov email or contract with SNL
 FEA Solver interface,Unlimited but users must code everything,Best used with Sierra but can partially export to many commercial FEA
 Feature flexibility,Only limited by funding for new flexibility,"Flexible regarding geometric complexity, element type (quad, tri, etc...)"

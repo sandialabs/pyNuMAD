@@ -4,7 +4,7 @@
 # -- Path setup --------------------------------------------------------------
 
 # -- Project information -----------------------------------------------------
-project = 'PyNuMAD'
+project = 'pyNuMAD'
 copyright = '2023, Kirk Bonney'
 author = 'Kirk Bonney'
 version = '1.0'
@@ -58,4 +58,4 @@ html_style = 'css/my_style.css'
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'PyNuMADdoc'
+htmlhelp_basename = 'pyNuMADdoc'
