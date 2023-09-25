@@ -156,6 +156,8 @@ def makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd):
                 )
                 meshVolList.append(get_last_id("volume"))
                 # assignIntervals(get_last_id("volume"),nIntervals)
+    else:
+        raise ValueError("Can't make volumes with only one cross section.")
 
     return meshVolList
 

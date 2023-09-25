@@ -1996,7 +1996,7 @@ def writeVABSinput(
         # Define Materials
         for imat, matName in enumerate(materialsUsed):
             materialID = imat + 1
-            material = blade.materials[matName]
+            material = blade.definition.materials[matName]
             f.write(f"{materialID} {1} \n")
             f.write(f"{material.ex} {material.ey} {material.ez}\n")
             f.write(f"{material.gxy} {material.gxz} {material.gyz}\n")

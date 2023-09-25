@@ -455,14 +455,13 @@ def cubit_make_solid_blade(
     cubit.cmd(f"reset volume all")
 
     cubit.cmd(f"delete surface with Is_Free")
-    cubit.cmd("vol all size 0.2")
+    #cubit.cmd("vol all size 0.2")
     # cubit.cmd(f'curve with name "layerThickness*" interval {cs_params["nel_per_layer"]}')
-    cubit.cmd("set default autosize on")
+    #cubit.cmd("set default autosize on")
     cubit.cmd(f"mesh volume {l2s(meshVolList)}")
     cubit.cmd(f"draw volume {l2s(meshVolList)}")
 
     # Blocks
-    # for imat,material in enumerate(blade.materials):
     for imat, materialName in enumerate(materialsUsed):
         cubit.cmd(f'block {imat+1} add volume with name "*{materialName}*"')
         cubit.cmd(f'block {imat+1} name "{materialName}"')
@@ -509,15 +508,12 @@ def cubit_make_solid_blade(
     theta3 = {}
     directions = {}
 
-    for iVol, volumeID in enumerate(allVolumeIDs):
+    for volumeID in allVolumeIDs:
         surfIDforMatOri, sign = getMatOriSurface(volumeID, spanwiseMatOriCurve)
 
-        for iEl, elementID in enumerate(get_volume_hexes(volumeID)):
-            coords = cubit.get_center_point("hex", elementID)
-            if elementID == 33:
-                print()
-            cubit.create_vertex(coords[0], coords[1], coords[2])
-            iVert1 = get_last_id("vertex")
+        for hex_id in get_volume_hexes(volumeID):
+            coords = cubit.get_center_point("hex", hex_id)
+
             if surfIDforMatOri:
                 surfaceNormal = vectNorm(
                     list(
@@ -552,44 +548,21 @@ def cubit_make_solid_blade(
             ]
             globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
-            # with open('spanwiseDirection.txt', 'a') as f:
-            #     f.write(f' {spanwiseDirection[0]}, {spanwiseDirection[1]}, {spanwiseDirection[2]};')
 
-            # with open('perimeterDirection.txt', 'a') as f:
-            #     f.write(f' {perimeterDirection[0]}, {perimeterDirection[1]}, {perimeterDirection[2]};')
-            # with open('surfaceNormal.txt', 'a') as f:
-            #     f.write(f' {surfaceNormal[0]}, {surfaceNormal[1]}, {surfaceNormal[2]};')
-
-            # print(f'iEl {iEl} elementID {elementID}')
-            # print(f'spanwiseDirection: {spanwiseDirection}')
-            # print(f'perimeterDirection: {perimeterDirection}')
-            # print(f'surfaceNormal: {surfaceNormal}')
-
+            global_id=get_global_element_id('hex',hex_id)
             dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
-            directions[elementID] = newCoordinateSystemVectors
-            theta1[elementID], theta2[elementID], theta3[elementID] = dcmToEulerAngles(
+            directions[global_id] = newCoordinateSystemVectors
+
+            theta1[global_id], theta2[global_id], theta3[global_id] = dcmToEulerAngles(
                 dcm
             )
 
-            # with open('theta.txt', 'a') as f:
-            #     f.write(f' {theta2[elementID]}, {theta1[elementID]}, {theta3[elementID]};')
 
-            # print(f'theta2: {theta2[elementID]}, theta1: {theta1[elementID]}, theta3: {theta3[elementID]}')
-
-            length = 0.1
-            cubit.create_vertex(
-                coords[0] + length * perimeterDirection[0],
-                coords[1] + length * perimeterDirection[1],
-                coords[2] + length * perimeterDirection[2],
-            )
-            iVert2 = get_last_id("vertex")
-            cubit.cmd(f"create curve vertex {iVert1} {iVert2}")
     if settings["export"] is not None:
         if "g" in settings["export"].lower():
             cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
         if "cub" in settings["export"].lower():
             cubit.cmd(f'save as "{wt_name}.cub" overwrite')
-
         with open("euler", "wb") as file:
             # A new file will be created
             pickle.dump((theta1, theta2, theta3), file)

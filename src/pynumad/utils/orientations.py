@@ -20,22 +20,19 @@ def getDCM(globalAxisBasisVectors,newCoordinateSystemVectors):
         raise ValueError(f'Direction cosine matrix is not orthogonal {dot_product}')
     
 
-
 def dcmToEulerAngles(dcm):
-    if dcm[2,1]<1:
-        if dcm[2,1]>-1:
-            print('a')
-            theta1=math.asin(dcm[2,1])
-            theta3=math.atan2(-dcm[0,1],dcm[1,1])
-            theta2=math.atan2(-dcm[2,0],dcm[2,2])
-        else: #r21 =-1
-            print('b')
-            theta1=-math.pi/2
-            theta3=-math.atan2(-dcm[0,2],dcm[0,0])
-            theta2=0
-    else:#r21 =1
-        # print('c')
-        theta1=math.pi/2
-        theta3=math.atan2(dcm[0,2],dcm[0,0])
-        theta2=0
+    #RzRyRx
+    if round(dcm[2,0],3)<1:   
+        if round(dcm[2,0],3)>-1:
+            theta2=math.asin(-dcm[2,0])
+            theta3=math.atan2(dcm[1,0],dcm[0,0])
+            theta1=math.atan2(dcm[2,1],dcm[2,2])
+        else: #r20 =-1
+            theta2=math.pi/2
+            theta3=-math.atan2(-dcm[1,2],dcm[1,1])
+            theta1=0
+    else:#r20 =1
+        theta2=-math.pi/2
+        theta3=math.atan2(-dcm[1,2],dcm[1,1])
+        theta1=0
     return theta1*180/math.pi,theta2*180/math.pi,theta3*180/math.pi
