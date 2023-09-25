@@ -316,7 +316,7 @@ def cubit_make_cross_sections(
                     or "cub" in settings["export"].lower()
                 ):
                     if "g" in settings["export"].lower():
-                        cubit.cmd(f'export mesh "{pathName}.g" overwrite')
+                        cubit.cmd(f'export mesh "{pathName}-{str(iStation)}.g" overwrite')
                     if "cub" in settings["export"].lower():
                         cubit.cmd(f"delete curve {spanwiseMatOriCurve}")
                         cubit.cmd(f'save as "{pathName}-{str(iStation)}.cub" overwrite')
@@ -326,19 +326,28 @@ def cubit_make_cross_sections(
                     raise NameError(
                         f'Unknown model export format: {settings["export"]}'
                     )
+        # elif model2Dor3D.lower() == "3d":
+        #     cubit.cmd(f"delete curve {spanwiseMatOriCurve}")
+        #     cubit.cmd(f'save as "{pathName}-{str(iStation)}.cub" overwrite')
 
-            # Import all cross-sections into one cub file
-            if settings["export"] is not None and "cub" in settings["export"].lower():
-                cubit.cmd("reset ")
-                writeSplineFromCoordinatePoints(cubit, refLineCoords)
+    # Import all cross-sections into one cub file
+    if model2Dor3D.lower() == "2d" and settings["export"] is not None and "cub" in settings["export"].lower():
+        cubit.cmd("reset ")
+        
+        #Since cross sections were translated for cross sectional codes, remove prebend and sweep from ref axis.
+        refLineCoords[:,0]=np.zeros(len(refLineCoords[:,0]))
+        refLineCoords[:,1]=np.zeros(len(refLineCoords[:,0]))
+        writeSplineFromCoordinatePoints(cubit, refLineCoords)
 
-                for iStation in stationList:
-                    cubit.cmd(f'import cubit "{pathName}-{str(iStation)}.cub"')
-                cubit.cmd(f'save as "{pathName}.cub" overwrite')
+        for iStation in stationList:
+            cubit.cmd(f'import cubit "{pathName}-{str(iStation)}.cub"')
+        addColor(blade, "surface")
+        cubit.cmd(f"delete vertex with Is_Free")
+        cubit.cmd(f'save as "{pathName}.cub" overwrite')
 
-                # Remove unnecessary files to save space
-                for filePath in glob.glob(f"{pathName}-*.cub"):
-                    os.remove(filePath)
+        # Remove unnecessary files to save space
+        for filePath in glob.glob(f"{pathName}-*.cub"):
+            os.remove(filePath)
     return (
         cubit,
         blade,
