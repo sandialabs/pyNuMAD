@@ -3,8 +3,24 @@
 Meshing Overview
 ==================================
 
-Blades can be meshed either with the in-house mesher or with Cubit. The table below summarizes 
-the differences between the two. 
+Blades can be meshed either with the in-house mesher or with Cubit. 
+
+The intent of the in-house mesher is to be independent of any target FEA code (Nastran, Abaqus, ANSYS, 
+etc..). It provides nodes and element connectivity that can be ported into any FEA code. It first meshes 
+the outer-mold-line with shell elements. if a solid model is desired, then solid elements are created 
+by extruding from the shell mesh. Currently, the code provides separate meshes for the webs, aeroshell,
+and adhesives that mush be tied together with constraints in an FEA package. 
+
+The intent of the Cubit mesher is to be able to create solid and beam models that have the 
+exact same cross-sections. Therefore, the Cubit mesher first creates cross sections, rather than 
+the OML surface shell mesh. If a solid model is desired, then the cross sections are connected with
+volumes and subsequently meshed. Since cross sectional codes like VABS and ANBA do not allow for
+discontinuous meshes connected by tie constrains, the meshes made by the Cubit mesher are continuous.
+The other intent with the Cubit functionality is that Sierra meshes are easily created since it can
+directly export into the Genesis format.  
+
+The table below summarizes the differences between the two meshing capabilities.
+
 
 .. csv-table:: Comparison of meshing capabilities between the in-house mesher and Cubit.
    :file: compare_in_house_vs_cubit.csv
@@ -65,8 +81,8 @@ Then add Cubit to the path
 
 
 There are two main ways to use the Cubit functionality. The first is the create any all blade cross sections with 
-:py:func:`~pynumad.analysis.cubit.cubit_make_cross_sections`. The second is to connect these cross sections with 
-solid volumes with :py:func:`~pynumad.analysis.cubit.cubit_make_cross`. Both ways require the user
+:py:func:`~pynumad.analysis.cubit.make_blade.cubit_make_cross_sections`. The second is to connect these cross sections with 
+solid volumes with :py:func:`~pynumad.analysis.cubit.make_blade.cubit_make_solid_blade`. Both ways require the user
 to define two dictionaries. 
 
 One is named ``cs_params``. It controls the details of how the cross-sections are created. The table below shows
@@ -115,8 +131,7 @@ that are needed by the Sierra codes.
 Troubleshooting issues with Cubit meshing is facilitated by "make_blade.log". There you will generally 
 be able to see what parts of the blade have been created and where the code stopped.
 
-.. Note:: 
-    The following files can be ignored for now: "euler", "directions"
+
 
 
 

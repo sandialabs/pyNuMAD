@@ -17,6 +17,9 @@ Numerical Manufacturing And Design (NuMAD) Tool for Wind Turbine Blades
    contributing
    apidoc/pynumad
    meshing
+   beam_models
+   shell_models
+   solid_models
    reference
    publications
    citation

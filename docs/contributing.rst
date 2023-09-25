@@ -209,7 +209,7 @@ definition to help get things started:
 
    """
 
-Extending PyNuMAD
+Extending pyNuMAD
 -----------------
 
 Below we explain what to do when adding a top level directory 

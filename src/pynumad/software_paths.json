@@ -1,6 +1,5 @@
-{
-"numad_path" : "",
-"ansys_path" : "mapdl",
+{"numadPath" : "",
+"ansysPath" : "",
 "cubit" : "",
 "cubitEnhancements" : "",
 "openFast" : "",
@@ -8,4 +7,3 @@
 "turbsimPath" :"",
 "iecwindPath" :"",
 "mbcPath" :""
-}
