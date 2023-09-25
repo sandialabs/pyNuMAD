@@ -6,6 +6,14 @@
 
 import numpy as np
 
+def setup_logging(file_name):
+    import logging
+
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.DEBUG)
+    fh = logging.FileHandler(file_name+'.log', mode='w')
+    log.addHandler(fh)
+    return log
 
 def full_keys_from_substrings(key_list, subtring_list):
     """
