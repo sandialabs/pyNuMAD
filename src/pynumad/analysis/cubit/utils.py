@@ -186,7 +186,7 @@ def offsetCurveAndCombineFragmentsIfNeeded(curveID, offsetDistance):
     # print(f'nEnd {nEnd}')
     # print(f'offsetDistance {nEnd}')
 
-    # cubit.cmd(f'save as "debug.cub" overwrite')
+    # cubit.cmd(f'save as "Debug.cub" overwrite')
 
     if nEnd - nStart > 1:
         curveList = []
@@ -281,7 +281,7 @@ def extendCurvePastCurveAndTrim(
             f"curveToExtendID {curveToExtendID} curveIDThatCutsExtendedCurve {curveIDThatCutsExtendedCurve}"
         )
 
-        cubit.cmd(f'save as "debug.cub" overwrite')
+        cubit.cmd(f'save as "Debug.cub" overwrite')
         raise Exception(
             f"Curve {curveToExtendID} was not able to be extended to curve {curveIDThatCutsExtendedCurve} because their intersection was not found."
         )
@@ -1697,7 +1697,7 @@ def writeCubitCrossSection(
     #     cubit.cmd(f'delete vertex {l2s(vertexList[1:-1])}')
     #     camberID=get_last_id("curve")
 
-    #     # cubit.cmd(f'save as "debug.cub" overwrite')
+    #     # cubit.cmd(f'save as "Debug.cub" overwrite')
     #     # foo
     else:
         xyz = getMidLine(blade, iLE, iStationGeometry, geometryScaling)
@@ -1773,6 +1773,41 @@ def writeCubitCrossSection(
     lpHpCurveDict["camberID"] = camberID
     lpHpCurveDict["flatBackCurveID"] = flatBackCurveID
 
+    #For round sections make sure that base curves intersect the camber
+    if not isFlatback:
+        vHP, _ = selCurveVerts(lpHpCurveDict["baseCurveIDs"][0][0])
+        vLP, _ = selCurveVerts(lpHpCurveDict["baseCurveIDs"][1][0])
+
+        #Make two lines, each with the correct sense
+        cubit.cmd(f'create curve vertex {vLP} {vHP}')
+        hpCurve=get_last_id("curve")
+
+        cubit.cmd(f'create curve vertex {vHP} {vLP}')
+        lpCurve=get_last_id("curve")
+
+        #HP
+        cubit.cmd(f'split curve {hpCurve} fraction 0.15 from end')
+        firstCurveID=get_last_id("curve")-1
+
+        cubit.cmd(f'split curve {lpHpCurveDict["baseCurveIDs"][0][0]} fraction 0.025 from start')
+        secondCurveID=get_last_id("curve")
+
+        keepCurve=2
+        lpHpCurveDict["baseCurveIDs"][0][0]=spliceTwoCurves(firstCurveID, secondCurveID, keepCurve)
+
+        #LP
+        cubit.cmd(f'split curve {lpCurve} fraction 0.15 from end')
+        firstCurveID=get_last_id("curve")-1
+
+        cubit.cmd(f'split curve {lpHpCurveDict["baseCurveIDs"][1][0]} fraction 0.025 from start')
+        secondCurveID=get_last_id("curve")
+
+        keepCurve=2
+        lpHpCurveDict["baseCurveIDs"][1][0]=spliceTwoCurves(firstCurveID, secondCurveID, keepCurve)
+
+
+        
+        
     nModeledLayers = 3
 
     lpHpside = "HP"
