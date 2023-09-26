@@ -7,7 +7,6 @@ import numpy as np
 from pynumad.analysis.ansys.read import *
 from pynumad.utils.fatigue import *
 from pynumad.utils.interpolation import *
-from pynumad.analysis.ansys.write import *
 
 
 def spread_concentrated_loads(nodeData, loads, maptype = 'map3D_fxM0'):

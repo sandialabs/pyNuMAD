@@ -5,7 +5,7 @@ import glob,os
 def call_ansys(script_name,log=False,script_out='ansys.out',ncpus=1):
     for f in glob.glob("*.lock"):
         os.remove(f)
-    ansys_path=SOFTWARE_PATHS['ansys_path'] #Not working fix later
+    ansys_path=SOFTWARE_PATHS['ansys_path']
     MAXnLicenceTries=100
     try:
 

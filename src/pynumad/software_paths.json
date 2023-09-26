@@ -1,5 +1,5 @@
-{"numadPath" : "~/Documents/GitHub/kirklocal_NuMAD",
-"ansysPath" : "mapdl",
+{"numad_path" : "~/Documents/GitHub/kirklocal_NuMAD",
+"ansys_path" : "mapdl",
 "cubit" : "/Applications/Cubit.app/Contents/MacOS/",
 "cubitEnhancements" : "/Applications/Cubit.app/Contents/MacOS/python3/lib/site-packages/",
 "openFast" : "~/.local/bin/anaconda3/envs/openfast_env/bin/",
