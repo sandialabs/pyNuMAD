@@ -1,11 +1,11 @@
 from cubit import *
 from PyCubed_Main import *
-from pynumad.analysis.cubit.utils import printSineCurveBetweenTwoVerts
+from pynumad.analysis.cubit.utils import print_sine_curve_between_two_verts
 import numpy as np
 import re
 
 
-def getOrderedList(partName):
+def get_ordered_list(partName):
 
     orderedList = []
     surfacesToConnect = [1]  # Initialize to enter loop
@@ -21,7 +21,7 @@ def getOrderedList(partName):
     return orderedList
 
 
-def makeSpanwiseSplines(surfaceDict, orderedList):
+def make_spanwise_splines(surfaceDict, orderedList):
     spanwiseSplines = []
     for alignedSurfaces in orderedList:
         tempList = []
@@ -38,7 +38,7 @@ def makeSpanwiseSplines(surfaceDict, orderedList):
     return spanwiseSplines
 
 
-def makeOneVolume(
+def make_a_volume(
     currentSurfaceID, nextSurfaceID, spanwiseSplinesForAvolume, surfaceDict, iStationEnd
 ):
     cubit.cmd(f"surface {currentSurfaceID} copy")
@@ -105,7 +105,7 @@ def makeOneVolume(
     cubit.cmd(f'volume {get_last_id("volume")} rename "{volumeName}"')
 
 
-def getspanwiseSplinesForAvolume(
+def get_spanwise_splines_for_a_volume(
     iSpan, nCrossSections, spanwiseSplinesForOneSurface, nextSurfaceVerteces
 ):
     # Split off spanwise curves for a single volume and store them
@@ -128,9 +128,9 @@ def getspanwiseSplinesForAvolume(
 #     cubit.cmd(f'curve {thicknessCurveID} interval {nIntervals}')
 
 
-def makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd):
+def make_all_volumes_for_a_part(surfaceDict, orderedList, meshVolList, iStationEnd):
     # nIntervals=3
-    spanwiseSplines = makeSpanwiseSplines(surfaceDict, orderedList)
+    spanwiseSplines = make_spanwise_splines(surfaceDict, orderedList)
     nCrossSections = len(orderedList[0])
     nPartSurfaceIDs = len(orderedList)
     if nCrossSections > 1:
@@ -141,13 +141,13 @@ def makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd):
                 (
                     spanwiseSplinesForAvolume,
                     spanwiseSplines[partSurfaceIDs],
-                ) = getspanwiseSplinesForAvolume(
+                ) = get_spanwise_splines_for_a_volume(
                     iSpan,
                     nCrossSections,
                     spanwiseSplines[partSurfaceIDs],
                     surfaceDict[nextSurfaceID]["verts"],
                 )
-                makeOneVolume(
+                make_a_volume(
                     currentSurfaceID,
                     nextSurfaceID,
                     spanwiseSplinesForAvolume,
@@ -162,7 +162,7 @@ def makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd):
     return meshVolList
 
 
-def verifyWebCuttingAmplitude(
+def verify_web_cutting_amplitude(
     blade, amplitude, tolerance, iStationFirstWeb, iStationLastWeb
 ):
     # Check to make sure that the amplitude does not result sharp volumes by cutting near a station location
@@ -186,7 +186,7 @@ def verifyWebCuttingAmplitude(
     return amplitude
 
 
-def makeBirdsMouth(
+def make_birds_mouth(
     blade, birdsMouthVerts, birds_mouth_amplitude_fraction, iStationFirstWeb, iStationLastWeb
 ):
     ### Make birds mouth volume that will cut the web volumes ###
@@ -215,12 +215,12 @@ def makeBirdsMouth(
     amplitude = birds_mouth_amplitude_fraction * distance
     tolerance = distance * 0.05
 
-    amplitude = verifyWebCuttingAmplitude(
+    amplitude = verify_web_cutting_amplitude(
         blade, amplitude, tolerance, iStationFirstWeb, iStationLastWeb
     )
 
     curvedLine = cubit.curve(
-        printSineCurveBetweenTwoVerts(v1.id(), v2.id(), amplitude, "z")
+        print_sine_curve_between_two_verts(v1.id(), v2.id(), amplitude, "z")
     )
     cubit.cmd(f"create surface skin curve {curvedLine.id()} {straightLine.id()}")
     baseSurface = get_last_id("surface")
@@ -258,7 +258,7 @@ def makeBirdsMouth(
 # cubit.cmd('open "/home/ecamare/myprojects/bar/cubitDev/python/python0.cub"')
 
 
-def getApproximateThicknessDirectionForVolume(volumeID):
+def get_approximate_thickness_direction_for_volume(volumeID):
     # This function is used when assigning material orientations
 
     # Get thickness direction tangents
@@ -298,12 +298,12 @@ def getApproximateThicknessDirectionForVolume(volumeID):
     return
 
 
-def getMatOriSurface(volumeID, spanwiseMatOriCurve):
+def get_mat_ori_surface(volumeID, spanwiseMatOriCurve):
     # This function is used when assigning material orientations
     # This gets returns the surface within a volume that will be used to get surface normals.
     # The sign +-1 is also returned since some of the surfaces are oriented the wrong way
 
-    approximateThicknessDirection = getApproximateThicknessDirectionForVolume(volumeID)
+    approximateThicknessDirection = get_approximate_thickness_direction_for_volume(volumeID)
 
     # Create a list of surface IDs in the given volume
     surfaceIDs = []

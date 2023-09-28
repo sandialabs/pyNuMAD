@@ -131,7 +131,7 @@ def extendCurveAtVertexToLength(curveToExtendID, extensionLength, curveStartOrEn
     cubit.cmd(f"split curve {secondCurveID} distance 0.02 from start ")
     secondCurveID = get_last_id("curve") 
 
-    return spliceTwoCurves(firstCurveID, secondCurveID, keepCurve)
+    return splice_two_curves(firstCurveID, secondCurveID, keepCurve)
 
 
 def removeBadTEgeometry(blade, iStation, curveID, flatBackCurveID):
@@ -153,7 +153,7 @@ def removeBadTEgeometry(blade, iStation, curveID, flatBackCurveID):
     return get_last_id("curve")
 
 
-def printOffsetDirectionCheck(curveID, lpHpside, crossSectionNormal):
+def print_offset_direction_check(curveID, lpHpside, crossSectionNormal):
     # This function is used to determine which way a curve offset will go. This is needed, for example,
     # to make sure the outer mold line curve is being offset towrads the interior of the blade.
     tol = 0.01
@@ -178,17 +178,14 @@ def printOffsetDirectionCheck(curveID, lpHpside, crossSectionNormal):
     return offsetSign
 
 
-def offsetCurveAndCombineFragmentsIfNeeded(curveID, offsetDistance):
+def offset_curve_and_combine_fragments_if_needed(curveID, offsetDistance):
     # Sometimes when offseting a curve, the offset is broken into multiple curves.
     # This happens when the curvature is to high for the offset distance. If this happens
     # this fuction combines the fragmented curves into one spline.
     nStart = get_last_id("curve")
     cubit.cmd(f"create curve offset curve {curveID} distance {offsetDistance} extended")
     nEnd = get_last_id("curve")
-    # print(f'curveID {curveID}')
-    # print(f'nStart {nStart}')
-    # print(f'nEnd {nEnd}')
-    # print(f'offsetDistance {nEnd}')
+
 
     # cubit.cmd(f'save as "Debug.cub" overwrite')
 
@@ -213,7 +210,7 @@ def offsetCurveAndCombineFragmentsIfNeeded(curveID, offsetDistance):
         cubit.cmd(f"delete curve {l2s(curveList)}")
 
 
-def streamlineCurveIntersections(firstCurveID, secondCurveID, keepCurve):
+def streamline_curve_intersections(firstCurveID, secondCurveID, keepCurve):
     # keepCurve is either 1 or 2
     nStart = get_last_id("vertex")
     cubit.cmd(f"create vertex atintersection curve {firstCurveID} {secondCurveID}")
@@ -229,7 +226,7 @@ def streamlineCurveIntersections(firstCurveID, secondCurveID, keepCurve):
         firstCurveID = get_last_id("curve") - 1
         cubit.cmd(f"split curve {secondCurveID} distance 0.005 from start ")
         secondCurveID = get_last_id("curve") 
-        tempID = spliceTwoCurves(firstCurveID, secondCurveID, keepCurve)
+        tempID = splice_two_curves(firstCurveID, secondCurveID, keepCurve)
         return tempID, vertexList[-1]
     else:
         if keepCurve == 1:
@@ -238,7 +235,7 @@ def streamlineCurveIntersections(firstCurveID, secondCurveID, keepCurve):
             return secondCurveID, None
 
 
-def spliceTwoCurves(firstCurveID, secondCurveID, keepCurve):
+def splice_two_curves(firstCurveID, secondCurveID, keepCurve):
     # Given two curves splice them into one curve. This should even work for curves that make corners.
     # Curve sence matters. The first curve's sense (tangent) should point towards the second curve.
 
@@ -269,7 +266,7 @@ def spliceTwoCurves(firstCurveID, secondCurveID, keepCurve):
         return secondCurveID
 
 
-def extendCurvePastCurveAndTrim(
+def extend_curve_past_curve_and_trim(
     curveToExtendID, curveStartOrEnd, curveIDThatCutsExtendedCurve
 ):
     # Given two curves that are not necessarily intersecting extend {curveToExtendID} then trim it at
@@ -307,7 +304,7 @@ def extendCurvePastCurveAndTrim(
     return curveToExtendID
 
 
-def renameLastSurface(partName, iStation, iModeledLayers, materialName, partNameID):
+def rename_last_surface(partName, iStation, iModeledLayers, materialName, partNameID):
     # Every cross sectional surface that is created must be followed by a call to this function
     partNameID += 1
     surfaceName = (
@@ -325,7 +322,7 @@ def renameLastSurface(partName, iStation, iModeledLayers, materialName, partName
     return partNameID
 
 
-def addSurfaceDictEntry(
+def add_surface_dict_entry(
     surfaceDict, surfaceObject, myCurveOrder, myVertOrder, materialName, plyAngle
 ):
     surfaceDict[surfaceObject.id()] = {}
@@ -348,7 +345,7 @@ def addSurfaceDictEntry(
     surfaceDict[surfaceObject.id()]["plyAngle"] = plyAngle
 
 
-def makeCrossSectionSurface(
+def make_cross_section_surface(
     surfaceDict,
     iStation,
     partName,
@@ -365,10 +362,10 @@ def makeCrossSectionSurface(
     surfaceFromTwoCurves(topCurve, bottomCurve)
     materialsUsed.add(materialName)
 
-    partNameID = renameLastSurface(
+    partNameID = rename_last_surface(
         partName, iStation, iModeledLayers, materialName, partNameID
     )
-    addSurfaceDictEntry(
+    add_surface_dict_entry(
         surfaceDict,
         cubit.surface(get_last_id("surface")),
         [0, 1, 2, 3],
@@ -390,7 +387,7 @@ def makeCrossSectionSurface(
     return partNameID, materialsUsed
 
 
-def writeLEAdhesiveCurves(
+def write_LE_adhesive_curves(
     HPstackThickness,
     LPstackThickness,
     adhesiveThickness,
@@ -398,7 +395,7 @@ def writeLEAdhesiveCurves(
     lpKeyCurve,
     crossSectionNormal,
 ):
-    def uniteLEgeomWithAdhesiveCurves(lpHpside, keyCurve):
+    def unite_LE_geom_with_adhesive_curves(lpHpside, keyCurve):
         if lpHpside.lower() == "hp":
             # keyCurve=hpKeyCurve
             adhesiveCurveID = LEadhesiveCurveIDs[0][0]
@@ -450,14 +447,14 @@ def writeLEAdhesiveCurves(
     # Offset OML curves to final layer offset
     cubit.cmd(f"curve {hpKeyCurve} copy")
     cubit.cmd(f'split curve {get_last_id("curve")} fraction 0.05 from end')
-    offsetCurveAndCombineFragmentsIfNeeded(get_last_id("curve"), -1 * HPstackThickness)
+    offset_curve_and_combine_fragments_if_needed(get_last_id("curve"), -1 * HPstackThickness)
 
     _, p1 = selCurveVerts(get_last_id("curve"))
     hpOffset = get_last_id("curve")
 
     cubit.cmd(f"curve {lpKeyCurve} copy")
     cubit.cmd(f'split curve {get_last_id("curve")} fraction 0.05 from end')
-    offsetCurveAndCombineFragmentsIfNeeded(get_last_id("curve"), -1 * LPstackThickness)
+    offset_curve_and_combine_fragments_if_needed(get_last_id("curve"), -1 * LPstackThickness)
 
     _, p2 = selCurveVerts(get_last_id("curve"))
     lpOffset = get_last_id("curve")
@@ -515,7 +512,7 @@ def writeLEAdhesiveCurves(
     keyCurves = [hpKeyCurve, lpKeyCurve]
     for iSide, lpHpside in enumerate(["HP", "LP"]):
         ###HP###
-        LEadhesiveCurveIDs[iSide][0], keyCurves[iSide] = uniteLEgeomWithAdhesiveCurves(
+        LEadhesiveCurveIDs[iSide][0], keyCurves[iSide] = unite_LE_geom_with_adhesive_curves(
             lpHpside, keyCurves[iSide]
         )
 
@@ -536,7 +533,7 @@ def writeLEAdhesiveCurves(
     return keyCurves[0], keyCurves[1], LEadhesiveCurveIDs
 
 
-def splitCurveAtCoordintePoints(coordinatesToSplitCurve, curveIDToSplit):
+def split_curve_at_coordinte_points(coordinatesToSplitCurve, curveIDToSplit):
     cubit.cmd(f"curve {curveIDToSplit} copy")
     tempCurveID = get_last_id("curve")
 
@@ -562,7 +559,7 @@ def splitCurveAtCoordintePoints(coordinatesToSplitCurve, curveIDToSplit):
     return keyCurves
 
 
-def splitKeyCurves(keyCurves, aftWebStack, foreWebStack, web_adhesive_width):
+def split_key_curves(keyCurves, aftWebStack, foreWebStack, web_adhesive_width):
     ###Do not split TE reinf
     tempBaseCurveIDs = [keyCurves[0]]
 
@@ -625,7 +622,7 @@ def splitKeyCurves(keyCurves, aftWebStack, foreWebStack, web_adhesive_width):
     return tempBaseCurveIDs, sparCapBaseCurves
 
 
-def getMidLine(blade, iLE, iStation, geometryScaling):
+def get_mid_line(blade, iLE, iStation, geometryScaling):
     geometry = blade.geometry
     X = geometry.coordinates[:, 0, iStation] * geometryScaling
     Y = geometry.coordinates[:, 1, iStation] * geometryScaling
@@ -647,7 +644,7 @@ def getMidLine(blade, iLE, iStation, geometryScaling):
     return midline
 
 
-def getAdjustmentCurve(curveIDs, layerOffsetDist, curveStartOrEnd, endLayerTaperCurve):
+def get_adjustment_curve(curveIDs, layerOffsetDist, curveStartOrEnd, endLayerTaperCurve):
     nStart = get_last_id("vertex") + 1
     curveFraction = 1.0 / 3
     for iCurve, curveID in enumerate(curveIDs):
@@ -675,7 +672,7 @@ def getAdjustmentCurve(curveIDs, layerOffsetDist, curveStartOrEnd, endLayerTaper
     return adjustmentCurve
 
 
-def makeCrossSectionLayerAreas_perimeter(wt_name,
+def make_cs_perimeter_layer_areas(wt_name,
     surfaceDict,
     iStation,
     stationStacks,
@@ -701,7 +698,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
         lpHpsideIndex = 1
         camberOffsetSign = -1
 
-    offsetSign_camberID = printOffsetDirectionCheck(
+    offsetSign_camberID = print_offset_direction_check(
         lpHpCurveDict["camberID"], "LP", crossSectionNormal
     )
 
@@ -816,7 +813,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             # Base curve copy
             cubit.cmd(f"curve {leftBottomCurve} copy")
             baseCurveIDCopy = get_last_id("curve")
-            offsetSign_baseCurveIDCopy = printOffsetDirectionCheck(
+            offsetSign_baseCurveIDCopy = print_offset_direction_check(
                 baseCurveIDCopy, lpHpside, crossSectionNormal
             )
 
@@ -830,7 +827,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             offsetDistance = (
                 1 * offsetSign_baseCurveIDCopy * sum(currentStackLayerThicknesses)
             )
-            offsetCurveAndCombineFragmentsIfNeeded(baseCurveIDCopy, offsetDistance)
+            offset_curve_and_combine_fragments_if_needed(baseCurveIDCopy, offsetDistance)
             topBoundingCurve = get_last_id("curve")
 
             if isFlatback:
@@ -844,7 +841,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
                 (
                     topBoundingCurve,
                     beginLayerTaperVertexID,
-                ) = streamlineCurveIntersections(
+                ) = streamline_curve_intersections(
                     camberOffset, topBoundingCurve, keepCurve
                 )
 
@@ -875,7 +872,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
                 f'trim curve {topBoundingCurve} atintersection curve {lpHpCurveDict["flatBackCurveID"]} keepside vertex {v1}'
             )
             topBoundingCurve = get_last_id("curve")
-            offsetSign_topBoundingCurve = printOffsetDirectionCheck(
+            offsetSign_topBoundingCurve = print_offset_direction_check(
                 topBoundingCurve, lpHpside, crossSectionNormal
             )
 
@@ -963,11 +960,11 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             offsetDistance = (
                 1 * offsetSign_baseCurveIDCopy * currentStackLayerThicknesses[iLayer]
             )
-            offsetCurveAndCombineFragmentsIfNeeded(baseCurveIDCopy, offsetDistance)
+            offset_curve_and_combine_fragments_if_needed(baseCurveIDCopy, offsetDistance)
             firstLayerOffset = get_last_id("curve")
 
             curveStartOrEnd = "start"
-            firstLayerOffset = extendCurvePastCurveAndTrim(
+            firstLayerOffset = extend_curve_past_curve_and_trim(
                 firstLayerOffset, curveStartOrEnd, lpHpCurveDict["flatBackCurveID"]
             )
 
@@ -976,7 +973,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             if (isFlatback and abs(min(currentStack.layerThicknesses())- max(currentStack.layerThicknesses()))> 0.0001):
                 layerOffsetDist = currentStackLayerThicknesses[0]
                 curveStartOrEnd = "start"
-                firstLayerOffset = getAdjustmentCurve(
+                firstLayerOffset = get_adjustment_curve(
                     curveIDs, layerOffsetDist, curveStartOrEnd, endLayerTaperCurve
                 )
 
@@ -985,18 +982,18 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             )
             camberOffset = get_last_id("curve")
 
-            offsetSign_topBoundingCurve = printOffsetDirectionCheck(
+            offsetSign_topBoundingCurve = print_offset_direction_check(
                 topBoundingCurve, lpHpside, crossSectionNormal
             )
 
             offsetDistance = (
                 -1 * offsetSign_topBoundingCurve * currentStackLayerThicknesses[-1]
             )
-            offsetCurveAndCombineFragmentsIfNeeded(topBoundingCurve, offsetDistance)
+            offset_curve_and_combine_fragments_if_needed(topBoundingCurve, offsetDistance)
             lastLayerOffset = get_last_id("curve")
 
             curveStartOrEnd = "start"
-            lastLayerOffset = extendCurvePastCurveAndTrim(
+            lastLayerOffset = extend_curve_past_curve_and_trim(
                 lastLayerOffset, curveStartOrEnd, lpHpCurveDict["flatBackCurveID"]
             )
 
@@ -1010,7 +1007,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             ):
                 layerOffsetDist = currentStackLayerThicknesses[-1]
                 curveStartOrEnd = "end"
-                lastLayerOffset = getAdjustmentCurve(
+                lastLayerOffset = get_adjustment_curve(
                     curveIDs, layerOffsetDist, curveStartOrEnd, endLayerTaperCurve
                 )
 
@@ -1036,7 +1033,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             nextStackCurves = []
             cubit.cmd(f"curve {rightBottomCurve} copy")
             baseCurveIDCopy = get_last_id("curve")
-            offsetSign_baseCurveIDCopy = printOffsetDirectionCheck(
+            offsetSign_baseCurveIDCopy = print_offset_direction_check(
                 baseCurveIDCopy, lpHpside, crossSectionNormal
             )
             nextStackCurves.append(baseCurveIDCopy)
@@ -1053,17 +1050,17 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             offsetDistance = (
                 1 * offsetSign_baseCurveIDCopy * nextStackLayerThicknesses[0]
             )
-            offsetCurveAndCombineFragmentsIfNeeded(baseCurveIDCopy, offsetDistance)
+            offset_curve_and_combine_fragments_if_needed(baseCurveIDCopy, offsetDistance)
             nextStackCurves.append(get_last_id("curve"))
 
             offsetDistance = (
                 1 * offsetSign_baseCurveIDCopy * sum(nextStackLayerThicknesses)
             )
-            offsetCurveAndCombineFragmentsIfNeeded(baseCurveIDCopy, offsetDistance)
+            offset_curve_and_combine_fragments_if_needed(baseCurveIDCopy, offsetDistance)
             topBoundingCurve = get_last_id("curve")
 
             keepCurve = 2
-            topBoundingCurve, intersectionVertex = streamlineCurveIntersections(
+            topBoundingCurve, intersectionVertex = streamline_curve_intersections(
                 camberOffset, topBoundingCurve, keepCurve
             )
 
@@ -1073,14 +1070,14 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             cubit.cmd(f'delete curve {get_last_id("curve")-1}')
             nextStackCurves.append(topBoundingCurve)
 
-            offsetSign_topBoundingCurve = printOffsetDirectionCheck(
+            offsetSign_topBoundingCurve = print_offset_direction_check(
                 topBoundingCurve, lpHpside, crossSectionNormal
             )
 
             offsetDistance = (
                 -1 * offsetSign_topBoundingCurve * nextStackLayerThicknesses[-1]
             )
-            offsetCurveAndCombineFragmentsIfNeeded(topBoundingCurve, offsetDistance)
+            offset_curve_and_combine_fragments_if_needed(topBoundingCurve, offsetDistance)
             lastLayerOffset = get_last_id("curve")
             nextStackCurves.insert(-1, lastLayerOffset)
 
@@ -1088,10 +1085,10 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             currentStackOffset = currentStackLayerThicknesses[iModeledLayers]
             nextStackOffset = nextStackLayerThicknesses[iModeledLayers]
 
-            offsetSign_leftBottomCurve = printOffsetDirectionCheck(
+            offsetSign_leftBottomCurve = print_offset_direction_check(
                 leftBottomCurve, lpHpside, crossSectionNormal
             )
-            offsetSign_rightBottomCurve = printOffsetDirectionCheck(
+            offsetSign_rightBottomCurve = print_offset_direction_check(
                 rightBottomCurve, lpHpside, crossSectionNormal
             )
 
@@ -1102,7 +1099,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
                 materialName = currentStack.plygroups[iModeledLayers].materialid
                 plyAngle = currentStack.plygroups[iModeledLayers].angle
 
-                partNameID, materialsUsed = makeCrossSectionSurface(
+                partNameID, materialsUsed = make_cross_section_surface(
                     surfaceDict,
                     iStation,
                     partName,
@@ -1154,7 +1151,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
                     get_last_id("curve")
                 )
 
-                offsetCurveAndCombineFragmentsIfNeeded(
+                offset_curve_and_combine_fragments_if_needed(
                     rightBottomCurve, offsetSign_rightBottomCurve * nextStackOffset
                 )
                 lastOffsetCurve = get_last_id("curve")
@@ -1166,7 +1163,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             if iPerimeter == lastPerimeter:
                 curveStartOrEnd = "end"
                 print(f"iPerimeter {iPerimeter}")
-                lastOffsetCurve = extendCurvePastCurveAndTrim(
+                lastOffsetCurve = extend_curve_past_curve_and_trim(
                     lastOffsetCurve,
                     curveStartOrEnd,
                     lpHpCurveDict["LEadhesiveCurveIDs"][lpHpsideIndex][1],
@@ -1218,7 +1215,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             # Sufaces for currentStack
             materialName = currentStack.plygroups[iModeledLayers].materialid
             plyAngle = currentStack.plygroups[iModeledLayers].angle
-            partNameID, materialsUsed = makeCrossSectionSurface(
+            partNameID, materialsUsed = make_cross_section_surface(
                 surfaceDict,
                 iStation,
                 partName,
@@ -1235,7 +1232,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             # Surfaces for transitionStack
             materialName = transitionStack.plygroups[iModeledLayers].materialid
             plyAngle = transitionStack.plygroups[iModeledLayers].angle
-            partNameID, materialsUsed = makeCrossSectionSurface(
+            partNameID, materialsUsed = make_cross_section_surface(
                 surfaceDict,
                 iStation,
                 partName,
@@ -1252,7 +1249,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
             # Surfaces for nextStack
             materialName = nextStack.plygroups[iModeledLayers].materialid
             plyAngle = nextStack.plygroups[iModeledLayers].angle
-            partNameID, materialsUsed = makeCrossSectionSurface(
+            partNameID, materialsUsed = make_cross_section_surface(
                 surfaceDict,
                 iStation,
                 partName,
@@ -1285,7 +1282,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
                 lpHpCurveDict["sparCapBaseCurves"][lpHpsideIndex]
             ):
                 bottomCurve = currentCurveID
-                offSetSign = printOffsetDirectionCheck(
+                offSetSign = print_offset_direction_check(
                     bottomCurve, lpHpside, crossSectionNormal
                 )
 
@@ -1297,7 +1294,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
 
                     materialName = nextStack.plygroups[it].materialid
                     plyAngle = nextStack.plygroups[it].angle
-                    partNameID, materialsUsed = makeCrossSectionSurface(
+                    partNameID, materialsUsed = make_cross_section_surface(
                         surfaceDict,
                         iStation,
                         partName,
@@ -1328,7 +1325,7 @@ def makeCrossSectionLayerAreas_perimeter(wt_name,
 ####################################################
 
 
-def createSimplistSurfaceForTEorLEadhesive(
+def create_simplist_surface_for_TE_or_LE_adhesive(
     iStation,
     surfaceDict,
     partName,
@@ -1342,7 +1339,7 @@ def createSimplistSurfaceForTEorLEadhesive(
         plyAngle = (
             0  # Ply angle is always zero since adhesive is always assumed as isotropic
         )
-        partNameID, materialsUsed = makeCrossSectionSurface(
+        partNameID, materialsUsed = make_cross_section_surface(
             surfaceDict,
             iStation,
             partName,
@@ -1358,7 +1355,7 @@ def createSimplistSurfaceForTEorLEadhesive(
     return partNameID
 
 
-def printSineCurveBetweenTwoVerts(vBot, vTop, amplitude, direction):
+def print_sine_curve_between_two_verts(vBot, vTop, amplitude, direction):
     nSineCurveSamplePoints = 7
     cubit.cmd(f"create curve vertex {vBot} {vTop}")
 
@@ -1384,7 +1381,7 @@ def printSineCurveBetweenTwoVerts(vBot, vTop, amplitude, direction):
     return get_last_id("curve")
 
 
-def makeCrossSectionLayerAreas_web(
+def make_cs_web_layer_areas(
     surfaceDict,
     iStation,
     aftWebStack,
@@ -1411,7 +1408,7 @@ def makeCrossSectionLayerAreas_web(
         else:
             lpHpside = "LP"
         for iCurve, bottomCurve in enumerate(curveList):
-            offSetSign = printOffsetDirectionCheck(
+            offSetSign = print_offset_direction_check(
                 bottomCurve, lpHpside, crossSectionNormal
             )
 
@@ -1444,7 +1441,7 @@ def makeCrossSectionLayerAreas_web(
                         materialName = foreWebStack.plygroups[0].materialid
                         plyAngle = foreWebStack.plygroups[0].angle
 
-                partNameID, materialsUsed = makeCrossSectionSurface(
+                partNameID, materialsUsed = make_cross_section_surface(
                     surfaceDict,
                     iStation,
                     partName,
@@ -1473,12 +1470,12 @@ def makeCrossSectionLayerAreas_web(
     for iCurve in range(nBaseCurvesWeb):
         vHP, _ = selCurveVerts(webInterfaceCurves[0][iCurve])
         vLP, _ = selCurveVerts(webInterfaceCurves[1][iCurve])
-        topCurve = printSineCurveBetweenTwoVerts(
+        topCurve = print_sine_curve_between_two_verts(
             vHP, vLP, cs_params["max_web_imperfection_distance"][iStation], "x"
         )
         _, vHP = selCurveVerts(webInterfaceCurves[0][iCurve])
         _, vLP = selCurveVerts(webInterfaceCurves[1][iCurve])
-        bottomCurve = printSineCurveBetweenTwoVerts(
+        bottomCurve = print_sine_curve_between_two_verts(
             vHP, vLP, cs_params["max_web_imperfection_distance"][iStation], "x"
         )
 
@@ -1490,7 +1487,7 @@ def makeCrossSectionLayerAreas_web(
                 iCurve - int(nBaseCurvesWeb / 2)
             ].materialid
             plyAngle = foreWebStack.plygroups[iCurve - int(nBaseCurvesWeb / 2)].angle
-        partNameID, materialsUsed = makeCrossSectionSurface(
+        partNameID, materialsUsed = make_cross_section_surface(
             surfaceDict,
             iStation,
             partName,
@@ -1505,7 +1502,7 @@ def makeCrossSectionLayerAreas_web(
     return partNameID, (vHP, vLP)
 
 
-def writeCubitCrossSection(wt_name,
+def make_a_cross_section(wt_name,
     surfaceDict,
     iStation,
     iStationGeometry,
@@ -1574,7 +1571,7 @@ def writeCubitCrossSection(wt_name,
 
 
     curveFraction = 0
-    TEangle = getTEangle(hpKeyCurve, lpKeyCurve, curveFraction)
+    TEangle = get_te_angle(hpKeyCurve, lpKeyCurve, curveFraction)
     print(f"station {iStation}")
     print(f"edgeLength={flatBackLength*1000}")
     print(cs_params)
@@ -1643,7 +1640,7 @@ def writeCubitCrossSection(wt_name,
     #     # cubit.cmd(f'save as "Debug.cub" overwrite')
     #     # foo
     else:
-        xyz = getMidLine(blade, iLE, iStationGeometry, geometryScaling)
+        xyz = get_mid_line(blade, iLE, iStationGeometry, geometryScaling)
         npts, _ = xyz.shape
         npts = round(
             npts * 0.75
@@ -1672,7 +1669,7 @@ def writeCubitCrossSection(wt_name,
     lpHpCurveDict["LEadhesiveCurveList"] = [[], []]
     lpHpCurveDict["aero_shell_verts_for_te_adhesive"] = {}
 
-    hpKeyCurve, lpKeyCurve, lpHpCurveDict["LEadhesiveCurveIDs"] = writeLEAdhesiveCurves(
+    hpKeyCurve, lpKeyCurve, lpHpCurveDict["LEadhesiveCurveIDs"] = write_LE_adhesive_curves(
         LEHPstackThickness,
         LELPstackThickness,
         cs_params["LE_adhesive_thickness"][iStation],
@@ -1681,21 +1678,21 @@ def writeCubitCrossSection(wt_name,
         crossSectionNormal,
     )
 
-    keyCurves = splitCurveAtCoordintePoints(
+    keyCurves = split_curve_at_coordinte_points(
         keypoints.key_points[1:5, :, iStationGeometry], hpKeyCurve
     )
     web_adhesive_width = cs_params["web_adhesive_width"][iStation]
     (
         lpHpCurveDict["baseCurveIDs"][0],
         lpHpCurveDict["sparCapBaseCurves"][0],
-    ) = splitKeyCurves(keyCurves, aftWebStack, foreWebStack, web_adhesive_width)
+    ) = split_key_curves(keyCurves, aftWebStack, foreWebStack, web_adhesive_width)
 
     temp = np.flip(keypoints.key_points[:, :, iStationGeometry], 0)
-    keyCurves = splitCurveAtCoordintePoints(temp[1:5, :], lpKeyCurve)
+    keyCurves = split_curve_at_coordinte_points(temp[1:5, :], lpKeyCurve)
     (
         lpHpCurveDict["baseCurveIDs"][1],
         lpHpCurveDict["sparCapBaseCurves"][1],
-    ) = splitKeyCurves(keyCurves, aftWebStack, foreWebStack, web_adhesive_width)
+    ) = split_key_curves(keyCurves, aftWebStack, foreWebStack, web_adhesive_width)
 
 
     # Make sure that the adhesive width is the same on HP and LP sides. Also 
@@ -1760,7 +1757,7 @@ def writeCubitCrossSection(wt_name,
         secondCurveID=get_last_id("curve")
 
         keepCurve=2
-        lpHpCurveDict["baseCurveIDs"][0][0]=spliceTwoCurves(firstCurveID, secondCurveID, keepCurve)
+        lpHpCurveDict["baseCurveIDs"][0][0]=splice_two_curves(firstCurveID, secondCurveID, keepCurve)
         
 
         #LP
@@ -1771,7 +1768,7 @@ def writeCubitCrossSection(wt_name,
         secondCurveID=get_last_id("curve")
 
         keepCurve=2
-        lpHpCurveDict["baseCurveIDs"][1][0]=spliceTwoCurves(firstCurveID, secondCurveID, keepCurve)
+        lpHpCurveDict["baseCurveIDs"][1][0]=splice_two_curves(firstCurveID, secondCurveID, keepCurve)
 
 
         
@@ -1780,7 +1777,7 @@ def writeCubitCrossSection(wt_name,
 
     lpHpside = "HP"
 
-    partNameID, lpHpCurveDict = makeCrossSectionLayerAreas_perimeter(wt_name,
+    partNameID, lpHpCurveDict = make_cs_perimeter_layer_areas(wt_name,
         surfaceDict,
         iStation,
         stackdb.stacks[1:6, iStation],
@@ -1800,7 +1797,7 @@ def writeCubitCrossSection(wt_name,
     lpHpside = "LP"
     temp = stackdb.stacks[:, iStation]
     temp = np.flip(temp)
-    partNameID, lpHpCurveDict = makeCrossSectionLayerAreas_perimeter(wt_name,
+    partNameID, lpHpCurveDict = make_cs_perimeter_layer_areas(wt_name,
         surfaceDict,
         iStation,
         temp[1:6],
@@ -1818,7 +1815,7 @@ def writeCubitCrossSection(wt_name,
     )
 
     partName = "shell"
-    partNameID = createSimplistSurfaceForTEorLEadhesive(
+    partNameID = create_simplist_surface_for_TE_or_LE_adhesive(
         iStation,
         surfaceDict,
         partName,
@@ -1835,7 +1832,7 @@ def writeCubitCrossSection(wt_name,
     else:
         partName = "roundTEadhesive"
 
-    partNameID = createSimplistSurfaceForTEorLEadhesive(
+    partNameID = create_simplist_surface_for_TE_or_LE_adhesive(
         iStation,
         surfaceDict,
         partName,
@@ -1850,7 +1847,7 @@ def writeCubitCrossSection(wt_name,
     if hasWebs:
         partNameID = 0  # Reset since outer areoshell is complete (LE adhesive is accouted for as aeroshell)
 
-        partNameID, birdsMouthVerts = makeCrossSectionLayerAreas_web(
+        partNameID, birdsMouthVerts = make_cs_web_layer_areas(
             surfaceDict,
             iStation,
             aftWebStack,
@@ -1875,7 +1872,7 @@ def writeCubitCrossSection(wt_name,
     return birdsMouthVerts
 
 
-def writeVABSinput(
+def write_vabs_input(
     surfaceDict,
     blade,
     cs_params,
@@ -2012,7 +2009,7 @@ def writeVABSinput(
 # Main script fuctions
 
 
-def getTEangle(hpKeyCurve, lpKeyCurve, fraction):
+def get_te_angle(hpKeyCurve, lpKeyCurve, fraction):
     c1 = cubit.curve(hpKeyCurve)
     c2 = cubit.curve(lpKeyCurve)
 

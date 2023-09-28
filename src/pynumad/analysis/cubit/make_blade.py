@@ -193,7 +193,7 @@ def cubit_make_cross_sections(
 
         # Only save birdsMouthVerts for the right cross-section
         if iStation == iStationFirstWeb:
-            birdsMouthVerts = writeCubitCrossSection(wt_name,
+            birdsMouthVerts = make_a_cross_section(wt_name,
                 surfaceDict,
                 iStation,
                 iStationGeometry,
@@ -211,7 +211,7 @@ def cubit_make_cross_sections(
                 crossSectionNormal,
             )
         else:
-            writeCubitCrossSection(wt_name,
+            make_a_cross_section(wt_name,
                 surfaceDict,
                 iStation,
                 iStationGeometry,
@@ -293,7 +293,7 @@ def cubit_make_cross_sections(
             if get_mesh_error_count() ==0:
                 if settings["make_input_for"] is not None:
                     if "vabs" in settings["make_input_for"].lower():
-                        writeVABSinput(
+                        write_vabs_input(
                             surfaceDict,
                             blade,
                             cs_params,
@@ -419,28 +419,28 @@ def cubit_make_solid_blade(
     meshVolList = []
 
     partName = "shell"
-    orderedList = getOrderedList(partName)
+    orderedList = get_ordered_list(partName)
     if len(orderedList) > 0:
-        meshVolList = makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd)
+        meshVolList = make_all_volumes_for_a_part(surfaceDict, orderedList, meshVolList, iStationEnd)
     #     cubit.cmd(f'save as "python2.cub" overwrite')
     #     foo
 
     partName = "web"
-    orderedList = getOrderedList(partName)
+    orderedList = get_ordered_list(partName)
     orderedListWeb = orderedList.copy()
     if orderedList and len(orderedList[0]) > 1:
-        meshVolList = makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd)
+        meshVolList = make_all_volumes_for_a_part(surfaceDict, orderedList, meshVolList, iStationEnd)
 
     partName = "roundTEadhesive"
-    orderedList = getOrderedList(partName)
+    orderedList = get_ordered_list(partName)
     if orderedList and len(orderedList[0]) > 1:
-        meshVolList = makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd)
+        meshVolList = make_all_volumes_for_a_part(surfaceDict, orderedList, meshVolList, iStationEnd)
 
     partName = "flatTEadhesive"
-    orderedList = getOrderedList(partName)
+    orderedList = get_ordered_list(partName)
 
     if orderedList and len(orderedList[0]) > 1:
-        meshVolList = makeAeroshell(surfaceDict, orderedList, meshVolList, iStationEnd)
+        meshVolList = make_all_volumes_for_a_part(surfaceDict, orderedList, meshVolList, iStationEnd)
 
     if (
         orderedListWeb
@@ -448,7 +448,7 @@ def cubit_make_solid_blade(
         and cs_params["birds_mouth_amplitude_fraction"]
         and birdsMouthVerts
     ):
-        makeBirdsMouth(
+        make_birds_mouth(
             blade,
             birdsMouthVerts,
             cs_params["birds_mouth_amplitude_fraction"],
@@ -514,7 +514,7 @@ def cubit_make_solid_blade(
     directions = {}
 
     for volumeID in allVolumeIDs:
-        surfIDforMatOri, sign = getMatOriSurface(volumeID, spanwiseMatOriCurve)
+        surfIDforMatOri, sign = get_mat_ori_surface(volumeID, spanwiseMatOriCurve)
 
         for hex_id in get_volume_hexes(volumeID):
             coords = cubit.get_center_point("hex", hex_id)
