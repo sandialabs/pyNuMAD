@@ -131,7 +131,7 @@ def cubit_make_cross_sections(
     roundStations = list(roundStations[:, 0])
     lastRoundStation = roundStations[-1]
 
-    with open("make_blade.log", "w") as logFile:
+    with open(f"{wt_name}.log", "w") as logFile:
         logFile.write(f"Making cross sections for {wt_name}\n")
 
     pathName = directory + "/" + wt_name + "-crossSections"
@@ -193,7 +193,7 @@ def cubit_make_cross_sections(
 
         # Only save birdsMouthVerts for the right cross-section
         if iStation == iStationFirstWeb:
-            birdsMouthVerts = writeCubitCrossSection(
+            birdsMouthVerts = writeCubitCrossSection(wt_name,
                 surfaceDict,
                 iStation,
                 iStationGeometry,
@@ -211,7 +211,7 @@ def cubit_make_cross_sections(
                 crossSectionNormal,
             )
         else:
-            writeCubitCrossSection(
+            writeCubitCrossSection(wt_name,
                 surfaceDict,
                 iStation,
                 iStationGeometry,
@@ -290,25 +290,30 @@ def cubit_make_cross_sections(
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
-            if settings["make_input_for"] is not None:
-                if "vabs" in settings["make_input_for"].lower():
-                    writeVABSinput(
-                        surfaceDict,
-                        blade,
-                        cs_params,
-                        directory,
-                        fileName,
-                        volumeIDs,
-                        materialsUsed,
-                        crossSectionNormal,
-                    )
+            if get_mesh_error_count() ==0:
+                if settings["make_input_for"] is not None:
+                    if "vabs" in settings["make_input_for"].lower():
+                        writeVABSinput(
+                            surfaceDict,
+                            blade,
+                            cs_params,
+                            directory,
+                            fileName,
+                            volumeIDs,
+                            materialsUsed,
+                            crossSectionNormal,
+                        )
 
-            elif "anba" in settings["make_input_for"].lower():
-                raise ValueError("ANBA currently not supported")
-            else:
-                raise NameError(
-                    f'Unknown beam cross-sectional solver: {settings["make_input_for"]}'
-                )
+                elif "anba" in settings["make_input_for"].lower():
+                    raise ValueError("ANBA currently not supported")
+                else:
+                    raise NameError(
+                        f'Unknown beam cross-sectional solver: {settings["make_input_for"]}'
+                    )
+            else: 
+                with open(f"{wt_name}.log", "a") as logFile:
+                    logFile.write(f"    Warning: {get_mesh_error_count()} cross section mesh errors exist in station {iStation}\n")
+    
 
             if settings["export"] is not None:
                 if (
