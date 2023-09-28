@@ -806,8 +806,8 @@ def write_ansys_shell_model(blade, meshData, config):
     fid.write('\n  ! tbdata,13,xzit,xzic,yzit,yzic')
     fid.write('\n  ! tbdata,17,g1g2,etal,etat,alp0\n')
 
-    for kmp, materialName in enumerate(blade.definition.materials):
-        mat = blade.definition.materials[materialName]
+    for kmp, material_name in enumerate(blade.definition.materials):
+        mat = blade.definition.materials[material_name]
         if mat.type == 'isotropic':
             fid.write('\n   ! %s' % (mat.name))
             fid.write('\n   mp,ex,%d,%g' % (kmp+1,mat.ex))

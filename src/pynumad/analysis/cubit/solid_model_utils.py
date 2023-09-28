@@ -5,15 +5,15 @@ import numpy as np
 import re
 
 
-def get_ordered_list(partName):
+def get_ordered_list(part_name):
 
     orderedList = []
     surfacesToConnect = [1]  # Initialize to enter loop
     iSurface = -1  # Initialize
     while surfacesToConnect:
         iSurface += 1
-        parseString = f'with name "*{partName}*surface{iSurface+1}"'
-        surfacesToConnect = parse_cubit_list("surface", parseString)
+        parse_string = f'with name "*{part_name}*surface{iSurface+1}"'
+        surfacesToConnect = parse_cubit_list("surface", parse_string)
 
         if surfacesToConnect:
             orderedList.append(surfacesToConnect)
@@ -21,25 +21,25 @@ def get_ordered_list(partName):
     return orderedList
 
 
-def make_spanwise_splines(surfaceDict, orderedList):
+def make_spanwise_splines(surface_dict, orderedList):
     spanwiseSplines = []
     for alignedSurfaces in orderedList:
         tempList = []
-        for iPoint in range(4):
-            vertexList = []
+        for i_point in range(4):
+            vertex_list = []
             for index, iSurface in enumerate(alignedSurfaces):
-                vertexID = surfaceDict[iSurface]["verts"][iPoint]
-                vertexList.append(vertexID)
+                vertexID = surface_dict[iSurface]["verts"][i_point]
+                vertex_list.append(vertexID)
                 vertexName = cubit.get_entity_name("vertex", vertexID)
 
-            curve = cubit.cmd(f"create curve spline vertex {l2s(vertexList)}")
+            curve = cubit.cmd(f"create curve spline vertex {l2s(vertex_list)}")
             tempList.append(get_last_id("curve"))
         spanwiseSplines.append(tempList)
     return spanwiseSplines
 
 
 def make_a_volume(
-    currentSurfaceID, nextSurfaceID, spanwiseSplinesForAvolume, surfaceDict, iStationEnd
+    currentSurfaceID, nextSurfaceID, spanwiseSplinesForAvolume, surface_dict, i_station_end
 ):
     cubit.cmd(f"surface {currentSurfaceID} copy")
     currentSurfaceIDcopy = get_last_id("surface")
@@ -50,11 +50,11 @@ def make_a_volume(
     currentSurface = cubit.surface(currentSurfaceID)
     nextSurface = cubit.surface(nextSurfaceID)
 
-    currentSurfaceCurves = surfaceDict[currentSurfaceID]["curves"]
-    nextSurfaceCurves = surfaceDict[nextSurfaceID]["curves"]
+    currentSurfaceCurves = surface_dict[currentSurfaceID]["curves"]
+    nextSurfaceCurves = surface_dict[nextSurfaceID]["curves"]
 
-    currentSurfaceVerteces = surfaceDict[currentSurfaceID]["verts"]
-    nextSurfaceVerteces = surfaceDict[nextSurfaceID]["verts"]
+    currentSurfaceVerteces = surface_dict[currentSurfaceID]["verts"]
+    nextSurfaceVerteces = surface_dict[nextSurfaceID]["verts"]
 
     spanwiseSplinesForAvolume.append(
         spanwiseSplinesForAvolume[0]
@@ -78,14 +78,14 @@ def make_a_volume(
     # cubit.cmd(f'save as "python1.cub" overwrite')
     # raise Exception(f'Volume "{volumeName}" creation failed')
     # Create Volume
-    # nStart=get_last_id("volume")
+    # n_start=get_last_id("volume")
     cubit.cmd(
         f"create volume surface {currentSurfaceIDcopy} {nextSurfaceIDcopy} {l2s(transverseSurfaceIDs)} noheal"
     )
-    # nEnd=get_last_id("volume")
-    # print(f'nStart: {nStart}, nEnd: {nEnd}')
+    # n_end=get_last_id("volume")
+    # print(f'n_start: {n_start}, n_end: {n_end}')
 
-    if "Station" + str(iStationEnd) in cubit.get_entity_name(
+    if "Station" + str(i_station_end) in cubit.get_entity_name(
         "surface", nextSurfaceID
     ):  # This if statement is needed for componets that may have been droped between the last station and the second to last station
         volumeName = cubit.get_entity_name("surface", nextSurfaceID)
@@ -112,8 +112,8 @@ def get_spanwise_splines_for_a_volume(
     if iSpan < nCrossSections - 2:
         spanwiseSplinesForAvolume = []
         temp = []
-        for iCurve, curveID in enumerate(spanwiseSplinesForOneSurface):
-            cubit.cmd(f"split curve {curveID} at vertex {nextSurfaceVerteces[iCurve]}")
+        for iCurve, curve_id in enumerate(spanwiseSplinesForOneSurface):
+            cubit.cmd(f"split curve {curve_id} at vertex {nextSurfaceVerteces[iCurve]}")
             temp.append(get_last_id("curve"))
             spanwiseSplinesForAvolume.append(get_last_id("curve") - 1)
         spanwiseSplinesForOneSurface = temp
@@ -128,9 +128,9 @@ def get_spanwise_splines_for_a_volume(
 #     cubit.cmd(f'curve {thicknessCurveID} interval {nIntervals}')
 
 
-def make_all_volumes_for_a_part(surfaceDict, orderedList, meshVolList, iStationEnd):
+def make_all_volumes_for_a_part(surface_dict, orderedList, meshVolList, i_station_end):
     # nIntervals=3
-    spanwiseSplines = make_spanwise_splines(surfaceDict, orderedList)
+    spanwiseSplines = make_spanwise_splines(surface_dict, orderedList)
     nCrossSections = len(orderedList[0])
     nPartSurfaceIDs = len(orderedList)
     if nCrossSections > 1:
@@ -145,14 +145,14 @@ def make_all_volumes_for_a_part(surfaceDict, orderedList, meshVolList, iStationE
                     iSpan,
                     nCrossSections,
                     spanwiseSplines[partSurfaceIDs],
-                    surfaceDict[nextSurfaceID]["verts"],
+                    surface_dict[nextSurfaceID]["verts"],
                 )
                 make_a_volume(
                     currentSurfaceID,
                     nextSurfaceID,
                     spanwiseSplinesForAvolume,
-                    surfaceDict,
-                    iStationEnd,
+                    surface_dict,
+                    i_station_end,
                 )
                 meshVolList.append(get_last_id("volume"))
                 # assignIntervals(get_last_id("volume"),nIntervals)
@@ -163,13 +163,13 @@ def make_all_volumes_for_a_part(surfaceDict, orderedList, meshVolList, iStationE
 
 
 def verify_web_cutting_amplitude(
-    blade, amplitude, tolerance, iStationFirstWeb, iStationLastWeb
+    blade, amplitude, tolerance, i_stationFirstWeb, i_stationLastWeb
 ):
     # Check to make sure that the amplitude does not result sharp volumes by cutting near a station location
     geometry = blade.geometry
-    for iStationCheck in range(iStationFirstWeb + 1, iStationLastWeb + 1):
+    for i_stationCheck in range(i_stationFirstWeb + 1, i_stationLastWeb + 1):
         bladeSegmentLength = (
-            geometry.ispan[iStationCheck] - geometry.ispan[iStationFirstWeb]
+            geometry.ispan[i_stationCheck] - geometry.ispan[i_stationFirstWeb]
         )
         gap = bladeSegmentLength - amplitude
         # print(f'bladeSegmentLength: {bladeSegmentLength}\ngap {gap}')
@@ -187,17 +187,17 @@ def verify_web_cutting_amplitude(
 
 
 def make_birds_mouth(
-    blade, birdsMouthVerts, birds_mouth_amplitude_fraction, iStationFirstWeb, iStationLastWeb
+    blade, birds_mouth_verts, birds_mouth_amplitude_fraction, i_stationFirstWeb, i_stationLastWeb
 ):
     ### Make birds mouth volume that will cut the web volumes ###
     #############################################################
 
-    # This function must be ran before merging the volumes since "birdsMouthVerts" will change during mergeing
+    # This function must be ran before merging the volumes since "birds_mouth_verts" will change during mergeing
 
     geometry = blade.geometry
 
-    v1 = cubit.vertex(birdsMouthVerts[0])
-    v2 = cubit.vertex(birdsMouthVerts[1])
+    v1 = cubit.vertex(birds_mouth_verts[0])
+    v2 = cubit.vertex(birds_mouth_verts[1])
     distance = getDist(v1.coordinates(), v2.coordinates())[0]
     create_curve(v1, v2)
 
@@ -216,7 +216,7 @@ def make_birds_mouth(
     tolerance = distance * 0.05
 
     amplitude = verify_web_cutting_amplitude(
-        blade, amplitude, tolerance, iStationFirstWeb, iStationLastWeb
+        blade, amplitude, tolerance, i_stationFirstWeb, i_stationLastWeb
     )
 
     curvedLine = cubit.curve(
@@ -229,12 +229,12 @@ def make_birds_mouth(
     tangent = straightLine.tangent(midPoint)
 
     # Get the cross-section normal
-    parseString = f'in surface with name "*webStation{iStationFirstWeb}*"'
-    surfaceID = parse_cubit_list("surface", parseString)[
+    parse_string = f'in surface with name "*webStation{i_stationFirstWeb}*"'
+    surface_id = parse_cubit_list("surface", parse_string)[
         0
     ]  # Pick the first surface in this list since all on same plane
-    coords = cubit.get_center_point("surface", surfaceID)
-    surfaceNormal = cubit.surface(surfaceID).normal_at(coords)
+    coords = cubit.get_center_point("surface", surface_id)
+    surfaceNormal = cubit.surface(surface_id).normal_at(coords)
     cutBlockLength = 5 * max(geometry.ichord)
     sweepDirection = np.array(vectNorm(crossProd(list(tangent), list(surfaceNormal))))
 
@@ -247,8 +247,8 @@ def make_birds_mouth(
 
     cuttingVolume = get_last_id("volume")
 
-    parseString = f'with name "*webStation*"'
-    webVolumes = parse_cubit_list("volume", parseString)
+    parse_string = f'with name "*webStation*"'
+    webVolumes = parse_cubit_list("volume", parse_string)
 
     cubit.cmd(f"subtract volume {cuttingVolume} from volume {l2s(webVolumes)}")
 
@@ -265,7 +265,7 @@ def get_approximate_thickness_direction_for_volume(volumeID):
     approximateThicknessDirection = []
     for currentCurve in cubit.volume(volumeID).curves():
         curveName = cubit.get_entity_name("curve", currentCurve.id())
-        if "layerThickness" in curveName:
+        if "layer_thickness" in curveName:
             coords = currentCurve.position_from_fraction(0.5)
             approximateThicknessDirection.append(currentCurve.tangent(coords))
     approximateThicknessDirection = np.array(approximateThicknessDirection)
@@ -276,7 +276,7 @@ def get_approximate_thickness_direction_for_volume(volumeID):
     elif nThicknessCurves == 8:  # LE adhesive case and round TE adhesive
         return 0
     elif nThicknessCurves == 6:  # Web overwrap
-        # Take the mean of all curves with name 'layerThickness'
+        # Take the mean of all curves with name 'layer_thickness'
         mean = np.mean(approximateThicknessDirection, 0)
 
         errorList = []
@@ -306,49 +306,49 @@ def get_mat_ori_surface(volumeID, spanwiseMatOriCurve):
     approximateThicknessDirection = get_approximate_thickness_direction_for_volume(volumeID)
 
     # Create a list of surface IDs in the given volume
-    surfaceIDs = []
+    surface_ids = []
     volumeSurfaces = cubit.volume(volumeID).surfaces()
     for currentSurface in volumeSurfaces:
-        surfaceIDs.append(currentSurface.id())
+        surface_ids.append(currentSurface.id())
 
     # Eliminate surfaces that have two curves named thickness:
     surfaceCT = 0
     for currentSurface in volumeSurfaces:
         curveCT = (
-            0  # Counts the number of curves in the surface with name 'layerThickness'
+            0  # Counts the number of curves in the surface with name 'layer_thickness'
         )
         for currentCurve in currentSurface.curves():
             curveName = cubit.get_entity_name("curve", currentCurve.id())
-            if "layerThickness" in curveName:
+            if "layer_thickness" in curveName:
                 curveCT += 1
 
         if curveCT >= 2:
             surfaceCT += 1
-            surfaceIDs.remove(currentSurface.id())
+            surface_ids.remove(currentSurface.id())
 
-    # surfaceIDs now has the list of surfaces w/o thickness curves
-    if len(surfaceIDs) == 2 or len(surfaceIDs) == 1:
-        if len(surfaceIDs) == 2:
-            surfaceName = cubit.get_entity_name("surface", surfaceIDs[0])
+    # surface_ids now has the list of surfaces w/o thickness curves
+    if len(surface_ids) == 2 or len(surface_ids) == 1:
+        if len(surface_ids) == 2:
+            surfaceName = cubit.get_entity_name("surface", surface_ids[0])
             if "topFace" in surfaceName:
-                surfaceID = surfaceIDs[0]
+                surface_id = surface_ids[0]
             else:
-                surfaceID = surfaceIDs[-1]
-        elif len(surfaceIDs) == 1:  # Web overwrap
-            surfaceID = surfaceIDs[0]
+                surface_id = surface_ids[-1]
+        elif len(surface_ids) == 1:  # Web overwrap
+            surface_id = surface_ids[0]
 
-        coords = cubit.get_center_point("surface", surfaceID)
-        surfaceNormal = cubit.surface(surfaceID).normal_at(coords)
+        coords = cubit.get_center_point("surface", surface_id)
+        surfaceNormal = cubit.surface(surface_id).normal_at(coords)
 
         if dotProd(surfaceNormal, approximateThicknessDirection) > 0:
             sign = 1.0
         else:
             sign = -1.0
     elif (
-        len(surfaceIDs) == 0
+        len(surface_ids) == 0
     ):  # LE adhesive and/or TE adhesive for round cross-sections
         # print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~volumeID {volumeID}')
-        surfaceID = False
+        surface_id = False
         sign = 1.0
 
     else:
@@ -356,4 +356,4 @@ def get_mat_ori_surface(volumeID, spanwiseMatOriCurve):
             "The number of thickness curves in volume is unexpected. Cannot assign material orientation"
         )
 
-    return surfaceID, sign
+    return surface_id, sign

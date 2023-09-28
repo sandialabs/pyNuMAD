@@ -182,15 +182,15 @@ def postprocessANSYSfatigue(blade, meshData, wt, rccdata, IEC, loadsTable, confi
         MrTheta = loadsTableTheta.input.Mrb
         MrThetaPlus90 = loadsTableThetaPlus90.input.Mrb
         plotFatigue = []
-        fileNameTheta = "plateStrains-all-" + str(kTheta) + ".txt"
-        fileNameThetaPlus90 = "plateStrains-all-" + str(kTheta + nSpace) + ".txt"
-        print(fileNameTheta)
-        print(fileNameThetaPlus90)
+        file_nameTheta = "plateStrains-all-" + str(kTheta) + ".txt"
+        file_nameThetaPlus90 = "plateStrains-all-" + str(kTheta + nSpace) + ".txt"
+        print(file_nameTheta)
+        print(file_nameThetaPlus90)
         # Used for reading element stresses
         pat = "ELEM\s*ZCENT\s*EPS11\s*EPS22\s*EPS12\s*KAPA11\s*KAPA22\s*KAPA12\s*GAMMA13\s*GAMMA23"
         NCOLS = 10
-        plateStrainsTheta = readANSYSElementTable(fileNameTheta, pat, NCOLS)
-        plateStrainsThetaPlus90 = readANSYSElementTable(fileNameThetaPlus90, pat, NCOLS)
+        plateStrainsTheta = readANSYSElementTable(file_nameTheta, pat, NCOLS)
+        plateStrainsThetaPlus90 = readANSYSElementTable(file_nameThetaPlus90, pat, NCOLS)
         for i in range(nSegments):
             iSegment = np.where(
                 segmentNamesReference == config.analysisFlags.fatigue[i]

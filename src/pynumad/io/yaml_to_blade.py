@@ -536,16 +536,16 @@ def update_internal_structure(blade_internal_structure, blade_outer_shape_bem):
         "start_nd_arc",
         "end_nd_arc",
     }
-    for partName in bladeParts:
-        N_layer_comp = len(blade_internal_structure[partName])
+    for part_name in bladeParts:
+        N_layer_comp = len(blade_internal_structure[part_name])
         for currentLayer in range(N_layer_comp):
-            layerKeys = set(blade_internal_structure[partName][currentLayer].keys())
+            layerKeys = set(blade_internal_structure[part_name][currentLayer].keys())
 
             for currentKey in keysToModify.intersection(layerKeys):
-                grid = blade_internal_structure[partName][currentLayer][currentKey][
+                grid = blade_internal_structure[part_name][currentLayer][currentKey][
                     "grid"
                 ]
-                values = blade_internal_structure[partName][currentLayer][currentKey][
+                values = blade_internal_structure[part_name][currentLayer][currentKey][
                     "values"
                 ]
                 startStationLoc = grid[0]
@@ -564,10 +564,10 @@ def update_internal_structure(blade_internal_structure, blade_outer_shape_bem):
                 fullSpanValues[subSpanGridIndex] = subSpanValues
 
                 # Reset
-                blade_internal_structure[partName][currentLayer][currentKey][
+                blade_internal_structure[part_name][currentLayer][currentKey][
                     "grid"
                 ] = fullSpanGrid
-                blade_internal_structure[partName][currentLayer][currentKey][
+                blade_internal_structure[part_name][currentLayer][currentKey][
                     "values"
                 ] = fullSpanValues
     return blade_internal_structure

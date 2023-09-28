@@ -82,11 +82,11 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
 
 
 
-    for fileName in glob.glob(directory+'/'+wt_name+"*." +extension):
-        iStation=int(fileName.split('-')[-3].split('.')[0])
-        print(f'fileName {fileName} iStation {iStation}')
+    for file_name in glob.glob(directory+'/'+wt_name+"*." +extension):
+        i_station=int(file_name.split('-')[-3].split('.')[0])
+        print(f'file_name {file_name} i_station {i_station}')
 
-        beam_stiff[iStation,:,:],beam_inertia[iStation,:,:]=beam_utils.readVABShomogenization(fileName)
+        beam_stiff[i_station,:,:],beam_inertia[i_station,:,:]=beam_utils.readVABShomogenization(file_name)
     
 
     if 'beamdyn' in settings['make_input_for'].lower():
@@ -97,7 +97,7 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
 
 
 
-def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
+def write_sierra_model(wt_name,settings,blade,materials_used,directory='.'):
    # import pynumad.analysis.beam_utils as beam_utils
 
 #     #Runs VABS or OpenSG to homogenize
@@ -113,9 +113,9 @@ def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
     solver_string=settings['make_input_for'].lower()
     if 'sm' in solver_string or 'sd' in solver_string:
         templateFileName='mat_ori.py.template'
-        mat_ori_fileName='mat_ori.py'
+        mat_ori_file_name='mat_ori.py'
 
-        copy_and_replace(templateFileName, mat_ori_fileName,
+        copy_and_replace(templateFileName, mat_ori_file_name,
             {
                 'IN_MESH':wt_name+'.g',
             })
@@ -126,8 +126,8 @@ def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
 
             materialLines=f''
             blockLines=f''
-            for materialName in materialsUsed:
-                material=materials[materialName]
+            for material_name in materials_used:
+                material=materials[material_name]
                 print(material.name)
                 materialLines+=f'begin property specification for material {material.name}\n'
                 materialLines+=f'   DENSITY      = {material.density}\n'
@@ -175,8 +175,8 @@ def write_sierra_model(wt_name,settings,blade,materialsUsed,directory='.'):
 
             materialLines=f''
             blockLines=f''
-            for materialName in materialsUsed:
-                material=materials[materialName]
+            for material_name in materials_used:
+                material=materials[material_name]
                 print(material.name)
                 materialLines+=f'material {material.name}\n'
                 materialLines+=f'orthotropic_prop\n'

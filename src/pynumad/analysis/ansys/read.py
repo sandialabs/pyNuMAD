@@ -37,8 +37,8 @@ def read_ansys_deflections(blade, config, iLoad, deflectionFilename):
     data = np.zeros((nSpan,6))
     
     for iSpan in range(nSpan):
-        fileName = deflectionFilename+'-'+str(iSpan)+'.txt'
-        temp_results = txt2mat(fileName)
+        file_name = deflectionFilename+'-'+str(iSpan)+'.txt'
+        temp_results = txt2mat(file_name)
         #Displacement
         for k in range(3):
             data[iSpan,k] = np.mean(temp_results[:,k + 4])
@@ -158,8 +158,8 @@ def readANSYSElementTable(filename, pat, NCOLS):
     data = cell2mat(data)
     return data
 
-def readAnsysFailure(fileName = None): 
-    fid = open(fileName)
+def readAnsysFailure(file_name = None): 
+    fid = open(file_name)
     terminate = 0
     elemFailure = []
     while (terminate == 0):
@@ -175,7 +175,7 @@ def readAnsysFailure(fileName = None):
 
     
     fid.close()
-    #     fid = fopen(fileName);
+    #     fid = fopen(file_name);
     #     terminate = 0;
     #     elemFailure = zeros(numEls,1);
     #     k = 1;
@@ -193,8 +193,8 @@ def readAnsysFailure(fileName = None):
     # fid.close();
     return elemFailure
 
-def readAnsysFreq(fileName = None): 
-    fid = open(fileName)
+def readAnsysFreq(file_name = None): 
+    fid = open(file_name)
     fLine = fgetl(fid)
     while (not contains(fLine,'1') ):
 
