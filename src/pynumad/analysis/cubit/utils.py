@@ -21,12 +21,12 @@ def addColor(blade, volume_or_surface):
             if color in mat_name.lower():
                 parse_string = f'with name "*{mat_name}*"'
 
-                volIDs = parse_cubit_list(volume_or_surface, parse_string)
+                vol_ids = parse_cubit_list(volume_or_surface, parse_string)
                 cubit.cmd(
-                    f"color {volume_or_surface} {l2s(volIDs)}  mesh {color_dict[color]}"
+                    f"color {volume_or_surface} {l2s(vol_ids)}  mesh {color_dict[color]}"
                 )
                 cubit.cmd(
-                    f"color {volume_or_surface} {l2s(volIDs)}  geometry {color_dict[color]}"
+                    f"color {volume_or_surface} {l2s(vol_ids)}  geometry {color_dict[color]}"
                 )
 
                 break
@@ -307,7 +307,7 @@ def extend_curve_past_curve_and_trim(
 def rename_last_surface(part_name, i_station, i_modeled_layers, material_name, part_name_id):
     # Every cross sectional surface that is created must be followed by a call to this function
     part_name_id += 1
-    surfaceName = (
+    surface_name = (
         part_name
         + "Station"
         + str(i_station)
@@ -318,7 +318,7 @@ def rename_last_surface(part_name, i_station, i_modeled_layers, material_name, p
         + "_surface"
         + str(part_name_id)
     )
-    cubit.cmd(f'surface {get_last_id("surface")} rename "{surfaceName}"')
+    cubit.cmd(f'surface {get_last_id("surface")} rename "{surface_name}"')
     return part_name_id
 
 
@@ -647,9 +647,9 @@ def get_mid_line(blade, iLE, i_station, geometry_scaling):
 def get_adjustment_curve(curve_ids, layer_offset_dist, curve_start_or_end, end_layer_taper_curve):
     n_start = get_last_id("vertex") + 1
     curve_fraction = 1.0 / 3
-    for iCurve, curve_id in enumerate(curve_ids):
+    for i_curve, curve_id in enumerate(curve_ids):
         curve_length = cubit.curve(curve_id).length()
-        if end_layer_taper_curve is not None and iCurve < end_layer_taper_curve - 1:
+        if end_layer_taper_curve is not None and i_curve < end_layer_taper_curve - 1:
             if curve_length * curve_fraction < layer_offset_dist:
                 cubit.cmd(
                     f"create vertex on curve {curve_id} fraction {curve_fraction} from {curve_start_or_end}"
@@ -676,7 +676,7 @@ def make_cs_perimeter_layer_areas(wt_name,
     surface_dict,
     i_station,
     station_stacks,
-    params,
+    cs_params,
     thickness_scaling,
     lp_hp_side,
     is_flatback,
@@ -748,14 +748,14 @@ def make_cs_perimeter_layer_areas(wt_name,
 
             adjacent_layer_missmatch = abs(current_stack_layer_offset - next_stack_layer_offset)
 
-            if adjacent_layer_missmatch > params["minimum_layer_transition_length"][i_station]:
+            if adjacent_layer_missmatch > cs_params["minimum_layer_transition_length"][i_station]:
                 layer_thickness_transition_lengths.append(
                     adjacent_layer_missmatch
-                    / tan(math.radians(params["layer_transition_angle"]))
+                    / tan(math.radians(cs_params["layer_transition_angle"]))
                 )
             else:
                 layer_thickness_transition_lengths.append(
-                    params["minimum_layer_transition_length"][i_station]
+                    cs_params["minimum_layer_transition_length"][i_station]
                 )
 
             # Also find the thinest layer in stack for meshing purposes
@@ -819,7 +819,7 @@ def make_cs_perimeter_layer_areas(wt_name,
 
             # offset camber to make gap
             cubit.cmd(
-                f'create curve offset curve {lp_hp_dict["camberID"]} distance {camber_offsetSign*offset_sign_camberID*params["te_adhesive_thickness"][i_station]/2} extended'
+                f'create curve offset curve {lp_hp_dict["camberID"]} distance {camber_offsetSign*offset_sign_camberID*cs_params["te_adhesive_thickness"][i_station]/2} extended'
             )
             camber_offset = get_last_id("curve")
 
@@ -978,7 +978,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 )
 
             cubit.cmd(
-                f'create curve offset curve {lp_hp_dict["camberID"]} distance {camber_offsetSign*offset_sign_camberID*params["te_adhesive_thickness"][i_station]/2} extended'
+                f'create curve offset curve {lp_hp_dict["camberID"]} distance {camber_offsetSign*offset_sign_camberID*cs_params["te_adhesive_thickness"][i_station]/2} extended'
             )
             camber_offset = get_last_id("curve")
 
@@ -1042,7 +1042,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             # Offset is increased to create a larger clearance between HP LP shells so that the panels
             # to not self intersect during a simulation (this may not be needed)
             #cubit.cmd(f'create curve offset curve {lp_hp_dict["camberID"]} distance {camber_offsetSign*offset_sign_camberID*0.001*4} extended')
-            cubit.cmd(f'create curve offset curve {lp_hp_dict["camberID"]} distance {camber_offsetSign*offset_sign_camberID*params["te_adhesive_thickness"][i_station]/2} extended')
+            cubit.cmd(f'create curve offset curve {lp_hp_dict["camberID"]} distance {camber_offsetSign*offset_sign_camberID*cs_params["te_adhesive_thickness"][i_station]/2} extended')
 
             camber_offset = get_last_id("curve")
 
@@ -1278,10 +1278,10 @@ def make_cs_perimeter_layer_areas(wt_name,
         # Build spar caps
         if i_perimeter == 1:
             lp_hp_dict["web_interface_curves"][lp_hp_side_index] = [right_top_curve]
-            for ic, currentCurveID in enumerate(
+            for ic, current_curveID in enumerate(
                 lp_hp_dict["spar_cap_base_curves"][lp_hp_side_index]
             ):
-                bottom_curve = currentCurveID
+                bottom_curve = current_curveID
                 offSetSign = print_offset_direction_check(
                     bottom_curve, lp_hp_side, cs_normal
                 )
@@ -1335,7 +1335,7 @@ def create_simplist_surface_for_TE_or_LE_adhesive(
     n_modeled_layers,
     materials_used,
 ):
-    for iCurve in range(len(adhesive_curve_list[0])):
+    for i_curve in range(len(adhesive_curve_list[0])):
         ply_angle = (
             0  # Ply angle is always zero since adhesive is always assumed as isotropic
         )
@@ -1343,8 +1343,8 @@ def create_simplist_surface_for_TE_or_LE_adhesive(
             surface_dict,
             i_station,
             part_name,
-            adhesive_curve_list[1][iCurve],
-            adhesive_curve_list[0][iCurve],
+            adhesive_curve_list[1][i_curve],
+            adhesive_curve_list[0][i_curve],
             adhesiveMatID,
             ply_angle,
             part_name_id,
@@ -1401,18 +1401,18 @@ def make_cs_web_layer_areas(
     ) / 1000
     part_name = "web"
     ### First create the first two layers. The first layer is the adhesive. The second layer is the web overwrap layer
-    for iCurveList, curveList in enumerate(web_interface_curves):
+    for i_curveList, curveList in enumerate(web_interface_curves):
         n_base_curves_web = len(curveList)
-        if iCurveList == 0:
+        if i_curveList == 0:
             lp_hp_side = "HP"
         else:
             lp_hp_side = "LP"
-        for iCurve, bottom_curve in enumerate(curveList):
+        for i_curve, bottom_curve in enumerate(curveList):
             offSetSign = print_offset_direction_check(
                 bottom_curve, lp_hp_side, cs_normal
             )
 
-            if iCurve < n_base_curves_web / 2:
+            if i_curve < n_base_curves_web / 2:
                 layer_thicknesses = [
                     cs_params["web_aft_adhesive_thickness"][i_station],
                     aft_web_overwrap_thickness,
@@ -1434,7 +1434,7 @@ def make_cs_web_layer_areas(
                     ply_angle = 0
 
                 else:
-                    if iCurve < n_base_curves_web / 2:
+                    if i_curve < n_base_curves_web / 2:
                         material_name = aft_web_stack.plygroups[0].materialid
                         ply_angle = aft_web_stack.plygroups[0].angle
                     else:
@@ -1457,36 +1457,36 @@ def make_cs_web_layer_areas(
                 bottom_curve = top_curve
 
             # update web interface curves for vertical web retions
-            web_interface_curves[iCurveList][iCurve] = top_curve
+            web_interface_curves[i_curveList][i_curve] = top_curve
 
     ### Create vertical web regions
 
     # remove curves that are not going to be part of the vertical web
-    for iCurveList, curveList in enumerate(web_interface_curves):
+    for i_curveList, curveList in enumerate(web_interface_curves):
         curveList.pop(3)
         curveList.pop(3)
 
     n_base_curves_web = len(web_interface_curves[0])
-    for iCurve in range(n_base_curves_web):
-        vHP, _ = selCurveVerts(web_interface_curves[0][iCurve])
-        vLP, _ = selCurveVerts(web_interface_curves[1][iCurve])
+    for i_curve in range(n_base_curves_web):
+        vHP, _ = selCurveVerts(web_interface_curves[0][i_curve])
+        vLP, _ = selCurveVerts(web_interface_curves[1][i_curve])
         top_curve = print_sine_curve_between_two_verts(
             vHP, vLP, cs_params["max_web_imperfection_distance"][i_station], "x"
         )
-        _, vHP = selCurveVerts(web_interface_curves[0][iCurve])
-        _, vLP = selCurveVerts(web_interface_curves[1][iCurve])
+        _, vHP = selCurveVerts(web_interface_curves[0][i_curve])
+        _, vLP = selCurveVerts(web_interface_curves[1][i_curve])
         bottom_curve = print_sine_curve_between_two_verts(
             vHP, vLP, cs_params["max_web_imperfection_distance"][i_station], "x"
         )
 
-        if iCurve < n_base_curves_web / 2:
-            material_name = aft_web_stack.plygroups[iCurve].materialid
-            ply_angle = aft_web_stack.plygroups[iCurve].angle
+        if i_curve < n_base_curves_web / 2:
+            material_name = aft_web_stack.plygroups[i_curve].materialid
+            ply_angle = aft_web_stack.plygroups[i_curve].angle
         else:
             material_name = fore_web_stack.plygroups[
-                iCurve - int(n_base_curves_web / 2)
+                i_curve - int(n_base_curves_web / 2)
             ].materialid
-            ply_angle = fore_web_stack.plygroups[iCurve - int(n_base_curves_web / 2)].angle
+            ply_angle = fore_web_stack.plygroups[i_curve - int(n_base_curves_web / 2)].angle
         part_name_id, materials_used = make_cross_section_surface(
             surface_dict,
             i_station,
@@ -1496,7 +1496,7 @@ def make_cs_web_layer_areas(
             material_name,
             ply_angle,
             part_name_id,
-            n_modeled_layers + it + 2 + iCurve,
+            n_modeled_layers + it + 2 + i_curve,
             materials_used,
         )
     return part_name_id, (vHP, vLP)
@@ -1917,9 +1917,9 @@ def write_vabs_input(
         # Write Elements
         maxNumberOfPossibleNodes = 9
         for iEl in range(nelem):
-            elementID = iEl + 1
+            element_id = iEl + 1
             nodesIDs = cubit.get_expanded_connectivity(
-                cs_params["element_shape"], elementID
+                cs_params["element_shape"], element_id
             )
 
             if nodesIDs[0] == 0 or nodesIDs[0] == 0.0:
@@ -1933,12 +1933,12 @@ def write_vabs_input(
             tempStr2 = tempStr2.replace("[", "")
             tempStr2 = tempStr2.replace("]", "")
             tempStr2 = tempStr2.replace(",", " ")
-            f.write(f"{elementID} {tempStr} {tempStr2}\n")
+            f.write(f"{element_id} {tempStr} {tempStr2}\n")
         # Write ply angle for all but the TE adhesive
 
-        for iSurface, surface_id in enumerate(surface_ids):
-            for iEl, elementID in enumerate(get_surface_quads(surface_id)):
-                nodesIDs = cubit.get_expanded_connectivity("face", elementID)
+        for i_surface, surface_id in enumerate(surface_ids):
+            for iEl, element_id in enumerate(get_surface_quads(surface_id)):
+                nodesIDs = cubit.get_expanded_connectivity("face", element_id)
                 coords = []
                 for iNd, node_id in enumerate(nodesIDs):
                     coords.append(list(get_nodal_coordinates(node_id)))
@@ -1951,12 +1951,12 @@ def write_vabs_input(
                 # length=max(distances)
                 # #######For Plotting - find the larges element side length #######
                 coords = np.mean(coords, 0)
-                # coords=cubit.get_center_point(cs_params['element_shape'], elementID)
+                # coords=cubit.get_center_point(cs_params['element_shape'], element_id)
 
                 #                             minDist=inf #initialize
                 #                             closestCurveID=nan #initialize
                 #                             #Since there are possibly many curves due to the offset operation, see which curve is closeset to element center
-                #                             for iCurve, curve_id in enumerate(curves):
+                #                             for i_curve, curve_id in enumerate(curves):
                 #                                 temp=cubit.curve(curve_id).closest_point(coords)
                 #                                 distance=getDist(coords,temp)[0]
                 #                                 if distance < minDist:
@@ -1964,13 +1964,13 @@ def write_vabs_input(
                 #                                     closestCurveID=curve_id
 
                 curve_id_for_mat_ori = cubit.surface(surface_id).curves()[0]
-                curveLocationForTangent = curve_id_for_mat_ori.closest_point(coords)
-                x = curve_id_for_mat_ori.tangent(curveLocationForTangent)[0]
-                y = curve_id_for_mat_ori.tangent(curveLocationForTangent)[1]
-                z = curve_id_for_mat_ori.tangent(curveLocationForTangent)[2]
+                curve_location_for_tangent = curve_id_for_mat_ori.closest_point(coords)
+                x = curve_id_for_mat_ori.tangent(curve_location_for_tangent)[0]
+                y = curve_id_for_mat_ori.tangent(curve_location_for_tangent)[1]
+                z = curve_id_for_mat_ori.tangent(curve_location_for_tangent)[2]
                 tangent_direction = vectNorm([x, y, z])  # Unit vector of tangent
                 theta1 = math.atan2(tangent_direction[1], tangent_direction[0]) * 180 / pi
-                f.write(f"{elementID} {iSurface+1} {theta1}\n")
+                f.write(f"{element_id} {i_surface+1} {theta1}\n")
                 # #######Only needed For Plotting Orientation Check#######
                 # cubit.create_vertex(coords[0],coords[1],coords[2])
                 # iVert1=get_last_id("vertex")
@@ -1987,12 +1987,12 @@ def write_vabs_input(
                 # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
                 # #######Only needed For Plotting Orientation Check#######
         # Define Plies
-        for iSurface, surface_id in enumerate(surface_ids):
+        for i_surface, surface_id in enumerate(surface_ids):
             material_id = (
                 list(materials_used).index(surface_dict[surface_id]["material_name"]) + 1
             )
             ply_angle = surface_dict[surface_id]["ply_angle"]
-            f.write(f"{iSurface+1} {material_id} {ply_angle}\n")
+            f.write(f"{i_surface+1} {material_id} {ply_angle}\n")
         # Define Materials
         for imat, mat_name in enumerate(materials_used):
             material_id = imat + 1

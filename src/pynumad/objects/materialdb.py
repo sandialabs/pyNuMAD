@@ -64,7 +64,7 @@ class MaterialDatabase(dict):
                 cur_layer = Layer()
                 plygroup = cur_stack.plygroups[j]
                 matid = plygroup.materialid
-                cur_layer.layerName = self[matid].name
+                cur_layer.layer_name = self[matid].name
                 cur_layer.thicknessA = mm_to_m * plygroup.thickness
                 cur_layer.thicknessB = cur_layer.thicknessA
                 cur_layer.quantity = plygroup.nPlies
@@ -91,7 +91,7 @@ class MaterialDatabase(dict):
                     cur_plygroup = cur_stack.plygroups[j]
                     cur_layer = Layer()
                     matid = cur_plygroup.materialid
-                    cur_layer.layerName = self[matid].name
+                    cur_layer.layer_name = self[matid].name
                     cur_layer.thicknessA = (
                         mm_to_m * cur_plygroup.thickness
                     )
@@ -174,7 +174,7 @@ class Layer:
 
     Attributes
     ----------
-    layerName : str
+    layer_name : str
     thicknessA : float
     thicknessB :float
     quantity : int
@@ -182,7 +182,7 @@ class Layer:
     """
 
     def __init__(self):
-        self.layerName: str = None
+        self.layer_name: str = None
         self.thicknessA: float = None
         self.thicknessB: float = None
         self.quantity: int = None

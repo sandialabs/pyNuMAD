@@ -52,13 +52,13 @@ def cubit_make_cross_sections(
 
     birds_mouth_verts: tuple
         Used internally.
-    i_stationFirstWeb: int
+    i_station_first_web: int
         Used internally.
-    i_stationLastWeb: int
+    i_station_last_web: int
         Used internally. 
     materials_used: set
         Used for in FEA input file generation to define unique materials.
-    spanwiseMatOriCurve: int
+    spanwise_mat_ori_curve: int
         Cubit curve ID for the main spanwise spline corresponding to the curvilinear blade axis.
 
 
@@ -124,7 +124,7 @@ def cubit_make_cross_sections(
     refLineCoords = np.vstack(
         ([definition.sweep, definition.prebend, definition.ispan])
     ).transpose()
-    spanwiseMatOriCurve = 1
+    spanwise_mat_ori_curve = 1
 
     te_types = [station.airfoil.te_type for station in definition.stations]
     roundStations = np.argwhere(np.array(te_types) == "round")
@@ -158,8 +158,8 @@ def cubit_make_cross_sections(
         else:
             is_flatback = False
 
-        i_stationFirstWeb = np.argwhere(hasWebs)[0][0]
-        i_stationLastWeb = np.argwhere(hasWebs)[-1][0]
+        i_station_first_web = np.argwhere(hasWebs)[0][0]
+        i_station_last_web = np.argwhere(hasWebs)[-1][0]
 
         if hasWebs[i_station] == True:
             webNumber = 1
@@ -167,12 +167,12 @@ def cubit_make_cross_sections(
             webNumber = 0
             fore_web_stack = stackdb.swstacks[webNumber][i_station]
         else:
-            if i_station < i_stationFirstWeb:
-                iWebStation = i_stationFirstWeb
+            if i_station < i_station_first_web:
+                iWebStation = i_station_first_web
 
-            #         elif i_stationLastWeb == len(blade.ispan) - 1-1:
+            #         elif i_station_last_web == len(blade.ispan) - 1-1:
             else:
-                iWebStation = i_stationLastWeb
+                iWebStation = i_station_last_web
             #         else:
             #             raise Exception('assuming web ends at last station for now. ')
 
@@ -192,7 +192,7 @@ def cubit_make_cross_sections(
         )
 
         # Only save birds_mouth_verts for the right cross-section
-        if i_station == i_stationFirstWeb:
+        if i_station == i_station_first_web:
             birds_mouth_verts = make_a_cross_section(wt_name,
                 surface_dict,
                 i_station,
@@ -230,7 +230,7 @@ def cubit_make_cross_sections(
             )
             birds_mouth_verts = []
 
-        cubit.cmd(f"delete curve all with Is_Free except {spanwiseMatOriCurve}")
+        cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
 
         # Chord line for rotation of cross-section for homogenization
         if model2Dor3D.lower() == "2d":
@@ -253,17 +253,17 @@ def cubit_make_cross_sections(
             # crossSectionRotationAngle=math.atan2(tangent_direction[1],tangent_direction[0])*180/pi
 
             parse_string = f'with name "*Station{str(i_station)}*"'
-            volumeIDs = parse_cubit_list("surface", parse_string)
+            volume_ids = parse_cubit_list("surface", parse_string)
 
             # Undo initial twist
             cubit.cmd(
-                f"rotate Surface {l2s(volumeIDs)} angle {definition.degreestwist[i_station]} about Z include_merged "
+                f"rotate Surface {l2s(volume_ids)} angle {definition.degreestwist[i_station]} about Z include_merged "
             )
 
             # Undo prebend
             if definition.prebend[i_station] != 0:
                 cubit.cmd(
-                    f"move surface {l2s(volumeIDs)} y {-1*definition.prebend[i_station]} include_merged"
+                    f"move surface {l2s(volume_ids)} y {-1*definition.prebend[i_station]} include_merged"
                 )
 
             # Undo sweep
@@ -275,15 +275,15 @@ def cubit_make_cross_sections(
                 f'curve with name "layer_thickness*" interval {cs_params["nel_per_layer"]}'
             )
             # cubit.cmd(f'imprint volume {l2s(surface_ids)}')
-            cubit.cmd(f"merge volume {l2s(volumeIDs)}")
+            cubit.cmd(f"merge volume {l2s(volume_ids)}")
             cubit.cmd(f"set default autosize on")
 
             if cs_params["element_shape"].lower() == "tri":
-                cubit.cmd(f"surface {l2s(volumeIDs)} scheme tri")
+                cubit.cmd(f"surface {l2s(volume_ids)} scheme tri")
             else:
-                cubit.cmd(f"surface {l2s(volumeIDs)} scheme map")
+                cubit.cmd(f"surface {l2s(volume_ids)} scheme map")
 
-            cubit.cmd(f"mesh surface {l2s(volumeIDs)}")
+            cubit.cmd(f"mesh surface {l2s(volume_ids)}")
 
             file_name = wt_name + "-" + str(i_station) + "-t-0.in"
 
@@ -299,7 +299,7 @@ def cubit_make_cross_sections(
                             cs_params,
                             directory,
                             file_name,
-                            volumeIDs,
+                            volume_ids,
                             materials_used,
                             cs_normal,
                         )
@@ -323,7 +323,7 @@ def cubit_make_cross_sections(
                     if "g" in settings["export"].lower():
                         cubit.cmd(f'export mesh "{path_name}-{str(i_station)}.g" overwrite')
                     if "cub" in settings["export"].lower():
-                        cubit.cmd(f"delete curve {spanwiseMatOriCurve}")
+                        cubit.cmd(f"delete curve {spanwise_mat_ori_curve}")
                         cubit.cmd(f'save as "{path_name}-{str(i_station)}.cub" overwrite')
                 elif len(settings["export"]) == 0:
                     pass
@@ -332,7 +332,7 @@ def cubit_make_cross_sections(
                         f'Unknown model export format: {settings["export"]}'
                     )
         # elif model2Dor3D.lower() == "3d":
-        #     cubit.cmd(f"delete curve {spanwiseMatOriCurve}")
+        #     cubit.cmd(f"delete curve {spanwise_mat_ori_curve}")
         #     cubit.cmd(f'save as "{path_name}-{str(i_station)}.cub" overwrite')
 
     # Import all cross-sections into one cub file
@@ -358,10 +358,10 @@ def cubit_make_cross_sections(
         blade,
         surface_dict,
         birds_mouth_verts,
-        i_stationFirstWeb,
-        i_stationLastWeb,
+        i_station_first_web,
+        i_station_last_web,
         materials_used,
-        spanwiseMatOriCurve,
+        spanwise_mat_ori_curve,
     )
 
 
@@ -403,10 +403,10 @@ def cubit_make_solid_blade(
         blade,
         surface_dict,
         birds_mouth_verts,
-        i_stationFirstWeb,
-        i_stationLastWeb,
+        i_station_first_web,
+        i_station_last_web,
         materials_used,
-        spanwiseMatOriCurve,
+        spanwise_mat_ori_curve,
     ) = cubit_make_cross_sections(
         blade, wt_name, settings, cs_params, "3D", stationList
     )
@@ -416,35 +416,35 @@ def cubit_make_solid_blade(
     ### ### ### ###
     # Make volumes along the span.
     ### ### ### ###
-    meshVolList = []
+    mesh_vol_list = []
 
     part_name = "shell"
-    orderedList = get_ordered_list(part_name)
-    if len(orderedList) > 0:
-        meshVolList = make_all_volumes_for_a_part(surface_dict, orderedList, meshVolList, i_station_end)
+    ordered_list = get_ordered_list(part_name)
+    if len(ordered_list) > 0:
+        mesh_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_station_end)
     #     cubit.cmd(f'save as "python2.cub" overwrite')
     #     foo
 
     part_name = "web"
-    orderedList = get_ordered_list(part_name)
-    orderedListWeb = orderedList.copy()
-    if orderedList and len(orderedList[0]) > 1:
-        meshVolList = make_all_volumes_for_a_part(surface_dict, orderedList, meshVolList, i_station_end)
+    ordered_list = get_ordered_list(part_name)
+    ordered_list_web = ordered_list.copy()
+    if ordered_list and len(ordered_list[0]) > 1:
+        mesh_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_station_end)
 
     part_name = "roundTEadhesive"
-    orderedList = get_ordered_list(part_name)
-    if orderedList and len(orderedList[0]) > 1:
-        meshVolList = make_all_volumes_for_a_part(surface_dict, orderedList, meshVolList, i_station_end)
+    ordered_list = get_ordered_list(part_name)
+    if ordered_list and len(ordered_list[0]) > 1:
+        mesh_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_station_end)
 
     part_name = "flatTEadhesive"
-    orderedList = get_ordered_list(part_name)
+    ordered_list = get_ordered_list(part_name)
 
-    if orderedList and len(orderedList[0]) > 1:
-        meshVolList = make_all_volumes_for_a_part(surface_dict, orderedList, meshVolList, i_station_end)
+    if ordered_list and len(ordered_list[0]) > 1:
+        mesh_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_station_end)
 
     if (
-        orderedListWeb
-        and len(orderedListWeb[0]) > 1
+        ordered_list_web
+        and len(ordered_list_web[0]) > 1
         and cs_params["birds_mouth_amplitude_fraction"]
         and birds_mouth_verts
     ):
@@ -452,19 +452,19 @@ def cubit_make_solid_blade(
             blade,
             birds_mouth_verts,
             cs_params["birds_mouth_amplitude_fraction"],
-            i_stationFirstWeb,
-            i_stationLastWeb,
+            i_station_first_web,
+            i_station_last_web,
         )
 
-    cubit.cmd(f"merge volume {l2s(meshVolList)}")
+    cubit.cmd(f"merge volume {l2s(mesh_vol_list)}")
     cubit.cmd(f"reset volume all")
 
     cubit.cmd(f"delete surface with Is_Free")
     #cubit.cmd("vol all size 0.2")
     # cubit.cmd(f'curve with name "layer_thickness*" interval {cs_params["nel_per_layer"]}')
     #cubit.cmd("set default autosize on")
-    cubit.cmd(f"mesh volume {l2s(meshVolList)}")
-    cubit.cmd(f"draw volume {l2s(meshVolList)}")
+    cubit.cmd(f"mesh volume {l2s(mesh_vol_list)}")
+    cubit.cmd(f"draw volume {l2s(mesh_vol_list)}")
 
     # Blocks
     for imat, material_name in enumerate(materials_used):
@@ -507,56 +507,54 @@ def cubit_make_solid_blade(
     # ####################################
 
     parse_string = f'in volume with name "*volume*"'
-    allVolumeIDs = parse_cubit_list("volume", parse_string)
+    all_volume_ids = parse_cubit_list("volume", parse_string)
     theta2 = {}
     theta1 = {}
     theta3 = {}
-    directions = {}
 
-    for volumeID in allVolumeIDs:
-        surfIDforMatOri, sign = get_mat_ori_surface(volumeID, spanwiseMatOriCurve)
+    for volume_id in all_volume_ids:
+        surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
 
-        for hex_id in get_volume_hexes(volumeID):
+        for hex_id in get_volume_hexes(volume_id):
             coords = cubit.get_center_point("hex", hex_id)
 
-            if surfIDforMatOri:
-                surfaceNormal = vectNorm(
+            if surf_id_for_mat_ori:
+                surface_normal = vectNorm(
                     list(
                         sign
-                        * np.array(get_surface_normal_at_coord(surfIDforMatOri, coords))
+                        * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
                     )
                 )
 
-                curveLocationForTangent = cubit.curve(
-                    spanwiseMatOriCurve
+                curve_location_for_tangent = cubit.curve(
+                    spanwise_mat_ori_curve
                 ).closest_point(coords)
-                x = cubit.curve(spanwiseMatOriCurve).tangent(curveLocationForTangent)[0]
-                y = cubit.curve(spanwiseMatOriCurve).tangent(curveLocationForTangent)[1]
-                z = cubit.curve(spanwiseMatOriCurve).tangent(curveLocationForTangent)[2]
-                spanwiseDirection = vectNorm([x, y, z])
+                x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
+                y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
+                z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
+                spanwise_direction = vectNorm([x, y, z])
 
-                perimeterDirection = vectNorm(
-                    crossProd(surfaceNormal, spanwiseDirection)
+                perimeter_direction = vectNorm(
+                    crossProd(surface_normal, spanwise_direction)
                 )
 
                 # Recalculate to garantee orthogonal system
-                surfaceNormal = crossProd(spanwiseDirection, perimeterDirection)
+                surface_normal = crossProd(spanwise_direction, perimeter_direction)
             else:
-                perimeterDirection = [1, 0, 0]
-                surfaceNormal = [0, 1, 0]
-                spanwiseDirection = [0, 0, 1]
+                perimeter_direction = [1, 0, 0]
+                surface_normal = [0, 1, 0]
+                spanwise_direction = [0, 0, 1]
 
             newCoordinateSystemVectors = [
-                spanwiseDirection,
-                perimeterDirection,
-                surfaceNormal,
+                spanwise_direction,
+                perimeter_direction,
+                surface_normal,
             ]
             globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
 
             global_id=get_global_element_id('hex',hex_id)
             dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
-            directions[global_id] = newCoordinateSystemVectors
 
             theta1[global_id], theta2[global_id], theta3[global_id] = dcmToEulerAngles(
                 dcm
@@ -571,7 +569,5 @@ def cubit_make_solid_blade(
         with open("euler", "wb") as file:
             # A new file will be created
             pickle.dump((theta1, theta2, theta3), file)
-        with open("directions", "wb") as file:
-            # A new file will be created
-            pickle.dump(directions, file)
+
     return materials_used
