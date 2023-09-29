@@ -13,4 +13,3 @@
 ``web_adhesive_width``,Type: array. Adhesive width in meters. Array size must be the same size as blade.ispan.
 ``te_adhesive_width``,Type: array. Adhesive width in meters. Array size must be the same size as blade.ispan.
 ``max_web_imperfection_distance``,Type: array. Web imperfection amplitude in meters.  Array size must be the same size as blade.ispan.
-``minimum_layer_transition_length``,Type: array. Overrides ``layer_transition_angle`` for the transitions between adjacent layers.  Array size must be the same size as blade.ispan.

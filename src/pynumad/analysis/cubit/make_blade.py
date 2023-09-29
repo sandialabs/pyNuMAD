@@ -466,6 +466,10 @@ def cubit_make_solid_blade(
     cubit.cmd(f"mesh volume {l2s(mesh_vol_list)}")
     cubit.cmd(f"draw volume {l2s(mesh_vol_list)}")
 
+    if get_mesh_error_count() !=0:
+        with open(f"{wt_name}.log", "a") as logFile:
+            logFile.write(f"    Warning: {get_mesh_error_count()} cross section mesh errors exist in station {i_station}\n")
+            
     # Blocks
     for imat, material_name in enumerate(materials_used):
         cubit.cmd(f'block {imat+1} add volume with name "*{material_name}*"')

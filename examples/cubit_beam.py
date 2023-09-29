@@ -43,7 +43,6 @@ def get_cs_params():
     cs_params['web_adhesive_width']=np.zeros((totalStations,))
     cs_params['te_adhesive_width']=np.zeros((totalStations,))
     cs_params['max_web_imperfection_distance']=np.zeros((totalStations,))
-    cs_params['minimum_layer_transition_length']=np.zeros((totalStations,))
 
     #Spanwise varying parameters
     thickness_scaling=0.001
@@ -60,8 +59,6 @@ def get_cs_params():
         
         cs_params['max_web_imperfection_distance'][i_station] = 0.0001 * blade.geometry.ichord[i_station] * geometry_scaling
         
-        #Parameters that vary with span but are not part of the study 
-        cs_params['minimum_layer_transition_length'][i_station]=blade.geometry.ichord[i_station]*0.002*geometry_scaling;
     return cs_params 
 
 blade=pynumad.Blade()

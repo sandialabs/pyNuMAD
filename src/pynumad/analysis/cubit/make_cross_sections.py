@@ -742,21 +742,21 @@ def make_cs_perimeter_layer_areas(wt_name,
         # Get all offsets and layer_thickness_transition_lengths
         thinest_layer_thickness_current_stack = 1e22  # initialize to a large value
         thinest_layer_thickness_next_stack = 1e22
+
+        minimum_layer_transition_length=1.1*(sum(current_stack_layer_thicknesses)+sum(next_stack_layer_thicknesses))/2
         for i_modeled_layers in range(n_modeled_layers):
             current_stack_layer_offset += current_stack_layer_thicknesses[i_modeled_layers]
             next_stack_layer_offset += next_stack_layer_thicknesses[i_modeled_layers]
 
             adjacent_layer_missmatch = abs(current_stack_layer_offset - next_stack_layer_offset)
 
-            if adjacent_layer_missmatch > cs_params["minimum_layer_transition_length"][i_station]:
+            if adjacent_layer_missmatch > minimum_layer_transition_length:
                 layer_thickness_transition_lengths.append(
                     adjacent_layer_missmatch
                     / tan(math.radians(cs_params["layer_transition_angle"]))
                 )
             else:
-                layer_thickness_transition_lengths.append(
-                    cs_params["minimum_layer_transition_length"][i_station]
-                )
+                layer_thickness_transition_lengths.append(minimum_layer_transition_length)
 
             # Also find the thinest layer in stack for meshing purposes
             if (
