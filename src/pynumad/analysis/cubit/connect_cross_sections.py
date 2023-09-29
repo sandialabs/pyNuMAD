@@ -250,8 +250,54 @@ def make_birds_mouth(
     parse_string = f'with name "*webStation*"'
     web_volumes = parse_cubit_list("volume", parse_string)
 
+    n_start = get_last_id("volume")
     cubit.cmd(f"subtract volume {cutting_volume} from volume {l2s(web_volumes)}")
+    n_end = get_last_id("volume")
+    
+    #Add thickness_curves to ensure each volume has 4 of them
+    vol_list = list(range(n_start + 1, n_end + 1))
+    
+    for volume_id in vol_list:
+        
+        #Get list of curves with name layer_thickness
+        parse_string = f'with name "*layer_thickness*" in volume {volume_id}'
+        thickness_curve_ids = parse_cubit_list("curve", parse_string)
+        
+        #All curves in volume
+        parse_string = f'in volume {volume_id}'
+        volume_curves=parse_cubit_list("curve", parse_string)
 
+        if len(thickness_curve_ids) < 4:
+            if len(thickness_curve_ids) > 0: #Make sure at least one thickness curve is defined
+
+                #All curves in volume
+                parse_string = f'in volume {volume_id}'
+                volume_curves=set(parse_cubit_list("curve", parse_string))
+                
+                current_curve=cubit.curve(thickness_curve_ids[0])
+                coords = current_curve.position_from_fraction(0.5)
+                approximate_thickness_direction=current_curve.tangent(coords)
+
+                for i_curve in set(volume_curves).difference(set(thickness_curve_ids)):
+                    current_curve=cubit.curve(i_curve)
+                    coords = current_curve.position_from_fraction(0.5)
+                    curve_tangent=current_curve.tangent(coords)
+                    if 1.0 - abs(np.dot(curve_tangent,approximate_thickness_direction)) < 0.15:
+                        cubit.cmd(f'curve {i_curve} rename "layer_thickness"')
+                
+                #Get list of curves with name layer_thickness
+                parse_string = f'with name "*layer_thickness*" in volume {volume_id}'
+                thickness_curve_ids = parse_cubit_list("curve", parse_string)
+                if len(thickness_curve_ids) !=4:
+                    raise ValueError(
+                        f"Something wrong with thickness curves in birds mounth volume"
+                    )
+            else:
+                raise ValueError(
+                    f"Zero thickness curves found in a web volume {volume_id} near birds mounth"
+                )
+
+        
     return
 
 

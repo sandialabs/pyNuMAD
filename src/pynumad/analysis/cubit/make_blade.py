@@ -135,7 +135,7 @@ def cubit_make_cross_sections(
         logFile.write(f"Making cross sections for {wt_name}\n")
 
     path_name = directory + "/" + wt_name + "-crossSections"
-
+    birds_mouth_verts = []
     for i_station in stationList:
         if model2Dor3D.lower() == "2d":
             cubit.cmd(
@@ -228,7 +228,7 @@ def cubit_make_cross_sections(
                 materials_used,
                 cs_normal,
             )
-            birds_mouth_verts = []
+            
 
         cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
 
@@ -331,9 +331,8 @@ def cubit_make_cross_sections(
                     raise NameError(
                         f'Unknown model export format: {settings["export"]}'
                     )
-        # elif model2Dor3D.lower() == "3d":
-        #     cubit.cmd(f"delete curve {spanwise_mat_ori_curve}")
-        #     cubit.cmd(f'save as "{path_name}-{str(i_station)}.cub" overwrite')
+
+
 
     # Import all cross-sections into one cub file
     if model2Dor3D.lower() == "2d" and settings["export"] is not None and "cub" in settings["export"].lower():
