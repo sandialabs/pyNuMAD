@@ -126,6 +126,12 @@ class KeyPoints:
 
         # keypoints, keyarcs, keycpos
         te_types = []  # reset te_type
+        i_leband_start=np.min(np.nonzero(definition.leband))
+        i_teband_start=np.min(np.nonzero(definition.teband))
+
+        i_leband_end=np.max(np.nonzero(definition.leband))
+        i_teband_end=np.max(np.nonzero(definition.teband))
+
         for k in range(num_istations):
             # allow for separate definitions of HP and LP spar cap
             # width and offset [HP LP]
@@ -138,13 +144,25 @@ class KeyPoints:
             #This algorithm will not work as well if small numbers exist in the
             #le/te band widths since it is based on nonzero values.
             
-            i_leband_start=next((i for i, x in enumerate(definition.leband) if x), None)
+            
             if k < i_leband_start :
                 n1= mm_to_m * definition.leband[i_leband_start]
 
-            i_teband_start=next((i for i, x in enumerate(definition.teband) if x), None)
             if k < i_teband_start :
                 n2= mm_to_m * definition.teband[i_teband_start]
+
+            #In order to avoid abrupt changes in geometry when the le/te bands
+            #end, set the le/te band width is tapered starting with the last nonzero.
+            #value. This algorithm will not work as well if small numbers exist in the
+            #le/te band widths since it is based on nonzero values.
+            
+            if k > i_leband_end :
+                n1= mm_to_m * definition.leband[k-1]*0.75
+                definition.leband[k]=n1/mm_to_m
+
+            if k > i_teband_end :
+                n2= mm_to_m * definition.teband[k-1]*0.75
+                definition.teband[k]=n2/mm_to_m
             ###
 
             scwidth_hp = mm_to_m * definition.sparcapwidth_hp[k]  # type: float
