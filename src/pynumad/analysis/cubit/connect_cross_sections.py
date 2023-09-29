@@ -75,7 +75,7 @@ def make_a_volume(
     string_name = layer_name + "_topFace"
     cubit.cmd(f'surface {transverse_surface_ids[2]} rename "{string_name}"')
 
-    # cubit.cmd(f'save as "python1.cub" overwrite')
+    # cubit.cmd(f'save as "Debug.cub" overwrite')
     # raise Exception(f'Volume "{volume_name}" creation failed')
     # Create Volume
     # n_start=get_last_id("volume")
@@ -98,7 +98,7 @@ def make_a_volume(
         print(f"current_surface_id_copy: {current_surface_id_copy}")
         print(f"next_surface_id_copy: {next_surface_id_copy}")
         print(f"spanwise_splines_for_a_volume: {spanwise_splines_for_a_volume}")
-        cubit.cmd(f'save as "python1.cub" overwrite')
+        cubit.cmd(f'save as "Debug.cub" overwrite')
         raise Exception(f'Volume "{volume_name}" creation failed')
 
     volume_name = volume_name.replace("surface", "volume")
@@ -308,25 +308,37 @@ def get_approximate_thickness_direction_for_volume(volume_id):
     # This function is used when assigning material orientations
 
     # Get thickness direction tangents
-    approximate_thickness_direction = []
-    for current_curve in cubit.volume(volume_id).curves():
-        curve_name = cubit.get_entity_name("curve", current_curve.id())
-        if "layer_thickness" in curve_name:
-            coords = current_curve.position_from_fraction(0.5)
-            approximate_thickness_direction.append(current_curve.tangent(coords))
-    approximate_thickness_direction = np.array(approximate_thickness_direction)
-    nThicknessCurves, _ = approximate_thickness_direction.shape
 
-    if nThicknessCurves == 4:  # All other cases
+    #Get list of curves with name layer_thickness
+    parse_string = f'with name "*layer_thickness*" in volume {volume_id}'
+    thickness_curve_ids = parse_cubit_list("curve", parse_string)
+
+    approximate_thickness_direction = []
+    for i_curve in thickness_curve_ids:
+        current_curve=cubit.curve(i_curve)
+        coords = current_curve.position_from_fraction(0.5)
+        approximate_thickness_direction.append(current_curve.tangent(coords)) 
+
+    n_thickness_curves=len(thickness_curve_ids)
+    # approximate_thickness_direction = []
+    # for current_curve in cubit.volume(volume_id).curves():
+    #     curve_name = cubit.get_entity_name("curve", current_curve.id())
+    #     if "layer_thickness" in curve_name:
+    #         coords = current_curve.position_from_fraction(0.5)
+    #         approximate_thickness_direction.append(current_curve.tangent(coords))
+    # approximate_thickness_direction = np.array(approximate_thickness_direction)
+    # n_thickness_curves, _ = approximate_thickness_direction.shape
+
+    if n_thickness_curves == 4:  # All other cases
         return np.mean(approximate_thickness_direction, 0)
-    elif nThicknessCurves == 8:  # LE adhesive case and round TE adhesive
+    elif n_thickness_curves == 8:  # LE adhesive case and round TE adhesive
         return 0
-    elif nThicknessCurves == 6:  # Web overwrap
+    elif n_thickness_curves == 6:  # Web overwrap
         # Take the mean of all curves with name 'layer_thickness'
         mean = np.mean(approximate_thickness_direction, 0)
 
         errorList = []
-        for i in range(nThicknessCurves):
+        for i in range(n_thickness_curves):
             diff = approximate_thickness_direction[i] - mean
 
             errorList.append(sqrt(dotProd(diff, diff)))
@@ -338,7 +350,7 @@ def get_approximate_thickness_direction_for_volume(volume_id):
     else:
         cubit.cmd(f'save as "Debug.cub" overwrite')
         raise ValueError(
-            f"The number of thickness curves in volume is unexpected. Cannot assign material orientation. nThicknessCurves: {nThicknessCurves}"
+            f"The number of thickness curves in volume is unexpected. Cannot assign material orientation. n_thickness_curves: {n_thickness_curves}"
         )
 
     return
