@@ -1,5 +1,5 @@
-from pynumad.analysis.cubit.utils import *
-from pynumad.analysis.cubit.solid_model_utils import *
+from pynumad.analysis.cubit.make_cross_sections import *
+from pynumad.analysis.cubit.connect_cross_sections import *
 from pynumad.utils.orientations import *
 import numpy as np
 import os

@@ -1,6 +1,6 @@
 from cubit import *
 from PyCubed_Main import *
-from pynumad.analysis.cubit.utils import print_sine_curve_between_two_verts
+from pynumad.analysis.cubit.make_cross_sections import print_sine_curve_between_two_verts
 import numpy as np
 import re
 

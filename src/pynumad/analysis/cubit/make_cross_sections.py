@@ -938,7 +938,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             # TE Adhesive curve
             if is_flatback:
                 cubit.cmd(f"curve {top_bounding_curve} copy")
-                cubit.cmd(f'split curve {get_last_id("curve")} at vertex {lp_hp_dict["aero_shell_verts_for_te_adhesive"][lp_hp_side]} from start')
+                cubit.cmd(f'split curve {get_last_id("curve")} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]} from start')
 
                 lp_hp_dict["te_adhesive_curve_list"][lp_hp_side_index].append(
                     get_last_id("curve") - 1
@@ -1012,7 +1012,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 )
 
 
-            cubit.cmd(f'split curve {first_layer_offset} at vertex {lp_hp_dict["aero_shell_verts_for_te_adhesive"][lp_hp_side]} from start')
+            cubit.cmd(f'split curve {first_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]} from start')
             current_stack_left_curves.append(get_last_id("curve") - 1)
             current_stack_right_curves.append(get_last_id("curve"))
             curve_len = cubit.curve(current_stack_left_curves[0]).length()
@@ -1667,7 +1667,7 @@ def make_a_cross_section(wt_name,
     lp_hp_dict["base_curve_ids"] = [[], []]
     lp_hp_dict["te_adhesive_curve_list"] = [[], []]
     lp_hp_dict["le_adhesive_curve_list"] = [[], []]
-    lp_hp_dict["aero_shell_verts_for_te_adhesive"] = {}
+    lp_hp_dict["perimeter_verts_for_te_adhesive"] = {}
 
     hp_key_curve, lp_key_curve, lp_hp_dict["le_adhesive_curve_ids"] = write_LE_adhesive_curves(
         le_hp_stack_thickness,
@@ -1721,9 +1721,9 @@ def make_a_cross_section(wt_name,
             logFile.write(f"    Warning: Adhesive width is wider than one of the TE reinforcements. Reducing adhesive width by about {minimumWidth}\n")
     
     cubit.cmd(f"create vertex on curve {hpTEreinfCurveID}  distance {split_length} from start")
-    lp_hp_dict["aero_shell_verts_for_te_adhesive"]['HP']=get_last_id("vertex")
+    lp_hp_dict["perimeter_verts_for_te_adhesive"]['HP']=get_last_id("vertex")
     cubit.cmd(f"create vertex on curve {lpTEreinfCurveID}  distance {split_length} from start")
-    lp_hp_dict["aero_shell_verts_for_te_adhesive"]['LP']=get_last_id("vertex")
+    lp_hp_dict["perimeter_verts_for_te_adhesive"]['LP']=get_last_id("vertex")
     
 
 

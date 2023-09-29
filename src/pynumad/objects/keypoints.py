@@ -132,6 +132,21 @@ class KeyPoints:
             n1 = mm_to_m * definition.leband[k]  # no foam width
             n2 = mm_to_m * definition.teband[k]  # no foam width
 
+            ### 
+            #In order to avoid abrupt changes in geometry when the le/te bands
+            #begin, set the le/te band width equal to the first nonzero value.
+            #This algorithm will not work as well if small numbers exist in the
+            #le/te band widths since it is based on nonzero values.
+            
+            i_leband_start=next((i for i, x in enumerate(definition.leband) if x), None)
+            if k < i_leband_start :
+                n1= mm_to_m * definition.leband[i_leband_start]
+
+            i_teband_start=next((i for i, x in enumerate(definition.teband) if x), None)
+            if k < i_teband_start :
+                n2= mm_to_m * definition.teband[i_teband_start]
+            ###
+
             scwidth_hp = mm_to_m * definition.sparcapwidth_hp[k]  # type: float
             scwidth_lp = mm_to_m * definition.sparcapwidth_lp[k]  # type: float
 
