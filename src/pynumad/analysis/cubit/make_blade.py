@@ -126,10 +126,16 @@ def cubit_make_cross_sections(
     ).transpose()
     spanwise_mat_ori_curve = 1
 
-    te_types = [station.airfoil.te_type for station in definition.stations]
-    roundStations = np.argwhere(np.array(te_types) == "round")
-    roundStations = list(roundStations[:, 0])
-    lastRoundStation = roundStations[-1]
+    #Get last round station index
+    te_types = []
+    for i_station in range(len(blade.geometry.ispan)):
+        if geometry.get_profile_te_type(i_station) == "flat":
+            te_types.append(True)
+        else:
+            te_types.append(False)
+    
+    last_round_station=next((i-1 for i, x in enumerate(te_types) if x), None)
+
 
     with open(f"{wt_name}.log", "w") as logFile:
         logFile.write(f"Making cross sections for {wt_name}\n")
@@ -206,7 +212,7 @@ def cubit_make_cross_sections(
                 geometry_scaling,
                 thickness_scaling,
                 is_flatback,
-                lastRoundStation,
+                last_round_station,
                 materials_used,
                 cs_normal,
             )
@@ -224,7 +230,7 @@ def cubit_make_cross_sections(
                 geometry_scaling,
                 thickness_scaling,
                 is_flatback,
-                lastRoundStation,
+                last_round_station,
                 materials_used,
                 cs_normal,
             )

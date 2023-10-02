@@ -681,7 +681,7 @@ def make_cs_perimeter_layer_areas(wt_name,
     lp_hp_side,
     is_flatback,
     te_angle,
-    lastRoundStation,
+    last_round_station,
     part_name_id,
     n_modeled_layers,
     cs_normal,
@@ -1112,7 +1112,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                         surface_dict[get_last_id("surface")]["curves"][-1]
                     )
 
-                if i_station == lastRoundStation - 1:
+                if i_station == last_round_station - 1:
                     v1 = surface_dict[get_last_id("surface")]["verts"][0]
                     cubit.cmd(f'vertex {v1} rename "linear"')
                     v1 = surface_dict[get_last_id("surface")]["verts"][-1]
@@ -1510,7 +1510,7 @@ def make_a_cross_section(wt_name,
     geometry_scaling,
     thickness_scaling,
     is_flatback,
-    lastRoundStation,
+    last_round_station,
     materials_used,
     cs_normal,
 ):
@@ -1784,7 +1784,7 @@ def make_a_cross_section(wt_name,
         lp_hp_side,
         is_flatback,
         te_angle,
-        lastRoundStation,
+        last_round_station,
         part_name_id,
         n_modeled_layers,
         cs_normal,
@@ -1804,7 +1804,7 @@ def make_a_cross_section(wt_name,
         lp_hp_side,
         is_flatback,
         te_angle,
-        lastRoundStation,
+        last_round_station,
         part_name_id,
         n_modeled_layers,
         cs_normal,
@@ -1825,7 +1825,7 @@ def make_a_cross_section(wt_name,
     )
 
     part_name_id = 0  # Reset since outer areoshell is complete (LE adhesive is accouted for as aeroshell)
-    if i_station > lastRoundStation:
+    if i_station > last_round_station:
         part_name = "flatTEadhesive"
     else:
         part_name = "roundTEadhesive"
