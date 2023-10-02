@@ -298,7 +298,7 @@ def make_birds_mouth(
                 )
 
         
-    return
+    return 
 
 
 # cubit.cmd('open "/home/ecamare/myprojects/bar/cubitDev/python/python0.cub"')
@@ -318,7 +318,7 @@ def get_approximate_thickness_direction_for_volume(volume_id):
         current_curve=cubit.curve(i_curve)
         coords = current_curve.position_from_fraction(0.5)
         approximate_thickness_direction.append(current_curve.tangent(coords)) 
-
+    approximate_thickness_direction = np.array(approximate_thickness_direction)
     n_thickness_curves=len(thickness_curve_ids)
     # approximate_thickness_direction = []
     # for current_curve in cubit.volume(volume_id).curves():
@@ -342,9 +342,10 @@ def get_approximate_thickness_direction_for_volume(volume_id):
             diff = approximate_thickness_direction[i] - mean
 
             errorList.append(sqrt(dotProd(diff, diff)))
-        sortIndex = np.argsort(errorList)[
-            :4
-        ]  # Take the first four. This discards the two directions with the largest deviation from the average
+        sortIndex = np.argsort(errorList)[:4]  # Take the first four. 
+                                               # This discards the two directions 
+                                               # with the largest deviation from the
+                                               # average
 
         return np.mean(approximate_thickness_direction[sortIndex, :], 0)
     else:
@@ -363,26 +364,37 @@ def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
 
     approximate_thickness_direction = get_approximate_thickness_direction_for_volume(volume_id)
 
-    # Create a list of surface IDs in the given volume
+
     surface_ids = []
     volumeSurfaces = cubit.volume(volume_id).surfaces()
     for current_surface in volumeSurfaces:
-        surface_ids.append(current_surface.id())
 
-    # Eliminate surfaces that have two curves named thickness:
-    surface_ct = 0
-    for current_surface in volumeSurfaces:
-        curve_ct = (
-            0  # Counts the number of curves in the surface with name 'layer_thickness'
-        )
-        for current_curve in current_surface.curves():
-            curve_name = cubit.get_entity_name("curve", current_curve.id())
-            if "layer_thickness" in curve_name:
-                curve_ct += 1
+        parse_string = f'with name "*layer_thickness*" in surface {current_surface.id()}'
+        thickness_curve_ids = parse_cubit_list("curve", parse_string)
+        
+        if len(thickness_curve_ids)==0:
+            surface_ids.append(current_surface.id()) 
 
-        if curve_ct >= 2:
-            surface_ct += 1
-            surface_ids.remove(current_surface.id())
+    # # Create a list of surface IDs in the given volume
+    # surface_ids = []
+    # volumeSurfaces = cubit.volume(volume_id).surfaces()
+    # for current_surface in volumeSurfaces:
+    #     surface_ids.append(current_surface.id())
+
+    # # Eliminate surfaces that have two curves named thickness:
+    # surface_ct = 0
+    # for current_surface in volumeSurfaces:
+    #     curve_ct = (
+    #         0  # Counts the number of curves in the surface with name 'layer_thickness'
+    #     )
+    #     for current_curve in current_surface.curves():
+    #         curve_name = cubit.get_entity_name("curve", current_curve.id())
+    #         if "layer_thickness" in curve_name:
+    #             curve_ct += 1
+
+    #     if curve_ct >= 2:
+    #         surface_ct += 1
+    #         surface_ids.remove(current_surface.id())
 
     # surface_ids now has the list of surfaces w/o thickness curves
     if len(surface_ids) == 2 or len(surface_ids) == 1:
@@ -402,9 +414,9 @@ def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
             sign = 1.0
         else:
             sign = -1.0
-    elif (
-        len(surface_ids) == 0
-    ):  # LE adhesive and/or TE adhesive for round cross-sections
+    elif len(surface_ids) == 0:
+        
+      # LE adhesive and/or TE adhesive for round cross-sections
         # print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~volume_id {volume_id}')
         surface_id = False
         sign = 1.0
