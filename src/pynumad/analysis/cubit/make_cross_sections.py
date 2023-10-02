@@ -936,15 +936,8 @@ def make_cs_perimeter_layer_areas(wt_name,
                     end_layer_taper_curve = None
 
             # TE Adhesive curve
-            if is_flatback:
-                cubit.cmd(f"curve {top_bounding_curve} copy")
-                cubit.cmd(f'split curve {get_last_id("curve")} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]} from start')
+            if not is_flatback:
 
-                lp_hp_dict["te_adhesive_curve_list"][lp_hp_side_index].append(
-                    get_last_id("curve") - 1
-                )
-                cubit.cmd(f'delete curve {get_last_id("curve")}')
-            else:
                 v1, _ = selCurveVerts(base_curve_id_copy)
                 v2, _ = selCurveVerts(top_bounding_curve)
                 cubit.cmd(
@@ -1012,23 +1005,25 @@ def make_cs_perimeter_layer_areas(wt_name,
                 )
 
 
-            cubit.cmd(f'split curve {first_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]} from start')
+            cubit.cmd(f'split curve {first_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
             current_stack_left_curves.append(get_last_id("curve") - 1)
             current_stack_right_curves.append(get_last_id("curve"))
             curve_len = cubit.curve(current_stack_left_curves[0]).length()
 
-            cubit.cmd(f"split curve {base_curve_id_copy} distance {curve_len} from start")
+            cubit.cmd(f'split curve {base_curve_id_copy} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
             current_stack_left_curves.insert(0, get_last_id("curve") - 1)
             current_stack_right_curves.insert(0, get_last_id("curve"))
 
-            cubit.cmd(f"split curve {last_layer_offset} distance {curve_len} from start")
+            cubit.cmd(f'split curve {last_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
             current_stack_left_curves.append(get_last_id("curve") - 1)
             current_stack_right_curves.append(get_last_id("curve"))
             
-            cubit.cmd(f"split curve {top_bounding_curve} distance {curve_len} from start")
+            cubit.cmd(f'split curve {top_bounding_curve} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
             current_stack_left_curves.append(get_last_id("curve") - 1)
             current_stack_right_curves.append(get_last_id("curve"))
 
+
+            lp_hp_dict["te_adhesive_curve_list"][lp_hp_side_index].append(current_stack_left_curves[-1])
             #### Next Stack (the panel might intersect the camberline so the following is needed
             next_stack_curves = []
             cubit.cmd(f"curve {right_bottom_curve} copy")
@@ -1720,12 +1715,15 @@ def make_a_cross_section(wt_name,
         with open(f"{wt_name}.log", "a") as logFile:
             logFile.write(f"    Warning: Adhesive width is wider than one of the TE reinforcements. Reducing adhesive width by about {minimumWidth}\n")
     
-    cubit.cmd(f"create vertex on curve {hpTEreinfCurveID}  distance {split_length} from start")
-    lp_hp_dict["perimeter_verts_for_te_adhesive"]['HP']=get_last_id("vertex")
-    cubit.cmd(f"create vertex on curve {lpTEreinfCurveID}  distance {split_length} from start")
-    lp_hp_dict["perimeter_verts_for_te_adhesive"]['LP']=get_last_id("vertex")
-    
-
+    if is_flatback:
+        cubit.cmd(f"create vertex on curve {camberID}  distance {split_length} from start")
+        lp_hp_dict["perimeter_verts_for_te_adhesive"]['HP']=get_last_id("vertex")
+        lp_hp_dict["perimeter_verts_for_te_adhesive"]['LP']=get_last_id("vertex")
+    else:
+        cubit.cmd(f"create vertex on curve {hpTEreinfCurveID}  distance {split_length} from start")
+        lp_hp_dict["perimeter_verts_for_te_adhesive"]['HP']=get_last_id("vertex")
+        cubit.cmd(f"create vertex on curve {lpTEreinfCurveID}  distance {split_length} from start")
+        lp_hp_dict["perimeter_verts_for_te_adhesive"]['LP']=get_last_id("vertex")
 
     print(f'camberID length: {cubit.curve(camberID).length()} te_angle {te_angle}')
     # Extend
@@ -1980,9 +1978,10 @@ def write_vabs_input(
                 # #######Only needed For Plotting Orientation Check#######
                 ###Normal to curve
                 # print(cs_normal)
-                axial_direction = cs_normal  # There will be a slight error here for highly tapeded regions
-                normal_direction = crossProd(axial_direction, tangent_direction)
+                
                 # #######Only needed For Plotting Orientation Check#######
+                # axial_direction = cs_normal  # There will be a slight error here for highly tapeded regions
+                # normal_direction = crossProd(axial_direction, tangent_direction)
                 # cubit.create_vertex(coords[0]+length*normal_direction[0],coords[1]+length*normal_direction[1],coords[2]+length*normal_direction[2])
                 # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
                 # #######Only needed For Plotting Orientation Check#######
