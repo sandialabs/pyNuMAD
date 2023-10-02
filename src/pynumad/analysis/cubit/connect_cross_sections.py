@@ -128,8 +128,9 @@ def get_spanwise_splines_for_a_volume(
 #     cubit.cmd(f'curve {thickness_curve_id} interval {nIntervals}')
 
 
-def make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_station_end):
+def make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end):
     # nIntervals=3
+    vol_list=[]
     spanwise_splines = make_spanwise_splines(surface_dict, ordered_list)
     n_cross_sections = len(ordered_list[0])
     nPartSurfaceIDs = len(ordered_list)
@@ -154,12 +155,12 @@ def make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_sta
                     surface_dict,
                     i_station_end,
                 )
-                mesh_vol_list.append(get_last_id("volume"))
+                vol_list.append(get_last_id("volume"))
                 # assign_intervals(get_last_id("volume"),nIntervals)
     else:
         raise ValueError("Can't make volumes with only one cross section.")
 
-    return mesh_vol_list
+    return vol_list
 
 
 def verify_web_cutting_amplitude(
@@ -296,9 +297,9 @@ def make_birds_mouth(
                 raise ValueError(
                     f"Zero thickness curves found in a web volume {volume_id} near birds mounth"
                 )
-
-        
-    return 
+    parse_string = f'with name "*webStation*"'
+    
+    return list(parse_cubit_list("volume", parse_string)) #update the web volumes
 
 
 # cubit.cmd('open "/home/ecamare/myprojects/bar/cubitDev/python/python0.cub"')

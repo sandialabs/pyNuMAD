@@ -420,7 +420,7 @@ def cubit_make_solid_blade(
     part_name = "shell"
     ordered_list = get_ordered_list(part_name)
     if len(ordered_list) > 0:
-        mesh_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_station_end)
+        shell_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
     #     cubit.cmd(f'save as "python2.cub" overwrite')
     #     foo
 
@@ -428,18 +428,18 @@ def cubit_make_solid_blade(
     ordered_list = get_ordered_list(part_name)
     ordered_list_web = ordered_list.copy()
     if ordered_list and len(ordered_list[0]) > 1:
-        mesh_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_station_end)
+        web_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
 
     part_name = "roundTEadhesive"
     ordered_list = get_ordered_list(part_name)
     if ordered_list and len(ordered_list[0]) > 1:
-        mesh_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_station_end)
+        roundTEadhesive_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
 
     part_name = "flatTEadhesive"
     ordered_list = get_ordered_list(part_name)
 
     if ordered_list and len(ordered_list[0]) > 1:
-        mesh_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, mesh_vol_list, i_station_end)
+        flatTEadhesive_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
 
     if (
         ordered_list_web
@@ -447,13 +447,14 @@ def cubit_make_solid_blade(
         and cs_params["birds_mouth_amplitude_fraction"]
         and birds_mouth_verts
     ):
-        make_birds_mouth(
+        web_vol_list=make_birds_mouth(
             blade,
             birds_mouth_verts,
             cs_params["birds_mouth_amplitude_fraction"],
             i_station_first_web,
             i_station_last_web,
         )
+    mesh_vol_list=shell_vol_list+web_vol_list+roundTEadhesive_vol_list+flatTEadhesive_vol_list
 
     cubit.cmd(f"merge volume {l2s(mesh_vol_list)}")
     cubit.cmd(f"reset volume all")
@@ -563,7 +564,8 @@ def cubit_make_solid_blade(
                 dcm
             )
 
-
+    cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
+    cubit.cmd(f"delete vertex all with Is_Free except {spanwise_mat_ori_curve}")
     if settings["export"] is not None:
         if "g" in settings["export"].lower():
             cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
