@@ -1130,8 +1130,8 @@ def make_cs_perimeter_layer_areas(wt_name,
                         i_modeled_layers,
                         materials_used,
                     )
-
-                if not is_flatback:
+                if i_station <= last_round_station+1:
+                #if not is_flatback:
                     lp_hp_dict["round_te_adhesive_curve_list"][lp_hp_side_index].append(
                         surface_dict[get_last_id("surface")]["curves"][-1]
                     )
@@ -1379,7 +1379,7 @@ def print_sine_curve_between_two_verts(vBot, vTop, amplitude, direction):
     cubit.cmd(f"create curve vertex {vBot} {vTop}")
 
     idCurve = get_last_id("curve")
-
+    vertex_list=[vBot,vTop]
     if round(amplitude, 3) > 0:
         n_start = get_last_id("vertex") + 1
         cubit.cmd(
@@ -1397,7 +1397,7 @@ def print_sine_curve_between_two_verts(vBot, vTop, amplitude, direction):
         vertex_list.append(vTop)
         cubit.cmd(f"create curve spline vertex {l2s(vertex_list)}")
         cubit.cmd(f"delete curve {idCurve}")
-    return get_last_id("curve")
+    return get_last_id("curve"),vertex_list
 
 
 def make_cs_web_layer_areas(
@@ -1489,12 +1489,12 @@ def make_cs_web_layer_areas(
     for i_curve in range(n_base_curves_web):
         vHP, _ = selCurveVerts(web_interface_curves[0][i_curve])
         vLP, _ = selCurveVerts(web_interface_curves[1][i_curve])
-        top_curve = print_sine_curve_between_two_verts(
+        top_curve,_ = print_sine_curve_between_two_verts(
             vHP, vLP, cs_params["max_web_imperfection_distance"][i_station], "x"
         )
         _, vHP = selCurveVerts(web_interface_curves[0][i_curve])
         _, vLP = selCurveVerts(web_interface_curves[1][i_curve])
-        bottom_curve = print_sine_curve_between_two_verts(
+        bottom_curve,_ = print_sine_curve_between_two_verts(
             vHP, vLP, cs_params["max_web_imperfection_distance"][i_station], "x"
         )
 
@@ -1567,7 +1567,7 @@ def make_a_cross_section(wt_name,
     first_point = xyz[-2, :]
     second_point = xyz[1, :]
     flatback_length = np.linalg.norm(second_point - first_point)
-
+    
     flatbackCurve = cubit.create_curve(
         cubit.vertex(flatback_vBot), cubit.vertex(flatback_vTop)
     )
@@ -1669,6 +1669,36 @@ def make_a_cross_section(wt_name,
         write_spline_from_coordinate_points(cubit, splinePoints)
         camberID = get_last_id("curve")
 
+    #Special treatment for station that will connect round to flatback
+    if i_station == last_round_station+1:
+        cubit.create_curve(cubit.vertex(flatback_vBot), cubit.vertex(flatback_vTop))
+        flatback_curve_id=get_last_id("curve")
+        v1,v2 = selCurveVerts(flatback_curve_id)
+        amplitude=cubit.curve(flatback_curve_id).length()/2
+        flatback_curve_id,vertex_list = print_sine_curve_between_two_verts(v1, v2, amplitude, "x")
+        
+        #### Extend flatback ###
+        curve_start_or_end = "start"
+        extension_length = (
+            100 * geometry.ichord[i_station_geometry] * cubit.curve(flatback_curve_id).length()
+        )
+        cubit.cmd(f"curve {flatback_curve_id} copy")
+        curve_id = extend_curve_at_vertex_to_length(
+            get_last_id("curve"), extension_length, curve_start_or_end
+        )
+        v1,_=selCurveVerts(curve_id)
+
+        curve_start_or_end = "end"
+        cubit.cmd(f"curve {flatback_curve_id} copy")
+        curve_id = extend_curve_at_vertex_to_length(
+            get_last_id("curve"), extension_length, curve_start_or_end
+        )
+        _,v2=selCurveVerts(curve_id)
+        vertex_list=[v1]+vertex_list+[v2]
+        cubit.cmd(f"create curve spline vertex {l2s(vertex_list)}")
+        flatback_curve_id = get_last_id("curve")
+
+        
     n_stacks = len(stackdb.stacks)
 
     le_hp_stack_thickness = (

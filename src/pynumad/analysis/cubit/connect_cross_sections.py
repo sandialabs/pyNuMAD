@@ -219,10 +219,10 @@ def make_birds_mouth(
     amplitude = verify_web_cutting_amplitude(
         blade, amplitude, tolerance, i_station_first_web, i_station_last_web
     )
+    
+    curve_id,_=print_sine_curve_between_two_verts(v1.id(), v2.id(), amplitude, "z")
+    curvedLine = cubit.curve(curve_id)
 
-    curvedLine = cubit.curve(
-        print_sine_curve_between_two_verts(v1.id(), v2.id(), amplitude, "z")
-    )
     cubit.cmd(f"create surface skin curve {curvedLine.id()} {straight_line.id()}")
     baseSurface = get_last_id("surface")
 
