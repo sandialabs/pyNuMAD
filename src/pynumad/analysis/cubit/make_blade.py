@@ -198,7 +198,7 @@ def cubit_make_cross_sections(
                 ]
             )
         )
-
+        
         # Only save birds_mouth_verts for the right cross-section
         if i_station == i_station_first_web:
             birds_mouth_verts = make_a_cross_section(wt_name,
@@ -533,7 +533,7 @@ def cubit_make_solid_blade(
 
     for volume_id in all_volume_ids:
         surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
-
+        volume_name = cubit.get_entity_name("volume", volume_id)
         for hex_id in get_volume_hexes(volume_id):
             coords = cubit.get_center_point("hex", hex_id)
 
@@ -544,14 +544,16 @@ def cubit_make_solid_blade(
                         * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
                     )
                 )
-
-                curve_location_for_tangent = cubit.curve(
-                    spanwise_mat_ori_curve
-                ).closest_point(coords)
-                x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
-                y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
-                z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
-                spanwise_direction = vectNorm([x, y, z])
+                if 'web' in volume_name.lower():
+                    spanwise_direction = [0,0,1]
+                else:
+                    curve_location_for_tangent = cubit.curve(
+                        spanwise_mat_ori_curve
+                    ).closest_point(coords)
+                    x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
+                    y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
+                    z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
+                    spanwise_direction = vectNorm([x, y, z])
 
                 perimeter_direction = vectNorm(
                     crossProd(surface_normal, spanwise_direction)

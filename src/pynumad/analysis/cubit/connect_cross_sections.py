@@ -428,7 +428,7 @@ def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
         if dotProd(surface_normal, approximate_thickness_direction) > 0:
             sign = 1.0
         else:
-            sign = -1.0
+            sign = -1.0 
     
 
 
@@ -439,7 +439,8 @@ def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
         # print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~volume_id {volume_id}')
         surface_id = False
         sign = 1.0
-
+        #parse_string = f'with name "*layer_thickness*" in volume {volume_id}'
+        #thickness_curve_ids = parse_cubit_list("curve", parse_string)
     else:
         raise ValueError(
             "The number of thickness curves in volume is unexpected. Cannot assign material orientation"
