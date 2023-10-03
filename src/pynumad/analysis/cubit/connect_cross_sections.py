@@ -362,7 +362,7 @@ def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
     # This function is used when assigning material orientations
     # This gets returns the surface within a volume that will be used to get surface normals.
     # The sign +-1 is also returned since some of the surfaces are oriented the wrong way
-
+    
     approximate_thickness_direction = get_approximate_thickness_direction_for_volume(volume_id)
 
 
@@ -398,7 +398,7 @@ def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
     #         surface_ids.remove(current_surface.id())
 
     # surface_ids now has the list of surfaces w/o thickness curves
-    if len(surface_ids) == 2 or len(surface_ids) == 1:
+    if len(surface_ids) == 3 or len(surface_ids) == 2 or len(surface_ids) == 1:
         if len(surface_ids) == 2:
             surface_name = cubit.get_entity_name("surface", surface_ids[0])
             if "topFace" in surface_name:
@@ -407,6 +407,20 @@ def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
                 surface_id = surface_ids[-1]
         elif len(surface_ids) == 1:  # Web overwrap
             surface_id = surface_ids[0]
+        elif len(surface_ids) == 3:
+            if 'web' in cubit.get_entity_name("volume", volume_id).lower(): 
+                                        #This is for when birdsmouth is made and it does 
+                                        #not cut into the next station
+                max_area=0
+                for i_surf in surface_ids:
+                    area =cubit.surface(i_surf).area()
+                    if area > max_area:
+                        max_area=area
+                        surface_id=i_surf
+            else:
+                raise ValueError(
+                    "The number of thickness curves in volume is unexpected. Cannot assign material orientation"
+                )
 
         coords = cubit.get_center_point("surface", surface_id)
         surface_normal = cubit.surface(surface_id).normal_at(coords)
@@ -415,6 +429,10 @@ def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
             sign = 1.0
         else:
             sign = -1.0
+    
+
+
+
     elif len(surface_ids) == 0:
         
       # LE adhesive and/or TE adhesive for round cross-sections
