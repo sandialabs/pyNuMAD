@@ -1005,25 +1005,48 @@ def make_cs_perimeter_layer_areas(wt_name,
                 )
 
 
-            cubit.cmd(f'split curve {first_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
-            current_stack_left_curves.append(get_last_id("curve") - 1)
-            current_stack_right_curves.append(get_last_id("curve"))
-            curve_len = cubit.curve(current_stack_left_curves[0]).length()
+            # cubit.cmd(f'split curve {first_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
+            # current_stack_left_curves.append(get_last_id("curve") - 1)
+            # current_stack_right_curves.append(get_last_id("curve"))
+            # curve_len = cubit.curve(current_stack_left_curves[0]).length()
 
-            cubit.cmd(f'split curve {base_curve_id_copy} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
-            current_stack_left_curves.insert(0, get_last_id("curve") - 1)
-            current_stack_right_curves.insert(0, get_last_id("curve"))
+            # cubit.cmd(f'split curve {base_curve_id_copy} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
+            # current_stack_left_curves.insert(0, get_last_id("curve") - 1)
+            # current_stack_right_curves.insert(0, get_last_id("curve"))
 
-            cubit.cmd(f'split curve {last_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
-            current_stack_left_curves.append(get_last_id("curve") - 1)
-            current_stack_right_curves.append(get_last_id("curve"))
+            # cubit.cmd(f'split curve {last_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
+            # current_stack_left_curves.append(get_last_id("curve") - 1)
+            # current_stack_right_curves.append(get_last_id("curve"))
             
-            cubit.cmd(f'split curve {top_bounding_curve} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
-            current_stack_left_curves.append(get_last_id("curve") - 1)
-            current_stack_right_curves.append(get_last_id("curve"))
+            # cubit.cmd(f'split curve {top_bounding_curve} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
+            # current_stack_left_curves.append(get_last_id("curve") - 1)
+            # current_stack_right_curves.append(get_last_id("curve"))
 
+            current_stack_right_curves=[base_curve_id_copy,first_layer_offset,last_layer_offset,top_bounding_curve]
+            #Further subdived current_stack_left_curves for roundTEadhesive volumes
 
-            lp_hp_dict["te_adhesive_curve_list"][lp_hp_side_index].append(current_stack_left_curves[-1])
+            
+            current_stack_left_curves_splited=[]
+            for vertex_id in lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]:
+                temp_list_left=[]
+                temp_list_right=[]
+                for curve_id in current_stack_right_curves:
+                    n_start = get_last_id("curve")
+                    cubit.cmd(f'split curve {curve_id} at vertex {vertex_id}')
+                    n_end = get_last_id("curve")
+                    if n_end -  n_start< 2:
+                        print('')
+                    temp_list_left.append(get_last_id("curve") - 1)
+                    temp_list_right.append(get_last_id("curve"))
+                current_stack_right_curves=temp_list_right
+                current_stack_left_curves_splited.append(temp_list_left)
+            #current_stack_left_curves_splited.append(temp_list_right)
+            
+            if is_flatback:
+                for i_split in range(len(current_stack_left_curves_splited)-1):
+                    lp_hp_dict["round_te_adhesive_curve_list"][lp_hp_side_index].append(current_stack_left_curves_splited[i_split][-1])
+
+                lp_hp_dict["flat_te_adhesive_curve_list"][lp_hp_side_index].append(current_stack_left_curves_splited[-1][-1])
             #### Next Stack (the panel might intersect the camberline so the following is needed
             next_stack_curves = []
             cubit.cmd(f"curve {right_bottom_curve} copy")
@@ -1094,21 +1117,22 @@ def make_cs_perimeter_layer_areas(wt_name,
                 material_name = current_stack.plygroups[i_modeled_layers].materialid
                 ply_angle = current_stack.plygroups[i_modeled_layers].angle
 
-                part_name_id, materials_used = make_cross_section_surface(
-                    surface_dict,
-                    i_station,
-                    part_name,
-                    current_stack_left_curves[i_modeled_layers + 1],
-                    current_stack_left_curves[i_modeled_layers],
-                    material_name,
-                    ply_angle,
-                    part_name_id,
-                    i_modeled_layers,
-                    materials_used,
-                )
+                for i_split in range(len(current_stack_left_curves_splited)):
+                    part_name_id, materials_used = make_cross_section_surface(
+                        surface_dict,
+                        i_station,
+                        part_name,
+                        current_stack_left_curves_splited[i_split][i_modeled_layers + 1],
+                        current_stack_left_curves_splited[i_split][i_modeled_layers],
+                        material_name,
+                        ply_angle,
+                        part_name_id,
+                        i_modeled_layers,
+                        materials_used,
+                    )
 
-                if te_angle > 120:
-                    lp_hp_dict["te_adhesive_curve_list"][lp_hp_side_index].append(
+                if not is_flatback:
+                    lp_hp_dict["round_te_adhesive_curve_list"][lp_hp_side_index].append(
                         surface_dict[get_last_id("surface")]["curves"][-1]
                     )
 
@@ -1660,7 +1684,8 @@ def make_a_cross_section(wt_name,
     lp_hp_dict["spar_cap_base_curves"] = [[], []]
     lp_hp_dict["web_interface_curves"] = [[], []]
     lp_hp_dict["base_curve_ids"] = [[], []]
-    lp_hp_dict["te_adhesive_curve_list"] = [[], []]
+    lp_hp_dict["round_te_adhesive_curve_list"] = [[], []]
+    lp_hp_dict["flat_te_adhesive_curve_list"] = [[], []]
     lp_hp_dict["le_adhesive_curve_list"] = [[], []]
     lp_hp_dict["perimeter_verts_for_te_adhesive"] = {}
 
@@ -1716,14 +1741,35 @@ def make_a_cross_section(wt_name,
             logFile.write(f"    Warning: Adhesive width is wider than one of the TE reinforcements. Reducing adhesive width by about {minimumWidth}\n")
     
     if is_flatback:
-        cubit.cmd(f"create vertex on curve {camberID}  distance {split_length} from start")
-        lp_hp_dict["perimeter_verts_for_te_adhesive"]['HP']=get_last_id("vertex")
-        lp_hp_dict["perimeter_verts_for_te_adhesive"]['LP']=get_last_id("vertex")
+        cubit.cmd(f"curve {camberID} copy")
+        cubit.cmd(f"split curve {get_last_id('curve')}  distance {split_length} from start")
+        curve_id=get_last_id("curve")-1
+
+        #Further subdived current_stack_left_curves for roundTEadhesive volumes
+        fraction_from_start=0
+        n_start = get_last_id("vertex") + 1
+        for fraction in []:
+        #for fraction in [0.15,0.15,0.15]:
+            fraction_from_start+=fraction
+            cubit.cmd(f'create vertex on curve {curve_id} fraction {fraction_from_start} from start')
+        n_end = get_last_id("vertex")
+        vertex_list = list(range(n_start, n_end + 1))
+
+
+        _,v1=selCurveVerts(curve_id)
+
+        vertex_list.append(v1)
+        lp_hp_dict["perimeter_verts_for_te_adhesive"]['HP']=vertex_list
+        lp_hp_dict["perimeter_verts_for_te_adhesive"]['LP']=vertex_list
+
+        #cs_params["round_te_adhesive_fractions_for_flatback"]=vertex_list
     else:
         cubit.cmd(f"create vertex on curve {hpTEreinfCurveID}  distance {split_length} from start")
-        lp_hp_dict["perimeter_verts_for_te_adhesive"]['HP']=get_last_id("vertex")
+        lp_hp_dict["perimeter_verts_for_te_adhesive"]['HP']=[get_last_id("vertex")]
         cubit.cmd(f"create vertex on curve {lpTEreinfCurveID}  distance {split_length} from start")
-        lp_hp_dict["perimeter_verts_for_te_adhesive"]['LP']=get_last_id("vertex")
+        lp_hp_dict["perimeter_verts_for_te_adhesive"]['LP']=[get_last_id("vertex")]
+
+        #cs_params["round_te_adhesive_fractions_for_flatback"]=[]
 
     print(f'camberID length: {cubit.curve(camberID).length()} te_angle {te_angle}')
     # Extend
@@ -1768,9 +1814,7 @@ def make_a_cross_section(wt_name,
         keep_curve=2
         lp_hp_dict["base_curve_ids"][1][0]=splice_two_curves(first_curve_id, second_curve_id, keep_curve)
 
-
-        
-        
+  
     n_modeled_layers = 3
 
     lp_hp_side = "HP"
@@ -1818,28 +1862,41 @@ def make_a_cross_section(wt_name,
         surface_dict,
         part_name,
         lp_hp_dict["le_adhesive_curve_list"],
-        cs_params["adhesive_mat_name"],
+        stackdb.stacks[6, i_station].plygroups[0].materialid,
         part_name_id,
         n_modeled_layers,
         materials_used,
     )
 
     part_name_id = 0  # Reset since outer areoshell is complete (LE adhesive is accouted for as aeroshell)
-    if i_station > last_round_station:
-        part_name = "flatTEadhesive"
-    else:
-        part_name = "roundTEadhesive"
+    part_name = "roundTEadhesive"
 
     part_name_id = create_simplist_surface_for_TE_or_LE_adhesive(
         i_station,
         surface_dict,
         part_name,
-        lp_hp_dict["te_adhesive_curve_list"],
+        lp_hp_dict["round_te_adhesive_curve_list"],
         cs_params["adhesive_mat_name"],
         part_name_id,
         n_modeled_layers,
         materials_used,
     )
+    
+
+    if is_flatback:
+        part_name = "flatTEadhesive"
+        part_name_id = 0  # Reset 
+        part_name_id = create_simplist_surface_for_TE_or_LE_adhesive(
+            i_station,
+            surface_dict,
+            part_name,
+            lp_hp_dict["flat_te_adhesive_curve_list"],
+            cs_params["adhesive_mat_name"],
+            part_name_id,
+            n_modeled_layers,
+            materials_used,
+        )
+
 
     birds_mouth_verts = []
     if hasWebs:

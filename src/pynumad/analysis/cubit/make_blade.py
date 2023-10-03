@@ -127,14 +127,15 @@ def cubit_make_cross_sections(
     spanwise_mat_ori_curve = 1
 
     #Get last round station index
-    te_types = []
+    is_station_flatback = []
     for i_station in range(len(blade.geometry.ispan)):
         if geometry.get_profile_te_type(i_station) == "flat":
-            te_types.append(True)
+            is_station_flatback.append(True)
         else:
-            te_types.append(False)
+            is_station_flatback.append(False)
     
-    last_round_station=next((i-1 for i, x in enumerate(te_types) if x), None)
+    is_station_flatback.append(True) #last station is never round
+    last_round_station=next((i-1 for i, x in enumerate(is_station_flatback) if x), None)
 
 
     with open(f"{wt_name}.log", "w") as logFile:
@@ -142,6 +143,9 @@ def cubit_make_cross_sections(
 
     path_name = directory + "/" + wt_name + "-crossSections"
     birds_mouth_verts = []
+
+
+
     for i_station in stationList:
         if model2Dor3D.lower() == "2d":
             cubit.cmd(
@@ -158,11 +162,9 @@ def cubit_make_cross_sections(
             # adjustLastStackAfterNewTipStation(i_station)
 
             i_station_geometry = i_station + 1
+        
+        is_flatback=is_station_flatback[i_station_geometry]
 
-        if geometry.get_profile_te_type(i_station_geometry) == "flat":
-            is_flatback = True
-        else:
-            is_flatback = False
 
         i_station_first_web = np.argwhere(hasWebs)[0][0]
         i_station_last_web = np.argwhere(hasWebs)[-1][0]
@@ -427,25 +429,32 @@ def cubit_make_solid_blade(
     ordered_list = get_ordered_list(part_name)
     if len(ordered_list) > 0:
         shell_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
-    #     cubit.cmd(f'save as "python2.cub" overwrite')
-    #     foo
+    else:
+        shell_vol_list=[]
 
     part_name = "web"
     ordered_list = get_ordered_list(part_name)
     ordered_list_web = ordered_list.copy()
     if ordered_list and len(ordered_list[0]) > 1:
         web_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
+    else:
+        web_vol_list=[]
 
     part_name = "roundTEadhesive"
     ordered_list = get_ordered_list(part_name)
     if ordered_list and len(ordered_list[0]) > 1:
         roundTEadhesive_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
+    else:
+        roundTEadhesive_vol_list=[]
+
 
     part_name = "flatTEadhesive"
     ordered_list = get_ordered_list(part_name)
 
     if ordered_list and len(ordered_list[0]) > 1:
         flatTEadhesive_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
+    else:
+        flatTEadhesive_vol_list=[]
 
     if (
         ordered_list_web
