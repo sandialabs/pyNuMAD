@@ -127,15 +127,57 @@ def cubit_make_cross_sections(
     spanwise_mat_ori_curve = 1
 
     #Get last round station index
-    is_station_flatback = []
-    for i_station in range(len(blade.geometry.ispan)):
-        if geometry.get_profile_te_type(i_station) == "flat":
-            is_station_flatback.append(True)
-        else:
-            is_station_flatback.append(False)
+    # is_station_flatback = []
+    # for i_station in range(len(blade.geometry.ispan)):
+    #     if geometry.get_profile_te_type(i_station) == "flat":
+    #         is_station_flatback.append(True)
+    #     else:
+    #         is_station_flatback.append(False)
     
-    is_station_flatback.append(True) #last station is never round
-    last_round_station=next((i-1 for i, x in enumerate(is_station_flatback) if x), None)
+    # is_station_flatback.append(True) #last station is never round
+    # last_round_station=next((i-1 for i, x in enumerate(is_station_flatback) if x), None)
+
+
+
+
+
+########################
+    #### Step one create outer mold line
+    flatback_lengths=[]
+    te_angles=[]
+    for i_station_geometry in range(len(blade.geometry.ispan)):
+        xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
+        
+        npts=5
+        # Start indexing from 1 (not 0) to ignore first point: because first point is not on the LP or HP surface but rather is the midpoint at the TE
+        splinePoints = xyz[1:npts, :]
+        write_spline_from_coordinate_points(cubit, splinePoints)
+        hp_key_curve = get_last_id("curve")
+
+        xyz = np.flip(xyz, 0)
+        splinePoints = xyz[1:npts, :]
+        write_spline_from_coordinate_points(cubit, splinePoints)
+        lp_key_curve = get_last_id("curve")
+
+
+        first_point = xyz[-2, :]
+        second_point = xyz[1, :]
+        flatback_lengths.append(np.linalg.norm(second_point - first_point))
+
+
+        curve_fraction = 0
+        te_angles.append(get_te_angle(hp_key_curve, lp_key_curve, curve_fraction))
+        # print(f"station {i_station}")
+        # print(f"edgeLength={flatback_length*1000}")
+        # print(cs_params)
+        # print(f'athickness={cs_params["te_adhesive_thickness"][i_station]*1000}')
+        # print(f'te_adhesive_width {cs_params["te_adhesive_width"][i_station]*1000}')
+        # print(f"te_angle {te_angle}")
+
+    last_round_station=next((i-1 for i, x in enumerate(te_angles) if x < 50.0), None)
+########################
+
+
 
 
     with open(f"{wt_name}.log", "w") as logFile:
@@ -163,7 +205,7 @@ def cubit_make_cross_sections(
 
             i_station_geometry = i_station + 1
         
-        is_flatback=is_station_flatback[i_station_geometry]
+        #is_flatback=is_station_flatback[i_station_geometry]
 
 
         i_station_first_web = np.argwhere(hasWebs)[0][0]
@@ -213,7 +255,6 @@ def cubit_make_cross_sections(
                 cs_params,
                 geometry_scaling,
                 thickness_scaling,
-                is_flatback,
                 last_round_station,
                 materials_used,
                 cs_normal,
@@ -231,7 +272,6 @@ def cubit_make_cross_sections(
                 cs_params,
                 geometry_scaling,
                 thickness_scaling,
-                is_flatback,
                 last_round_station,
                 materials_used,
                 cs_normal,

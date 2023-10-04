@@ -405,7 +405,6 @@ def write_LE_adhesive_curves(
             adhesiveCurveID = le_adhesive_curve_ids[1][0]
             offset_curve = lpOffset
 
-        print(f"lp_hp_side: {lp_hp_side} keyCurve {keyCurve}")
 
         v1, _ = selCurveVerts(keyCurve)
 
@@ -679,8 +678,6 @@ def make_cs_perimeter_layer_areas(wt_name,
     cs_params,
     thickness_scaling,
     lp_hp_side,
-    is_flatback,
-    te_angle,
     last_round_station,
     part_name_id,
     n_modeled_layers,
@@ -689,6 +686,11 @@ def make_cs_perimeter_layer_areas(wt_name,
     materials_used,
 ):
     part_name = lp_hp_side + "shell"
+    
+    if i_station > last_round_station:
+        is_flatback = True
+    else:
+        is_flatback = False
 
     # Assumes that #HP side is made first
     if lp_hp_side.lower() == "hp":
@@ -913,11 +915,6 @@ def make_cs_perimeter_layer_areas(wt_name,
                             temp
                         )
 
-                        print(f"begin_layer_taper_vertex_id {begin_layer_taper_vertex_id}")
-                        print(
-                            f"base_curve_id_copy{base_curve_id_copy} top_bounding_curve {top_bounding_curve}"
-                        )
-
                         moment_arm = np.array(temp) - np.array(
                             cubit.vertex(begin_layer_taper_vertex_id).coordinates()
                         )
@@ -1106,6 +1103,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             offset_sign_left_bottom_curve = print_offset_direction_check(
                 left_bottom_curve, lp_hp_side, cs_normal
             )
+
             offset_sign_right_bottom_curve = print_offset_direction_check(
                 right_bottom_curve, lp_hp_side, cs_normal
             )
@@ -1162,6 +1160,8 @@ def make_cs_perimeter_layer_areas(wt_name,
                     next_stack_curves[i_modeled_layers + 1]
                 )
             else:
+
+
                 cubit.cmd(
                     f"create curve offset curve {left_bottom_curve} distance {offset_sign_left_bottom_curve*current_stackOffset} extended"
                 )
@@ -1169,7 +1169,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 [top_left_vertex_curve_left, top_right_vertex_curve_left] = selCurveVerts(
                     get_last_id("curve")
                 )
-
+                
                 offset_curve_and_combine_fragments_if_needed(
                     right_bottom_curve, offset_sign_right_bottom_curve * next_stack_offset
                 )
@@ -1181,7 +1181,7 @@ def make_cs_perimeter_layer_areas(wt_name,
 
             if i_perimeter == last_perimeter:
                 curve_start_or_end = "end"
-                print(f"i_perimeter {i_perimeter}")
+                
                 last_offset_curve = extend_curve_past_curve_and_trim(
                     last_offset_curve,
                     curve_start_or_end,
@@ -1533,7 +1533,6 @@ def make_a_cross_section(wt_name,
     cs_params,
     geometry_scaling,
     thickness_scaling,
-    is_flatback,
     last_round_station,
     materials_used,
     cs_normal,
@@ -1542,6 +1541,11 @@ def make_a_cross_section(wt_name,
     stackdb = blade.stackdb
     keypoints = blade.keypoints
     
+    if i_station > last_round_station:
+        is_flatback=True
+    else:
+        is_flatback=False
+
     with open(f"{wt_name}.log", "a") as logFile:
         logFile.write(f"Working on Station: {i_station}\n")
 
@@ -1564,9 +1568,6 @@ def make_a_cross_section(wt_name,
     flatback_vBot, _ = selCurveVerts(hp_key_curve)
     flatback_vTop, _ = selCurveVerts(lp_key_curve)
 
-    first_point = xyz[-2, :]
-    second_point = xyz[1, :]
-    flatback_length = np.linalg.norm(second_point - first_point)
     
     flatbackCurve = cubit.create_curve(
         cubit.vertex(flatback_vBot), cubit.vertex(flatback_vTop)
@@ -1588,15 +1589,6 @@ def make_a_cross_section(wt_name,
         flatback_curve_id, extension_length, curve_start_or_end
     )
 
-
-    curve_fraction = 0
-    te_angle = get_te_angle(hp_key_curve, lp_key_curve, curve_fraction)
-    print(f"station {i_station}")
-    print(f"edgeLength={flatback_length*1000}")
-    print(cs_params)
-    print(f'athickness={cs_params["te_adhesive_thickness"][i_station]*1000}')
-    print(f'te_adhesive_width {cs_params["te_adhesive_width"][i_station]*1000}')
-    print(f"te_angle {te_angle}")
     if is_flatback:
         # Crate camber line
         offset_distance = 0
@@ -1801,7 +1793,6 @@ def make_a_cross_section(wt_name,
 
         #cs_params["round_te_adhesive_fractions_for_flatback"]=[]
 
-    print(f'camberID length: {cubit.curve(camberID).length()} te_angle {te_angle}')
     # Extend
     curve_start_or_end = "start"
     extension_length = 0.5 * cubit.curve(camberID).length()
@@ -1856,8 +1847,6 @@ def make_a_cross_section(wt_name,
         cs_params,
         thickness_scaling,
         lp_hp_side,
-        is_flatback,
-        te_angle,
         last_round_station,
         part_name_id,
         n_modeled_layers,
@@ -1876,8 +1865,6 @@ def make_a_cross_section(wt_name,
         cs_params,
         thickness_scaling,
         lp_hp_side,
-        is_flatback,
-        te_angle,
         last_round_station,
         part_name_id,
         n_modeled_layers,
