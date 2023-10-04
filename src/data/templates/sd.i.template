@@ -1,0 +1,33 @@
+// Sierra/SD blank input
+   
+SOLUTION
+   case 'myEigen'
+   eigen
+   nmodes = 10
+END
+
+file
+    geometry_file 'IN_MESH'
+end
+
+BLADE_BLOCKS
+
+
+
+outputs
+    disp
+    stress
+    eorient
+    material_direction_1
+    material_direction_2
+    material_direction_3
+end
+   
+BLADE_MATERIALS
+
+boundary
+   nodeset root
+   fixed
+   nodeset tip
+   z=-10.5
+end

@@ -11,7 +11,7 @@ from pynumad.utils.interpolation import interpolator_wrap
 from pynumad.shell.surface import Surface
 from pynumad.shell.mesh3d import Mesh3D
 from pynumad.shell.shell_region import ShellRegion
-from pynumad.analysis.ansys.write import writeAnsysShellModel
+#from pynumad.analysis.ansys.write import writeAnsysShellModel
 
 
 def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
@@ -572,59 +572,6 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
 
     return shellData
 
-
-def generateShellModel(blade, feaCode, includeAdhesive, meshData=None):
-    # This method generates a shell FEA model in one of the supported FEA codes; w/ or w/o adhesieve
-
-    if str(feaCode.lower()) == str("ansys"):
-        ansysPath = pynumad.path_data["ansysPath"]
-        # define ANSYS model settings (can be options in generateFEA)
-        config = {}
-        config["BoundaryCondition"] = "cantilevered"
-        config["elementType"] = "181"
-        config["MultipleLayerBehavior"] = "multiply"
-        config["dbgen"] = 1
-        config["dbname"] = "master"
-        # Generate a mesh using shell elements
-        APDLname = "buildAnsysShell.src"
-        ansys_product = "ANSYS"
-        blade.paths["job"] = getcwd()
-        filename = join(blade.paths["job"], APDLname)
-        if not meshData:
-            forSolid = 0
-            meshData = shell_mesh_general(blade, forSolid, includeAdhesive)
-
-        writeAnsysShellModel(blade, filename, meshData, config)
-        if config["dbgen"]:
-            assert (
-                not len(ansysPath) == 0
-            ), "Path to ANSYS not specified. Aborting. Operation Not Permitted"
-            try:
-                # tcl: exec "$ANSYS_path" -b -p $AnsysProductVariable -I shell7.src -o output.txt
-                ansys_call = '"%s" -b -p %s -I %s -o output.txt' % (
-                    ansysPath,
-                    ansys_product,
-                    APDLname,
-                )
-                process = subprocess.run(ansys_call, shell=True)
-                # if status==0:
-                #     # dos command completed successfully; log written to output.txt
-                #     if 1:
-                #         print('ANSYS batch run to generate database (.db) has completed. See "output.txt" for any warnings.')
-                #     else:
-                #         print('ANSYS batch run to generate database (.db) has completed. See "output.txt" for any warnings.','ANSYS Call Completed')
-                # if status==7:
-                #     # an error has occured which is stored in output.txt
-                #     if 1:
-                #         print('Could not complete ANSYS call. See "output.txt" for details.')
-                #     else:
-                #         print('Could not complete ANSYS call. See "output.txt" for details.','Error: ANSYS Call')
-            finally:
-                pass
-    else:
-        raise Exception('FEA code "%s" not supported.', feaCode)
-
-    return meshData
 
 
 def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):

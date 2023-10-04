@@ -6,8 +6,8 @@ from pynumad.shell.shell import get_solid_mesh
 
 ## Read blade data from yaml file
 blade = pynu.Blade()
-fileName = join("example_data","blade.yaml")
-blade.read_yaml(fileName)
+file_name = join("example_data","blade.yaml")
+blade.read_yaml(file_name)
 
 ## Set the airfoil point resolution
 for stat in blade.definition.stations:

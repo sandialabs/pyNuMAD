@@ -7,8 +7,8 @@ from os.path import join
 from pynumad.shell.shell import get_shell_mesh
 
 blade = pynu.Blade()
-fileName = join("example_data","blade.yaml")
-blade.read_yaml(fileName)
+file_name = join("example_data","blade.yaml")
+blade.read_yaml(file_name)
 
 elementSize = 0.2
 adhes = 1

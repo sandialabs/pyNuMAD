@@ -152,9 +152,9 @@ class Blade:
         x0 = self.ispan
 
         if span_location < self.ispan[-1] and span_location > 0:
-            for iSpan, spanLocation in enumerate(self.ispan[1:]):
+            for i_span, spanLocation in enumerate(self.ispan[1:]):
                 if span_location < spanLocation:
-                    insertIndex = iSpan + 1
+                    insertIndex = i_span + 1
                     break
         else:
             raise ValueError(

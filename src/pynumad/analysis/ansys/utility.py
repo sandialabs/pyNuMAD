@@ -92,10 +92,10 @@ def getMatrialLayerInfoWithOutGUI(blade):
         if not np.any(n):
             raise Exception('Material "%s" not found in database.', compsInModel[kcomp])
         mat = blade.matdb[n]
-        layerNames = []
+        layer_names = []
         for klay in range(mat.layer.size):
-            layerNames.bladeend(np.array([mat.layer(klay).layerName]))
-        isoorthoInModel = np.unique(np.array([[isoorthoInModel], [layerNames]]))
+            layer_names.bladeend(np.array([mat.layer(klay).layer_name]))
+        isoorthoInModel = np.unique(np.array([[isoorthoInModel], [layer_names]]))
 
     return isoorthoInModel, compsInModel, skin_areas, blade
 
@@ -182,15 +182,15 @@ def postprocessANSYSfatigue(blade, meshData, wt, rccdata, IEC, loadsTable, confi
         MrTheta = loadsTableTheta.input.Mrb
         MrThetaPlus90 = loadsTableThetaPlus90.input.Mrb
         plotFatigue = []
-        fileNameTheta = "plateStrains-all-" + str(kTheta) + ".txt"
-        fileNameThetaPlus90 = "plateStrains-all-" + str(kTheta + nSpace) + ".txt"
-        print(fileNameTheta)
-        print(fileNameThetaPlus90)
+        file_nameTheta = "plateStrains-all-" + str(kTheta) + ".txt"
+        file_nameThetaPlus90 = "plateStrains-all-" + str(kTheta + nSpace) + ".txt"
+        print(file_nameTheta)
+        print(file_nameThetaPlus90)
         # Used for reading element stresses
         pat = "ELEM\s*ZCENT\s*EPS11\s*EPS22\s*EPS12\s*KAPA11\s*KAPA22\s*KAPA12\s*GAMMA13\s*GAMMA23"
         NCOLS = 10
-        plateStrainsTheta = readANSYSElementTable(fileNameTheta, pat, NCOLS)
-        plateStrainsThetaPlus90 = readANSYSElementTable(fileNameThetaPlus90, pat, NCOLS)
+        plateStrainsTheta = readANSYSElementTable(file_nameTheta, pat, NCOLS)
+        plateStrainsThetaPlus90 = readANSYSElementTable(file_nameThetaPlus90, pat, NCOLS)
         for i in range(nSegments):
             iSegment = np.where(
                 segmentNamesReference == config.analysisFlags.fatigue[i]
@@ -202,10 +202,10 @@ def postprocessANSYSfatigue(blade, meshData, wt, rccdata, IEC, loadsTable, confi
                     title = config.analysisFlags.fatigue[i]
                     __, nSpanRegions = meshData.outerShellElSets.shape
                     elementList = []
-                    for iSpan in range(nSpanRegions):
+                    for i_span in range(nSpanRegions):
                         elementList = [
                             elementList,
-                            meshData.outerShellElSets[iSegment, iSpan].elementList,
+                            meshData.outerShellElSets[iSegment, i_span].elementList,
                         ]
                 else:
                     title = "Webs"
@@ -213,11 +213,11 @@ def postprocessANSYSfatigue(blade, meshData, wt, rccdata, IEC, loadsTable, confi
                     elementList = []
                     for iWeb in range(nWebs):
                         __, nSpanRegions = meshData.shearWebElSets[iWeb].shape
-                        for iSpan in range(nSpanRegions):
+                        for i_span in range(nSpanRegions):
                             elementList = np.array(
                                 [
                                     elementList,
-                                    meshData.shearWebElSets[iWeb][iSpan].elementList,
+                                    meshData.shearWebElSets[iWeb][i_span].elementList,
                                 ]
                             )
                 plateStrainsThetaSet = plateStrainsTheta[elementList, :]
@@ -363,7 +363,7 @@ def getLoadFactorsForElementsWithSameSection(
         # Locate the face sheet
         cellMat = np.array([])
         for i in range(len(mat.layer)):
-            cellMat = np.array([[cellMat], [np.array([mat.layer[i].layerName])]])
+            cellMat = np.array([[cellMat], [np.array([mat.layer[i].layer_name])]])
 
         kbalsa = np.find(str(coreMatName) == str(cellMat))
         iLayer = np.arange(1, (kbalsa - 1) + 1)
@@ -418,11 +418,11 @@ def getLoadFactorsForElementsWithSameSection(
                     * mat.layer(iLayer(klay)).quantity
                 )
                 matklay = app.matdb(
-                    np.find(str(mat.layer(iLayer(klay)).layerName) == str(app.matlist))
+                    np.find(str(mat.layer(iLayer(klay)).layer_name) == str(app.matlist))
                 )
                 # Bulid Plane Stress reduced compliance matrix for each
                 # layer
-                # fprintf('z1 = #f z2 = #f mat = #f   #s\n',z1,z2,matListnumber,mat.layer(klay).layerName)
+                # fprintf('z1 = #f z2 = #f mat = #f   #s\n',z1,z2,matListnumber,mat.layer(klay).layer_name)
                 # Entries common to either isotropic or orthotropic entries
                 Se = np.zeros((3, 3))
                 Se[1, 1] = 1 / matklay.ex
