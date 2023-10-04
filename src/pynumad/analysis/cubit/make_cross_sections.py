@@ -153,14 +153,23 @@ def removeBadTEgeometry(blade, i_station, curve_id, flatback_curve_id):
     return get_last_id("curve")
 
 
-def print_offset_direction_check(curve_id, lp_hp_side, cs_normal):
+def get_curve_offset_direction(curve_id, lp_hp_side, cs_normal):
     # This function is used to determine which way a curve offset will go. This is needed, for example,
     # to make sure the outer mold line curve is being offset towrads the interior of the blade.
     tol = 0.01
-    cubit.cmd(f"create curve offset curve {curve_id} distance 0.0001")
-    tempCurveID = get_last_id("curve")
-    cubit.cmd(f"create surface skin curve {curve_id} {tempCurveID}")
-    cubit.cmd(f"delete curve {tempCurveID}")
+    cubit.cmd(f"create curve offset curve {curve_id} distance 0.0005")
+    temp_id = get_last_id("curve")
+
+    n_start = get_last_id("surface")   
+    cubit.cmd(f"create surface skin curve {curve_id} {temp_id}")
+    n_end = get_last_id("surface")
+    
+    if n_end - n_start==0:
+      cubit.cmd(f'save as "Debug.cub" overwrite')
+      raise Exception(
+            f"Offset direction for curve {curve_id} was not able to be found due to failed skin curve operation.")
+    
+    cubit.cmd(f"delete curve {temp_id}")
     n = get_surface_normal(get_last_id("surface"))
     if (
         abs(n[0] - cs_normal[0]) < tol
@@ -700,7 +709,7 @@ def make_cs_perimeter_layer_areas(wt_name,
         lp_hp_side_index = 1
         camber_offsetSign = -1
 
-    offset_sign_camberID = print_offset_direction_check(
+    offset_sign_camberID = get_curve_offset_direction(
         lp_hp_dict["camberID"], "LP", cs_normal
     )
 
@@ -815,7 +824,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             # Base curve copy
             cubit.cmd(f"curve {left_bottom_curve} copy")
             base_curve_id_copy = get_last_id("curve")
-            offset_sign_base_curve_id_copy = print_offset_direction_check(
+            offset_sign_base_curve_id_copy = get_curve_offset_direction(
                 base_curve_id_copy, lp_hp_side, cs_normal
             )
 
@@ -874,7 +883,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 f'trim curve {top_bounding_curve} atintersection curve {lp_hp_dict["flatback_curve_id"]} keepside vertex {v1}'
             )
             top_bounding_curve = get_last_id("curve")
-            offset_sign_top_bounding_curve = print_offset_direction_check(
+            offset_sign_top_bounding_curve = get_curve_offset_direction(
                 top_bounding_curve, lp_hp_side, cs_normal
             )
 
@@ -972,7 +981,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             )
             camber_offset = get_last_id("curve")
 
-            offset_sign_top_bounding_curve = print_offset_direction_check(
+            offset_sign_top_bounding_curve = get_curve_offset_direction(
                 top_bounding_curve, lp_hp_side, cs_normal
             )
 
@@ -1048,7 +1057,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             next_stack_curves = []
             cubit.cmd(f"curve {right_bottom_curve} copy")
             base_curve_id_copy = get_last_id("curve")
-            offset_sign_base_curve_id_copy = print_offset_direction_check(
+            offset_sign_base_curve_id_copy = get_curve_offset_direction(
                 base_curve_id_copy, lp_hp_side, cs_normal
             )
             next_stack_curves.append(base_curve_id_copy)
@@ -1085,7 +1094,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             cubit.cmd(f'delete curve {get_last_id("curve")-1}')
             next_stack_curves.append(top_bounding_curve)
 
-            offset_sign_top_bounding_curve = print_offset_direction_check(
+            offset_sign_top_bounding_curve = get_curve_offset_direction(
                 top_bounding_curve, lp_hp_side, cs_normal
             )
 
@@ -1100,11 +1109,11 @@ def make_cs_perimeter_layer_areas(wt_name,
             current_stackOffset = current_stack_layer_thicknesses[i_modeled_layers]
             next_stack_offset = next_stack_layer_thicknesses[i_modeled_layers]
 
-            offset_sign_left_bottom_curve = print_offset_direction_check(
+            offset_sign_left_bottom_curve = get_curve_offset_direction(
                 left_bottom_curve, lp_hp_side, cs_normal
             )
 
-            offset_sign_right_bottom_curve = print_offset_direction_check(
+            offset_sign_right_bottom_curve = get_curve_offset_direction(
                 right_bottom_curve, lp_hp_side, cs_normal
             )
 
@@ -1301,7 +1310,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 lp_hp_dict["spar_cap_base_curves"][lp_hp_side_index]
             ):
                 bottom_curve = current_curveID
-                offSetSign = print_offset_direction_check(
+                offSetSign = get_curve_offset_direction(
                     bottom_curve, lp_hp_side, cs_normal
                 )
 
@@ -1427,7 +1436,7 @@ def make_cs_web_layer_areas(
         else:
             lp_hp_side = "LP"
         for i_curve, bottom_curve in enumerate(curveList):
-            offSetSign = print_offset_direction_check(
+            offSetSign = get_curve_offset_direction(
                 bottom_curve, lp_hp_side, cs_normal
             )
 
