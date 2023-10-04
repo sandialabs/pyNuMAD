@@ -15,8 +15,9 @@ def set_path(path_label, path):
     ----------
     path_label : str
         Label of the path to be set.
-            - "cubit" : path to X
-            - "ansys" : path to X
+            - "cubit"
+            - "cubit_enhancements"
+            - "ansys"
     path : str
         Value to set label as
     """
