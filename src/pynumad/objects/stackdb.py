@@ -270,7 +270,7 @@ class Stack:
 
         return self
 
-    def layerThicknesses(self) -> ndarray:
+    def layer_thicknesses(self) -> ndarray:
         """Computes the thickness of each layer
 
         Returns:

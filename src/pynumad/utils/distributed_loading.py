@@ -7,7 +7,6 @@ import numpy as np
 from pynumad.analysis.ansys.read import *
 from pynumad.utils.fatigue import *
 from pynumad.utils.interpolation import *
-from pynumad.analysis.ansys.write import *
 
 
 def spread_concentrated_loads(nodeData, loads, maptype = 'map3D_fxM0'):
@@ -238,14 +237,8 @@ def map3D_fxM0(nodeData, loads):
     mesh["x"] = nodeData[:,1]
     mesh["y"] = nodeData[:,2]
     mesh["z"] = nodeData[:,3]
-    # aero.Z = forces{1};
-    # aero.Fx = forces{2};
-    # aero.Fy = forces{3};
-    # aero.M = forces{4};
-    # aero.alpha = forces{5};
-    # aero.xoff = forces{6};
-    # aero.yoff = forces{7};
-    
+
+
     # divide nodes into spanwise groups
     bin = np.zeros(mesh["n"].shape)
     
@@ -263,9 +256,9 @@ def map3D_fxM0(nodeData, loads):
     forcemap["bin"] = bin
     forcemap["fx"] = np.zeros(mesh["n"].shape)
     forcemap["fy"] = np.zeros(mesh["n"].shape)
-    ## EMA added:
+
     forcemap["fz"] = np.zeros(mesh["n"].shape)
-    ## END
+
     for bk in range(len(loads["Fxb"])):
         i = np.where(bin == bk)[0]
         N = len(i)
@@ -278,21 +271,10 @@ def map3D_fxM0(nodeData, loads):
         mxx = np.mean(x ** 2)
         myy = np.mean(y ** 2)
         mzz = np.mean(z ** 2)
-        #mxy = np.mean(x.*y);
+
         mzx = np.mean(np.multiply(z,x))
         mzy = np.mean(np.multiply(z,y))
-        ## Original
-        #     A = [mz,   my,   1,   0,   0,   0;
-        #         0,    0,    0,   mz,  mx,  1;
-        #         0,    0,    0,   mzx, mxx, mx;
-        #         -mzy, -myy, -my,  0,   0,   0;
-        #         0,    0,    0,   mzz, mzx, mz;
-        #         mzz,  mzy,  mz,  0,   0,   0];
-        #     F = 1/N * [aero.Fx[bk]; aero.Fy[bk]; aero.M[bk]; 0; ...
-        #         aero.Z[bk]*aero.Fy[bk]; aero.Z[bk]*aero.Fx[bk]];
-        #     abc = A\F;
-        ## Changed to:
-        ## Add/modify equations to include forces in the Z-direction.
+
         A = np.array([[mz,my,1,0,0,0,0],
                       [0,0,0,mz,mx,1,0],
                       [0,0,0,0,0,0,1],
@@ -310,12 +292,11 @@ def map3D_fxM0(nodeData, loads):
             loads["rBlade"][bk] * loads["Fxb"][bk]
             ])
         abc = np.linalg.solve(A,F)
-        ## END
+
         forcemap["fx"][i] = abc[0] * z + abc[1] * y + abc[2]
         forcemap["fy"][i] = abc[3] * z + abc[4] * x + abc[5]
-        ## EMA added:
         forcemap["fz"][i] = abc[6]
-        ## END
+
     
     return forcemap
     

@@ -233,9 +233,9 @@ def get_airfoil_normals(coordinates) -> ndarray:
 
     nPoints = coordinates.shape[0]
     unitNormals = np.zeros((nPoints - 1, 2))
-    for iPoint in range(nPoints - 1):
-        currentPoint = coordinates[iPoint, :]
-        nextPoint = coordinates[iPoint + 1, :]
+    for i_point in range(nPoints - 1):
+        currentPoint = coordinates[i_point, :]
+        nextPoint = coordinates[i_point + 1, :]
         r = nextPoint - currentPoint  # Postion vector from currentPoint to nextPoint
         if (np.abs(r[0]) + np.abs(r[1])) != 0:  # Skip if points are coincedint
             unitNorm = np.transpose(sp.linalg.null_space(r.reshape(1, -1)))
@@ -244,9 +244,9 @@ def get_airfoil_normals(coordinates) -> ndarray:
             )
             if crossProduct[2] < 0:
                 unitNorm = -unitNorm
-            unitNormals[iPoint, :] = unitNorm
+            unitNormals[i_point, :] = unitNorm
         else:
-            unitNormals[iPoint, :] = np.array([np.nan, np.nan])
+            unitNormals[i_point, :] = np.array([np.nan, np.nan])
 
     return unitNormals
 

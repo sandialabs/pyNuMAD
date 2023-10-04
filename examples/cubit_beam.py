@@ -31,37 +31,34 @@ def get_cs_params():
     totalStations = np.asarray(blade.ispan).size
 
 
-    rootAdhesiveThickness=0.001
-    tipAdhesiveThickness=0.001
-    teAdhesiveWidthPercentChord=5
-    adhesiveArray=np.linspace(rootAdhesiveThickness, tipAdhesiveThickness, num=totalStations)
+    root_adhesive_thickness=0.001
+    tip_adhesive_thickness=0.001
+    te_adhesive_width_percent_chord=5
+    adhesive_array=np.linspace(root_adhesive_thickness, tip_adhesive_thickness, num=totalStations)
 
-    cs_params['web_fore_adhesive_thickness'] = adhesiveArray
-    cs_params['web_aft_adhesive_thickness'] = adhesiveArray  
-    cs_params['LE_adhesive_thickness'] = adhesiveArray
-    cs_params['TE_adhesive_thickness'] = adhesiveArray
+    cs_params['web_fore_adhesive_thickness'] = adhesive_array
+    cs_params['web_aft_adhesive_thickness'] = adhesive_array  
+    cs_params['le_adhesive_thickness'] = adhesive_array
+    cs_params['te_adhesive_thickness'] = adhesive_array
     cs_params['web_adhesive_width']=np.zeros((totalStations,))
-    cs_params['TE_adhesive_width']=np.zeros((totalStations,))
+    cs_params['te_adhesive_width']=np.zeros((totalStations,))
     cs_params['max_web_imperfection_distance']=np.zeros((totalStations,))
-    cs_params['minimum_layer_transition_length']=np.zeros((totalStations,))
 
     #Spanwise varying parameters
-    thicknessScaling=0.001
-    geometryScaling=thicknessScaling*1000
-    for iStation in range(totalStations):
+    thickness_scaling=0.001
+    geometry_scaling=thickness_scaling*1000
+    for i_station in range(totalStations):
     
-        if blade.definition.leband[iStation]!=0.0 and cs_params['LE_adhesive_thickness'][iStation] > blade.definition.leband[iStation]*0.85/1000: #Adhesive thickness can't be greater than 85% of the LE band
-            raise ValueError(f'LE adhesive thickness of {cs_params["LE_adhesive_thickness"][iStation]} for station {iStation} is too large for the specified LE band width of {blade.definition.leband[iStation]/1000}.')
+        if blade.definition.leband[i_station]!=0.0 and cs_params['le_adhesive_thickness'][i_station] > blade.definition.leband[i_station]*0.85/1000: #Adhesive thickness can't be greater than 85% of the LE band
+            raise ValueError(f'LE adhesive thickness of {cs_params["le_adhesive_thickness"][i_station]} for station {i_station} is too large for the specified LE band width of {blade.definition.leband[i_station]/1000}.')
     
 
         #Adhesive width parameters
-        cs_params['web_adhesive_width'][iStation] = 0.03 * blade.geometry.ichord[iStation]
-        cs_params['TE_adhesive_width'][iStation] = teAdhesiveWidthPercentChord/100.0 * blade.geometry.ichord[iStation] * geometryScaling
+        cs_params['web_adhesive_width'][i_station] = 0.03 * blade.geometry.ichord[i_station]
+        cs_params['te_adhesive_width'][i_station] = te_adhesive_width_percent_chord/100.0 * blade.geometry.ichord[i_station] * geometry_scaling
         
-        cs_params['max_web_imperfection_distance'][iStation] = 0.0001 * blade.geometry.ichord[iStation] * geometryScaling
+        cs_params['max_web_imperfection_distance'][i_station] = 0.0001 * blade.geometry.ichord[i_station] * geometry_scaling
         
-        #Parameters that vary with span but are not part of the study 
-        cs_params['minimum_layer_transition_length'][iStation]=blade.geometry.ichord[iStation]*0.002*geometryScaling;
     return cs_params 
 
 blade=pynumad.Blade()
@@ -86,4 +83,4 @@ cubit_make_cross_sections(blade,wt_name,settings,cs_params,'2D',stationList=[],d
     
 
 mu=[0.00257593, 0.0017469,  0.0017469,  0.0017469,  0.00257593, 0.0017469]
-fileNames=write_beam_model(wt_name,settings,blade,mu,log,directory=dirName)
+file_names=write_beam_model(wt_name,settings,blade,mu,log,directory=dirName)

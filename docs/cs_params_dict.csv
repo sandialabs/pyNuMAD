@@ -1,5 +1,5 @@
 ﻿Key,Description
-``nel_per_layer``,"Type: Int. Number of intervals assigned to Cubit curves named ""layerThickness"""
+``nel_per_layer``,"Type: Int. Number of intervals assigned to Cubit curves named ""layer_thickness"""
 ``element_ar``,Currently unused
 ``element_shape``,"Type: str. Could be either ""quad"" or ""tri"""
 ``layer_transition_angle``,Type: float. Angle in degrees to connect adjacent componets with different thicknesses
@@ -8,9 +8,8 @@
 ``adhesive_mat_name``,Type: str. Name of adhesive material. Must match yaml file exacly.
 ``web_fore_adhesive_thickness``,Type: array. Adhesive thicknesses in meters. Array size must be the same size as blade.ispan.
 ``web_aft_adhesive_thickness``,Type: array. Adhesive thicknesses in meters. Array size must be the same size as blade.ispan.
-``LE_adhesive_thickness``,Type: array. Adhesive thicknesses in meters. Array size must be the same size as blade.ispan.
-``TE_adhesive_thickness``,Type: array. Adhesive thicknesses in meters. Array size must be the same size as blade.ispan.
+``le_adhesive_thickness``,Type: array. Adhesive thicknesses in meters. Array size must be the same size as blade.ispan.
+``te_adhesive_thickness``,Type: array. Adhesive thicknesses in meters. Array size must be the same size as blade.ispan.
 ``web_adhesive_width``,Type: array. Adhesive width in meters. Array size must be the same size as blade.ispan.
-``TE_adhesive_width``,Type: array. Adhesive width in meters. Array size must be the same size as blade.ispan.
+``te_adhesive_width``,Type: array. Adhesive width in meters. Array size must be the same size as blade.ispan.
 ``max_web_imperfection_distance``,Type: array. Web imperfection amplitude in meters.  Array size must be the same size as blade.ispan.
-``minimum_layer_transition_length``,Type: array. Overrides ``layer_transition_angle`` for the transitions between adjacent layers.  Array size must be the same size as blade.ispan.
