@@ -1,4 +1,4 @@
-.. _contributing:
+.. _reference:
 
 
 Reference
@@ -10,17 +10,21 @@ used throughout pyNuMAD documentation and code.
 Terminology
 -----------
 
-Airfoil
 
-Profile
+Profile/Airfoil: A 2D "slice" of an airfoil. In pyNuMAD, these terms
+are used interchangeably.
 
-Station
+Station: A station is an airfoil at a specified span location
 
-Stack
+Stack: A stack of material plys specified by types and thicknesses.
 
-Ply
+Ply: A ply material layer.
 
-Camber
+Camber:
+
+Keypoints:
+
+
 
 Abbreviations
 -------------
