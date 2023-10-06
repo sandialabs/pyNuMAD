@@ -141,7 +141,7 @@ def write_beamdyn_axis(directory, wt_name, blade,radial_stations):
     file.write('---------------------- OUTPUTS -------------------------------------------------\n')
     file.write('False          SumPrint       - Print summary data to "<RootName>.sum" (flag)\n')
     file.write('"ES10.3E2"    OutFmt         - Format used for text tabular output, excluding the time channel.\n')
-    file.write('          1   NNodeOuts      - Number of nodes to output to file [0 - 9] (-)\n')
+    file.write('          9   NNodeOuts      - Number of nodes to output to file [0 - 9] (-)\n')
     file.write('3, 6, 9, 12, 15, 18, 21, 24, 27    OutNd          - Nodes whose values will be output  (-)\n')
     file.write('          OutList            - The next line(s) contains a list of output parameters. See OutListParameters.xlsx for a listing of available output channels, (-)\n')
 
