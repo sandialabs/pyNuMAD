@@ -36,6 +36,9 @@ class SpatialGridList3D:
                 xList.append(yList)
             self.fullList.append(xList)
 
+    def getDim(self):
+        return [self.xGSz*self.xRows, self.yGSz*self.yRows, self.zGSz*self.zRows]
+
     def addEntry(self, val, coord):
         xRow = int(np.floor((coord[0] - self.xMin) / self.xGSz))
         yRow = int(np.floor((coord[1] - self.yMin) / self.yGSz))
