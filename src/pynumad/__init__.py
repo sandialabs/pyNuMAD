@@ -10,7 +10,7 @@ from pynumad import utils
 from pynumad import analysis
 from pynumad import graphics
 
-from pynumad.paths import SOFTWARE_PATHS, DATA_PATH
+from pynumad.paths import SOFTWARE_PATHS, DATA_PATH, set_path
 
 
 __version__ = "0.0.1"

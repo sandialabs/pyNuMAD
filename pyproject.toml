@@ -43,6 +43,9 @@ test = [
 #   "matplotlib >=2.0",
 # ]
 
+[tool.black]
+line-length = 140
+
 [project.urls]
 Homepage = "https://github.com/sandialabs/pynumad"
 # Documentation = "https://package.readthedocs.io/"

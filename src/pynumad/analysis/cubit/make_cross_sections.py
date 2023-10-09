@@ -1,5 +1,11 @@
-from cubit import *
-from PyCubed_Main import *
+import warnings
+
+try:
+    from cubit import *
+    from PyCubed_Main import *
+except ModuleNotFoundError:
+    warnings.warn("Cubit not configured, so cubit functionality will not be available.")
+
 import numpy as np
 import os
 
