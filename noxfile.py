@@ -18,7 +18,7 @@ def docs(session):
     """Generate documentation."""
     session.run("pip", "install", "-e", ".")
     session.install("sphinx")
-    session.install("sphinx_rtd_theme")
+    session.install("pydata_sphinx_theme")
     session.install("sphinxcontrib-bibtex")
     session.cd("docs/")
     session.run("make", "html")
