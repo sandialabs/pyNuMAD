@@ -45,10 +45,9 @@ def cubit_make_cross_sections(
     surface_dict: dict
         Keys are integers for the Cubit surface IDs for the cross sections. Each surface has
         it's own dictionary with the following keys: 'curves', 'verts', 'material_name', 'ply_angle'.
-        
         e.g. 
         >> surface_dict[9]
-            {'curves': [131, 164, 129, 163], 'verts': [500, 501, 497, 496], 'material_name': 'glass_triax', 'ply_angle': 0}
+        >>     {'curves': [131, 164, 129, 163], 'verts': [500, 501, 497, 496], 'material_name': 'glass_triax', 'ply_angle': 0}
 
     birds_mouth_verts: tuple
         Used internally.
