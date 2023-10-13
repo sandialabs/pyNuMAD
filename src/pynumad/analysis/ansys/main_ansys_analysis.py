@@ -200,8 +200,8 @@ def main_ansys_analysis(
         ## ************************************************************************
         # ================= READ STRESS RESULTANTS   =================
         if flags['resultants']:
-            fileName = 'results_resultants.txt'
-            results['resultants'][iLoad] = txt2mat(fileName)
+            file_name = 'results_resultants.txt'
+            results['resultants'][iLoad] = txt2mat(file_name)
 
         ## ************************************************************************
         # ================= READ LINEAR BUCKLING RESULTS =================
@@ -253,8 +253,8 @@ def main_ansys_analysis(
         ## ************************************************************************
         # ================= READ FAILURE RESULTS   =================
         if flags['failure']:
-            fileName = failureFilename+'.txt'
-            results['failure'][iLoad] = read_1_ANSYSoutput(fileName)
+            file_name = failureFilename+'.txt'
+            results['failure'][iLoad] = read_1_ANSYSoutput(file_name)
             print('')
     
     ## ************************************************************************

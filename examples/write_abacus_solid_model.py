@@ -4,12 +4,28 @@ from os.path import join
 
 from pynumad.shell.shell import get_solid_mesh
 
+<<<<<<< HEAD
 print("Notice: example write_abacus_solid_model.py temporarily down for updates.  To be restored shortly.")
 
 # ## Read blade data from yaml file
 # blade = pynu.Blade()
 # fileName = join("example_data","blade.yaml")
 # blade.read_yaml(fileName)
+=======
+## Read blade data from yaml file
+blade = pynu.Blade()
+file_name = join("example_data","blade.yaml")
+blade.read_yaml(file_name)
+
+## Set the airfoil point resolution
+for stat in blade.definition.stations:
+    stat.airfoil.resample(n_samples=300)
+    
+blade.generate_geometry()
+nStations = blade.geometry.coordinates.shape[2]
+minTELengths = 0.001*np.ones(nStations)
+blade.expand_blade_geometry_te(minTELengths)
+>>>>>>> 49f8ed44f24fc91bdb28b2013a17e88e3c708ef5
 
 # ## Set the airfoil point resolution
 # for stat in blade.definition.stations:

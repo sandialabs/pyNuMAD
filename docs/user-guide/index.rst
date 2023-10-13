@@ -1,20 +1,22 @@
-.. _intro-user:
+.. _user-guide:
 
-##############
 User’s Guide
-##############
+============
 
 .. toctree::
    :maxdepth: 2
+   :caption: Get Started
    
-   getting_started.rst
-   operation_modes.rst
-   blade_definition.rst
-   examples.rst
-   running_numad.rst
-   aero_sim.rst
-   fea.rst
-   optimization.rst
-   gui_coupling.rst
-   conclusion.rst
-   classDefs.rst
+   overview
+   installation
+   getting-started
+
+.. toctree::
+   :maxdepth: 2
+   :caption: User Interface
+
+   blade_definition
+   meshing
+   beam_models
+   shell_models
+   solid_models

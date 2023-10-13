@@ -128,11 +128,16 @@ Note that "cub" files are only needed if you want to visualize your model in Cub
 that are needed by the Sierra codes. 
 
 
-Troubleshooting issues with Cubit meshing is facilitated by "make_blade.log". There you will generally 
+Troubleshooting issues with Cubit meshing is facilitated by "{wt_name}.log". There you will generally 
 be able to see what parts of the blade have been created and where the code stopped.
 
+**Log File**
+A log file is generated that communicates progress. Warning messages are also stored here. Check this file for 
+troubleshooting.
 
-
+**Limitations**
+The adhesive width must not exceed the width of the reinforcement. If it does it will be reduced. A warning will be written 
+to the log file.
 
 
 

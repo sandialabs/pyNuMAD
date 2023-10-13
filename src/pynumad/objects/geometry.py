@@ -352,7 +352,7 @@ class Geometry:
             first_point = self.ichord[i_station] * self.profiles[-2, :, i_station]
             second_point = self.ichord[i_station] * self.profiles[1, :, i_station]
             edge_length = np.linalg.norm(second_point - first_point)
-            # fprintf('station #i, edgeLength: #f\n',iStation,edgeLength*1000)
+            # fprintf('station #i, edgeLength: #f\n',i_station,edgeLength*1000)
 
             maxthick = np.amax(self.ithickness[:, i_station])
             mtindex = np.argmax(self.ithickness[:, i_station])
@@ -388,10 +388,10 @@ class Geometry:
                 mtindex = np.argmax(self.ithickness[:, i_station])
                 self.xoffset[0, i_station] = self.ic[mtindex, i_station]
                 self.update_oml_geometry(i_station)
-                # firstPoint=self.ichord(iStation)*self.profiles(end-1,:,iStation);
-                # secondPont=self.ichord(iStation)*self.profiles(2,:,iStation);
-                # edgeLength2=norm(secondPont-firstPoint);
-                # fprintf('station #i, edgeLength: #f, New edgeLength=#f, percent diff: #f\n',iStation,edgeLength*1000,edgeLength2*1000,(edgeLength2-edgeLength)/edgeLength2*100)
+                # first_point=self.ichord(i_station)*self.profiles(end-1,:,i_station);
+                # second_point=self.ichord(i_station)*self.profiles(2,:,i_station);
+                # edgeLength2=norm(second_point-first_point);
+                # fprintf('station #i, edgeLength: #f, New edgeLength=#f, percent diff: #f\n',i_station,edgeLength*1000,edgeLength2*1000,(edgeLength2-edgeLength)/edgeLength2*100)
         return self
 
     def update_oml_geometry(self, k):

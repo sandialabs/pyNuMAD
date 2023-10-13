@@ -1,12 +1,12 @@
 import numpy as np
 from pynumad.utils.interpolation import interpolator_wrap
 import os
-def readVABShomogenization(fileName):
+def readVABShomogenization(file_name):
 
 
     #Stiffness
     beam_stiff=np.zeros((6,6))
-    with open(fileName) as f:
+    with open(file_name) as f:
         lines=f.readlines()
         
     for lineNumber,line in enumerate(lines):
@@ -45,9 +45,9 @@ def transformMatrixToBeamDyn(beam_stiff,beam_inertia):
     
     nStations, _,_=np.shape(beam_stiff)
 
-    for iStation in range(nStations):
-        beam_stiff[iStation,:,:]=trsf_sixbysix(beam_stiff[iStation,:,:], T)
-        beam_inertia[iStation,:,:]=trsf_sixbysix(beam_inertia[iStation,:,:], T)
+    for i_station in range(nStations):
+        beam_stiff[i_station,:,:]=trsf_sixbysix(beam_stiff[i_station,:,:], T)
+        beam_inertia[i_station,:,:]=trsf_sixbysix(beam_inertia[i_station,:,:], T)
    
     return(beam_stiff,beam_inertia)
 
@@ -235,7 +235,7 @@ def write_beamdyn_prop(folder, wt_name, radial_stations, beam_stiff, beam_inerti
     return propFileName
 
 
-def writeBeamDynStandAlone(fileNames,disrLoads,tipLoads,directory='.'):
+def writeBeamDynStandAlone(file_names,disrLoads,tipLoads,directory='.'):
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -244,14 +244,14 @@ def writeBeamDynStandAlone(fileNames,disrLoads,tipLoads,directory='.'):
 
     templateFileName='beamDynStandAlone.template'
     
-    analysisFileName=fileNames[0]+'_driver.inp'
+    analysisFileName=file_names[0]+'_driver.inp'
 
-    pathName=directory+'/'+analysisFileName
+    path_name=directory+'/'+analysisFileName
 
 
 
     
-    copy_and_replace(templateFileName, pathName,
+    copy_and_replace(templateFileName, path_name,
         {
             'DISTRLOAD1' : str(disrLoads[0]),
             'DISTRLOAD2' : str(disrLoads[1]),
@@ -265,7 +265,7 @@ def writeBeamDynStandAlone(fileNames,disrLoads,tipLoads,directory='.'):
             'TIPLOAD4' : str(tipLoads[3]),
             'TIPLOAD5' : str(tipLoads[4]),
             'TIPLOAD6' : str(tipLoads[5]),
-            'AXIS FILE NAME': fileNames[0],
+            'AXIS FILE NAME': file_names[0],
         })
     return analysisFileName
 

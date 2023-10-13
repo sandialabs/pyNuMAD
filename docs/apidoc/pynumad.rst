@@ -17,6 +17,6 @@ Subpackages
     pynumad.objects
     pynumad.utils
     pynumad.io
+    pynumad.graphics
     pynumad.analysis.cubit
-
-
+    pynumad.analysis.ansys

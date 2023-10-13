@@ -1,9 +1,6 @@
-{"numadPath" : "",
-"ansysPath" : "",
-"cubit" : "",
-"cubitEnhancements" : "",
-"openFast" : "",
-"crunchPath" : "",
-"turbsimPath" :"",
-"iecwindPath" :"",
-"mbcPath" :""}
+{
+    "numad": "",
+    "ansys": "",
+    "cubit": "",
+    "cubit_enhancements": ""
+}

@@ -70,7 +70,7 @@ def writeAnsysFagerberWrinkling(app, SkinAreas, compsInModel, coreMatName):
             #the sandwhich panels)
             n = str(SkinAreas[kStation].Material[kArea]) == str(app.matlist)
             mat = app.matdb(n)
-            if coreMatName in mat.layer.layerName:
+            if coreMatName in mat.layer.layer_name:
                 ansysSecNumber = np.where(str(SkinAreas[kStation].Material[kArea]) == str(compsInModel))
                 file = 'section-'+str(ansysSecNumber)+'-faceAvgStresses.txt'
                 avgFaceStress = txt2mat(file)
@@ -81,7 +81,7 @@ def writeAnsysFagerberWrinkling(app, SkinAreas, compsInModel, coreMatName):
     for kShearweb in range(TotalShearwebs):
         n = str(app.shearweb(kShearweb).Material) == str(app.matlist)
         mat = app.matdb(n)
-        if coreMatName in mat.layer.layerName:
+        if coreMatName in mat.layer.layer_name:
             ansysSecNumber = np.where(str(app.shearweb(kShearweb).Material) == str(compsInModel))
             file = 'section-'+str(ansysSecNumber + 1000)+'-faceAvgStresses.txt'
             avgFaceStress = txt2mat(file)
@@ -144,7 +144,7 @@ def writeAnsysGetFaceStresses(blade, fid, coreMatName):
             #the sandwhich panels)
             n = str(SkinAreas[kStation].Material[kArea]) == str(app.matlist)
             mat = app.matdb[n]
-            if coreMatName in mat.layer.layerName:
+            if coreMatName in mat.layer.layer_name:
                 ansysSecNumber = np.where(str(SkinAreas[kStation].Material[kArea]) == str(compsInModel))
                 writeANSYSinputFile(fid,mat,ansysSecNumber,coreMatName)
     
@@ -159,7 +159,7 @@ def writeAnsysGetFaceStresses(blade, fid, coreMatName):
     for kShearweb in range(TotalShearwebs):
         n = str(app.shearweb[kShearweb].Material) == str(app.matlist)
         mat = app.matdb[n]
-        if coreMatName in mat.layer.layerName:
+        if coreMatName in mat.layer.layer_name:
             ansysSecNumber = np.where(str(app.shearweb[kShearweb].Material) == str(compsInModel))
             ansysSecNumber = ansysSecNumber + 1000
             writeANSYSinputFile(fid,mat,ansysSecNumber,coreMatName)
@@ -173,7 +173,7 @@ def writeANSYSinputFile(fid, mat, ansysSecNumber, coreMatName):
     #####Find the face sheet####
     cellMat = np.array([])
     for i in range(len(mat.layer)):
-        cellMat = np.array([[cellMat],[np.array([mat.layer(i).layerName])]])
+        cellMat = np.array([[cellMat],[np.array([mat.layer(i).layer_name])]])
     
     kbalsa = np.where(str(coreMatName) == str(cellMat))
     iLayer = np.arange(0,(kbalsa - 1))
@@ -806,8 +806,8 @@ def write_ansys_shell_model(blade, meshData, config):
     fid.write('\n  ! tbdata,13,xzit,xzic,yzit,yzic')
     fid.write('\n  ! tbdata,17,g1g2,etal,etat,alp0\n')
 
-    for kmp, materialName in enumerate(blade.definition.materials):
-        mat = blade.definition.materials[materialName]
+    for kmp, material_name in enumerate(blade.definition.materials):
+        mat = blade.definition.materials[material_name]
         if mat.type == 'isotropic':
             fid.write('\n   ! %s' % (mat.name))
             fid.write('\n   mp,ex,%d,%g' % (kmp+1,mat.ex))

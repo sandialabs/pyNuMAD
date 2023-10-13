@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 
-def mesh_to_yaml(meshData, fileName):
+def mesh_to_yaml(meshData, file_name):
     """
     TODO docstring
     """
@@ -98,7 +98,7 @@ def mesh_to_yaml(meshData, fileName):
     outStream.close()
 
     inFile = open("temp.yaml", "r")
-    outFile = open(fileName, "w")
+    outFile = open(file_name, "w")
 
     fLine = inFile.readline()
     while fLine != "":
