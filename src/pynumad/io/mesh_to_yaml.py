@@ -25,6 +25,18 @@ def mesh_to_yaml(meshData, fileName):
             labels.append(int(el))
         newSet["labels"] = labels
         esList.append(newSet)
+    nsList = list()
+    try:
+        for ns in meshData["sets"]["node"]:
+            newSet = dict()
+            newSet["name"] = ns["name"]
+            labels = list()
+            for nd in ns["labels"]:
+                labels.append(int(nd))
+            newSet["labels"] = labels
+            nsList.append(newSet)
+    except:
+        pass
     sections = list()
     for sec in meshData["sections"]:
         newSec = dict()
@@ -36,14 +48,21 @@ def mesh_to_yaml(meshData, fileName):
                 laystr = str(lay)
                 newLayup.append(laystr)
             newSec["layup"] = newLayup
+            newSec["xDir"] = str(sec["xDir"])
+            newSec["xyDir"] = str(sec["xyDir"])
         else:
             newSec["material"] = sec["material"]
         sections.append(newSec)
+    elOri = list()
+    for ori in meshData["elementOrientations"]:
+        elOri.append(str(list(ori)))
+    
     mDataOut["nodes"] = nodes
     mDataOut["elements"] = elements
     mDataOut["sets"] = dict()
     mDataOut["sets"]["element"] = esList
     mDataOut["sections"] = sections
+    mDataOut["elementOrientations"] = elOri
     try:
         adNds = list()
         for nd in meshData["adhesiveNds"]:
@@ -56,8 +75,23 @@ def mesh_to_yaml(meshData, fileName):
         mDataOut["adhesiveNds"] = adNds
         mDataOut["adhesiveEls"] = adEls
         mDataOut["adhesiveElSet"] = meshData["adhesiveElSet"]
+        constraints = list()
+        for c in meshData["constraints"]:
+            terms = list()
+            for t in c["terms"]:
+                newTerm = dict()
+                newTerm["nodeSet"] = t["nodeSet"]
+                newTerm["node"] = int(t["node"])
+                newTerm["coef"] = float(t["coef"])
+                terms.append(newTerm)
+            newConst = dict()
+            newConst["terms"] = terms
+            newConst["rhs"] = c["rhs"]
+            constraints.append(newConst)
+        mDataOut["constraints"] = constraints
     except:
         pass
+    
 
     outStream = open("temp.yaml", "w")
     yaml.dump(mDataOut, stream=outStream, sort_keys=False)

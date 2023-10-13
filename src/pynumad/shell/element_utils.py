@@ -181,13 +181,12 @@ def spt_in_el(elType,sPt):
             return False
         return True
     if(elType == 'wedge6'):
-        sPt[0] = sPt[0] + 0.333333333333333
-        sPt[1] = sPt[1] + 0.333333333333333
-        if(sPt[0] < 0.0):
+        sO = sPt + 0.333333333333333
+        if(sO[0] < 0.0):
             return False
-        if(sPt[1] < 0.0):
+        if(sO[1] < 0.0):
             return False
-        if(sPt[1] > (1.0 - sPt[1])):
+        if(sO[1] > (1.0 - sO[0])):
             return False
         if(abs(sPt[2]) > 1.0):
             return False
@@ -199,13 +198,12 @@ def spt_in_el(elType,sPt):
             return False
         return True
     if(elType == 'shell3'):
-        sPt[0] = sPt[0] + 0.333333333333333
-        sPt[1] = sPt[1] + 0.333333333333333
-        if(sPt[0] < 0.0):
+        sO = sPt + 0.333333333333333
+        if(sO[0] < 0.0):
             return False
-        if(sPt[1] < 0.0):
+        if(sO[1] < 0.0):
             return False
-        if(sPt[1] > (1.0 - sPt[1])):
+        if(sO[1] > (1.0 - sO[0])):
             return False
         return True
     return False
@@ -236,6 +234,10 @@ def get_proj_dist(elCrd,elType,ptCrd):
         xVec = np.matmul(dxds,sVec)
         xDist = xDist - xVec
         dist = np.linalg.norm(xDist)
+    if(elType == 'wedge6'):
+        sVec[0:2] = sVec[0:2] + 0.333333333333333
+    elif(elType == 'shell3'):
+        sVec = sVec + 0.333333333333333
     nOut = get_el_basis(elType,sVec)
     projOut = dict()
     projOut['distance'] = dist

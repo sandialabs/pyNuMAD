@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class SpatialGridList2D:
+class spatial_grid_list2d:
     def __init__(self, minimumX, maximumX, minimumY, maximumY, xGridSize, yGridSize):
         self.xMin = minimumX
         self.yMin = minimumY

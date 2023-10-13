@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class SpatialGridList3D:
+class spatial_grid_list3d:
     def __init__(
         self,
         minimumX,

@@ -14,7 +14,23 @@ def get_direction_cosines(xDir,xyDir):
     dirCos = np.array([a1,a2,a3])
     return dirCos
 
-def get_mesh_spatial_list(nodes):
+def get_average_node_spacing(nodes,elements):
+    totDist = 0.0
+    ct = 0
+    for el in elements:
+        for ndi in el:
+            if(ndi > -1):
+                nd1 = nodes[ndi]
+                for ndi2 in el:
+                    if(ndi2 > -1 and ndi2 != ndi):
+                        nd2 = nodes[ndi2]
+                        vec = nd1 - nd2
+                        dist = np.linalg.norm(vec)
+                        totDist = totDist + dist
+                        ct = ct + 1
+    return totDist/ct
+
+def get_mesh_spatial_list(nodes,xSpacing=0,ySpacing=0,zSpacing=0):
     totNds = len(nodes)
     spaceDim = len(nodes[0])
 
@@ -35,10 +51,19 @@ def get_mesh_spatial_list(nodes):
         minY = minY - 0.01*meshDim
         maxZ = maxZ + 0.01*meshDim
         minZ = minZ - 0.01*meshDim
-        xSpacing = 0.5*(maxX - minX)/nto1_3
-        ySpacing = 0.5*(maxY - minY)/nto1_3
-        zSpacing = 0.5*(maxZ - minZ)/nto1_3
-        meshGL = SpatialGridList3D(minX,maxX,minY,maxY,minZ,maxZ,xSpacing,ySpacing,zSpacing)
+        if(xSpacing == 0):
+            xS = 0.5*(maxX - minX)/nto1_3
+        else:
+            xS = xSpacing
+        if(ySpacing == 0):
+            yS = 0.5*(maxY - minY)/nto1_3
+        else:
+            yS = ySpacing
+        if(zSpacing == 0):
+            zS = 0.5*(maxZ - minZ)/nto1_3
+        else:
+            zS = zSpacing
+        meshGL = spatial_grid_list3d(minX,maxX,minY,maxY,minZ,maxZ,xS,yS,zS)
         #tol = 1.0e-6*meshDim/nto1_3
     else:
         dimVec = np.array([(maxX-minX),(maxY-minY)])
@@ -47,9 +72,15 @@ def get_mesh_spatial_list(nodes):
         minX = minX - 0.01*meshDim
         maxY = maxY + 0.01*meshDim
         minY = minY - 0.01*meshDim
-        xSpacing = 0.5*(maxX - minX)/nto1_3
-        ySpacing = 0.5*(maxY - minY)/nto1_3
-        meshGL = SpatialGridList2D(minX,maxX,minY,maxY,xSpacing,ySpacing)
+        if(xSpacing == 0):
+            xS = 0.5*(maxX - minX)/nto1_2
+        else:
+            xS = xSpacing
+        if(ySpacing == 0):
+            yS = 0.5*(maxY - minY)/nto1_2
+        else:
+            yS = ySpacing
+        meshGL = spatial_grid_list2d(minX,maxX,minY,maxY,xS,yS)
         #tol = 1.0e-6*meshDim/nto1_2
     return meshGL
 
@@ -83,7 +114,7 @@ def mergeDuplicateNodes(meshData):
         xSpacing = 0.5 * (maxX - minX) / nto1_3
         ySpacing = 0.5 * (maxY - minY) / nto1_3
         zSpacing = 0.5 * (maxZ - minZ) / nto1_3
-        nodeGL = SpatialGridList3D(
+        nodeGL = spatial_grid_list3d(
             minX, maxX, minY, maxY, minZ, maxZ, xSpacing, ySpacing, zSpacing
         )
         tol = 1.0e-6 * meshDim / nto1_3
@@ -96,7 +127,7 @@ def mergeDuplicateNodes(meshData):
         minY = minY - 0.01 * meshDim
         xSpacing = 0.5 * (maxX - minX) / nto1_3
         ySpacing = 0.5 * (maxY - minY) / nto1_3
-        nodeGL = SpatialGridList2D(minX, maxX, minY, maxY, xSpacing, ySpacing)
+        nodeGL = spatial_grid_list2d(minX, maxX, minY, maxY, xSpacing, ySpacing)
         tol = 1.0e-6 * meshDim / nto1_2
 
     i = 0
@@ -211,10 +242,8 @@ def tie_2_meshes_constraints(tiedMesh,tgtMesh,maxDist):
     tiedNds = tiedMesh['nodes']
     tgtNds = tgtMesh['nodes']
     tgtEls = tgtMesh['elements']
-    elGL = getMeshSpatialList(tgtNds)
-    glDim = elGL.getDim()
-    mag = np.linalg.norm(glDim)
-    radius = mag/np.power(len(tgtNds),0.33333333)
+    radius = get_average_node_spacing(tgtNds,tgtEls)
+    elGL = get_mesh_spatial_list(tgtNds,radius,radius,radius)
     if(radius < maxDist):
         radius = maxDist
     ei = 0
@@ -245,6 +274,7 @@ def tie_2_meshes_constraints(tiedMesh,tgtMesh,maxDist):
                     elType = 'brick8'
             else:
                 pstr = 'Warning: encountered unsupported element type in tie2MeshesConstraints'
+                print(pstr)
             xC = []
             yC = []
             zC = []
@@ -254,10 +284,10 @@ def tie_2_meshes_constraints(tiedMesh,tgtMesh,maxDist):
                     yC.append(tgtNds[en,1])
                     zC.append(tgtNds[en,2])
             elCrd = np.array([xC,yC,zC])
-            pO = getProjDist(elCrd,elType,nd)
+            pO = get_proj_dist(elCrd,elType,nd)
             if(elType in solidStr):
                 if(pO['distance'] > 0.0):
-                    solidPO = getSolidSurfProj(elCrd,elType,nd)
+                    solidPO = get_solid_surf_proj(elCrd,elType,nd)
                     if(solidPO['distance'] < minDist):
                         minDist = solidPO['distance']
                         minPO = solidPO
@@ -320,10 +350,8 @@ def tie_2_sets_constraints(mesh,tiedSetName,tgtSetName,maxDist):
         tgtNdCrd.append(nodes[ni])
     tgtNdCrd = np.array(tgtNdCrd)
     
-    elGL = getMeshSpatialList(tgtNdCrd)
-    glDim = elGL.getDim()
-    mag = np.linalg.norm(glDim)
-    radius = mag/np.power(len(tgtNdCrd),0.33333333)
+    radius = get_average_node_spacing(nodes, elements)
+    elGL = get_mesh_spatial_list(tgtNdCrd,radius,radius,radius)
     if(radius < maxDist):
         radius = maxDist
     for ei in tgtSet:
@@ -364,7 +392,7 @@ def tie_2_sets_constraints(mesh,tiedSetName,tgtSetName,maxDist):
                     yC.append(nodes[en,1])
                     zC.append(nodes[en,2])
             elCrd = np.array([xC,yC,zC])
-            pO = getProjDist(elCrd,elType,nd)
+            pO = get_proj_dist(elCrd,elType,nd)
             if(elType in solidStr):
                 if(pO['distance'] > 0.0):
                     solidPO = getSolidSurfProj(elCrd,elType,nd)
