@@ -138,6 +138,8 @@ class StackDatabase:
         numSec, numStat = self.stacks.shape
         for i in range(numSec):
             for j in range(numStat):
+                if i==6 and j==29:
+                    print('')
                 pg = self.stacks[i, j].plygroups
                 if len(pg) == 4:
                     ply1 = deepcopy(pg[1])
@@ -158,8 +160,8 @@ class StackDatabase:
                         newPg = np.array([ply1, ply2, ply3])
                     else:
                         if len(pg) == 2:
-                            ply1 = deepcopy(pg[0])
-                            ply2 = deepcopy(pg[0])
+                            ply1 = deepcopy(pg[1])
+                            ply2 = deepcopy(pg[1])
                             ply3 = deepcopy(pg[1])
                             # newPg = np.array([pg[0],pg[0],pg[1]])
                             t1 = ply1.thickness
