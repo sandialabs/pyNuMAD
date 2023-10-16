@@ -73,9 +73,6 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
 ### Read inputs
     extension='K'
 
-    #geometry.ispan=np.delete(geometry.ispan,-2)  #TEMP Need to delete the added station near tip
-    #geometry.idegreestwist=np.delete(geometry.idegreestwist,-2)  #TEMP Need to delete the added station near tip
-
     radial_stations=geometry.ispan/geometry.ispan[-1]
     beam_stiff = np.zeros([len(radial_stations), 6, 6])
     beam_inertia = np.zeros([len(radial_stations), 6, 6])
