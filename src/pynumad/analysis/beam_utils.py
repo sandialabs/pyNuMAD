@@ -139,7 +139,7 @@ def write_beamdyn_axis(directory, wt_name, blade,radial_stations):
     file.write('      2E+07   PitchK      - Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]\n')
     file.write('     500000   PitchC      - Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]\n')
     file.write('---------------------- OUTPUTS -------------------------------------------------\n')
-    file.write('False          SumPrint       - Print summary data to "<RootName>.sum" (flag)\n')
+    file.write('True          SumPrint       - Print summary data to "<RootName>.sum" (flag)\n')
     file.write('"ES10.3E2"    OutFmt         - Format used for text tabular output, excluding the time channel.\n')
     file.write('          9   NNodeOuts      - Number of nodes to output to file [0 - 9] (-)\n')
     file.write('2,3, 6, 9, 12, 15, 18, 21, 50, 59    OutNd          - Nodes whose values will be output  (-)\n')
