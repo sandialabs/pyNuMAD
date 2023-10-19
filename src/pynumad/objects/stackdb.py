@@ -158,8 +158,8 @@ class StackDatabase:
                         newPg = np.array([ply1, ply2, ply3])
                     else:
                         if len(pg) == 2:
-                            ply1 = deepcopy(pg[0])
-                            ply2 = deepcopy(pg[0])
+                            ply1 = deepcopy(pg[1])
+                            ply2 = deepcopy(pg[1])
                             ply3 = deepcopy(pg[1])
                             # newPg = np.array([pg[0],pg[0],pg[1]])
                             t1 = ply1.thickness
