@@ -5,7 +5,7 @@ Release Notes
 
 .. _pyNuMADv0x:
 
-pyNuMAD 0.1
+pyNuMAD 1.0.0
 -----------
 
 Core functionality from previous versions of the NuMAD software
