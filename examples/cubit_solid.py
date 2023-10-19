@@ -2,7 +2,7 @@ import sys
 import pynumad
 
 sys.path.append(pynumad.SOFTWARE_PATHS['cubit'])
-sys.path.append(pynumad.SOFTWARE_PATHS['cubitEnhancements'])
+sys.path.append(pynumad.SOFTWARE_PATHS['cubit_enhancements'])
 
 import cubit
 from pynumad.analysis.cubit.make_blade import *
@@ -75,7 +75,7 @@ dirName='.'
 
 cs_params=get_cs_params()
 settings={}
-settings['make_input_for']='Sd'  #SM, VABS, ANBA, or None
+settings['make_input_for']='SmSd'  #SM, VABS, ANBA, or None
 settings['export']='cubg' #cub, g, or None
 
 materials_used=cubit_make_solid_blade(blade, wt_name, settings, cs_params, stationList=[2,3])

@@ -4,7 +4,7 @@ import subprocess
 import glob
 import numpy as np
 from pynumad.utils.misc_utils import copy_and_replace
-
+from pynumad.paths import SOFTWARE_PATHS
 
 def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
     import pynumad.analysis.beam_utils as beam_utils
@@ -31,7 +31,7 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
         for filePath in glob.glob(directory+'/'+wt_name+'*.in'):
             fileCount+=1
             try:
-                this_cmd = 'VABS ' +filePath
+                this_cmd = SOFTWARE_PATHS['vabs']+' ' +filePath
                 log.info(f' running: {this_cmd}')
 
                 licenseAvailable=False
@@ -73,9 +73,6 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
 ### Read inputs
     extension='K'
 
-    geometry.ispan=np.delete(geometry.ispan,-2)  #TEMP Need to delete the added station near tip
-    geometry.idegreestwist=np.delete(geometry.idegreestwist,-2)  #TEMP Need to delete the added station near tip
-
     radial_stations=geometry.ispan/geometry.ispan[-1]
     beam_stiff = np.zeros([len(radial_stations), 6, 6])
     beam_inertia = np.zeros([len(radial_stations), 6, 6])
@@ -103,7 +100,7 @@ def write_sierra_model(wt_name,settings,blade,materials_used,directory='.'):
 #     #Runs VABS or OpenSG to homogenize
 #     #Makes beamDyn or GEBT files
 
-
+    template_path=SOFTWARE_PATHS['pynumad']+'src/data/templates/'
 
     # radial_stations=blade.ispan/blade.ispan[-1]
     # nStations=len(radial_stations)
@@ -112,7 +109,7 @@ def write_sierra_model(wt_name,settings,blade,materials_used,directory='.'):
     materials = blade.definition.materials
     solver_string=settings['make_input_for'].lower()
     if 'sm' in solver_string or 'sd' in solver_string:
-        templateFileName='mat_ori.py.template'
+        templateFileName=template_path+'mat_ori.py.template'
         mat_ori_file_name='mat_ori.py'
 
         copy_and_replace(templateFileName, mat_ori_file_name,
@@ -121,7 +118,7 @@ def write_sierra_model(wt_name,settings,blade,materials_used,directory='.'):
             })
         if 'sm' in settings['make_input_for'].lower():
 
-            templateFileName='sm.i.template'
+            templateFileName=template_path+'sm.i.template'
             adagioFileName='sm.i'
 
             materialLines=f''
@@ -170,7 +167,7 @@ def write_sierra_model(wt_name,settings,blade,materials_used,directory='.'):
                     'BLADE_BLOCKS': blockLines,
                 })
         if 'sd' in settings['make_input_for'].lower():
-            templateFileName='sd.i.template'
+            templateFileName=template_path+'sd.i.template'
             adagioFileName='sd.i'
 
             materialLines=f''

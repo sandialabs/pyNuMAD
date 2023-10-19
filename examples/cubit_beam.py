@@ -2,14 +2,14 @@ import sys
 import pynumad
 
 sys.path.append(pynumad.SOFTWARE_PATHS['cubit'])
-sys.path.append(pynumad.SOFTWARE_PATHS['cubitEnhancements'])
+sys.path.append(pynumad.SOFTWARE_PATHS['cubit_enhancements'])
 
 import cubit
 from pynumad.analysis.cubit.make_blade import *
 import numpy as np
 
 from pynumad.analysis.make_models import write_beam_model
-
+import logging
 
 
 def get_cs_params():
@@ -75,12 +75,23 @@ dirName='.'
 
 cs_params=get_cs_params()
 settings={}
-settings['make_input_for']='VABS'  #SM, VABS, ANBA, or None
+settings['make_input_for']='VABSbeamdyn'  #SM, VABS, ANBA, or None
 settings['export']='cubg' #cub, g, or None
 
 
 cubit_make_cross_sections(blade,wt_name,settings,cs_params,'2D',stationList=[],directory=dirName) #Note an empty list for stationList will make all cross sections.
     
-
+#Proportional damping values for BeamDyn file.
 mu=[0.00257593, 0.0017469,  0.0017469,  0.0017469,  0.00257593, 0.0017469]
+
+
+#Set up logging
+log =logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+fh=logging.FileHandler(wt_name+'driver.log',mode='w')
+log.addHandler(fh)
+
+#Read in a fresh new blade
+blade=pynumad.Blade()
+blade.read_yaml('example_data/'+yamlName+'.yaml') 
 file_names=write_beam_model(wt_name,settings,blade,mu,log,directory=dirName)

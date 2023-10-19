@@ -76,7 +76,7 @@ Then add Cubit to the path
 
    import sys
    sys.path.append(pynumad.SOFTWARE_PATHS['cubit'])
-   sys.path.append(pynumad.SOFTWARE_PATHS['cubitEnhancements'])  
+   sys.path.append(pynumad.SOFTWARE_PATHS['cubit_enhancements'])  
    import cubit
 
 

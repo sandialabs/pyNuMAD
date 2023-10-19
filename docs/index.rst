@@ -1,8 +1,5 @@
 .. _home:
 
-.. figure:: /_static/images/NuMAD-header.png
-   :target: https://github.com/sandialabs/NuMAD
-
 pyNuMAD
 ========
 
@@ -31,15 +28,10 @@ and modeling of wind turbine blades is developed and described.
 Citing NuMAD
 ===============
 
-To cite pyNuMAD v0.1, please utilize the reference below.
+To cite pyNuMAD, please utilize the reference below.
 
-[1] Camarena, E., Anderson, E., Paquette, J., Bortolotti, P., Feil, R.,
-& Johnson, N. (2021). Land-based wind turbines with flexible rail
-transportable blades-Part II: 3D FEM design optimization of the rotor
-blades. Wind Energy Science Discussions, 1-28.
+[1] Camarena, E., Anderson, E., Bonney, K. L., Clarke, R. J., & Paquette, J. (2023). pyNuMAD 1.0.0. Zenodo. https://doi.org/10.5281/zenodo.10023189
 
-..
-   Kelley: replace with DOI citation once release is tagged
 
 
 .. _developers:
@@ -47,7 +39,7 @@ blades. Wind Energy Science Discussions, 1-28.
 pyNuMAD Developers
 =====================
 
-NuMAD has been developed by `Sandia National Laboratories 
+pyNuMAD has been developed by `Sandia National Laboratories 
 (Sandia) <https://energy.sandia.gov/programs/renewable-energy/wind-power/>`_, 
 funded by the U.S. Department of Energy’s Wind Energy Technologies Technologies Office. 
 
@@ -57,17 +49,9 @@ Current members of the development team include:
 - Joshua Paquette (“Josh”) (Sandia - PI)
 - Evan Anderson (Sandia)
 - Ernesto Camarena (Sandia)
-- Ryan James Clarke (Sandia)
 - Kirk Bonney (Sandia)
+- Ryan James Clarke (Sandia)
 
-Former members of the development team include:
-
-- Jonathan Charles Berg
-- Brian Resor
-- Daniel Laird
-- Kelley Ruehl (Sandia)
-- Christopher Lee Kelley (Sandia)
-- Brandon Lee Ennis (Sandia)
 
 Funding
 =======
