@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class SpatialGridList2D:
+class spatial_grid_list2d:
     def __init__(self, minimumX, maximumX, minimumY, maximumY, xGridSize, yGridSize):
         self.xMin = minimumX
         self.yMin = minimumY
@@ -17,6 +17,9 @@ class SpatialGridList2D:
             for j in range(0, self.yRows):
                 xList.append(list())
             self.fullList.append(xList)
+            
+    def getDim(self):
+        return [self.xGSz*self.xRows, self.yGSz*self.yRows]
 
     def addEntry(self, val, coord):
         xRow = int(np.floor((coord[0] - self.xMin) / self.xGSz))

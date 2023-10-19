@@ -408,18 +408,18 @@ class Mesh2D:
         yS3 = yLen * aL2
         yGS = np.power(yS3, 0.333333)
 
-        self.nodeGL = SpatialGridList2D(xMin, xMax, yMin, yMax, xGS, yGS)
+        self.nodeGL = spatial_grid_list2d(xMin, xMax, yMin, yMax, xGS, yGS)
         for ndi in range(0, self.numNodes):
             self.nodeGL.addEntry(ndi, self.nodes[ndi, :])
 
-        self.edgeGL = SpatialGridList2D(xMin, xMax, yMin, yMax, xGS, yGS)
+        self.edgeGL = spatial_grid_list2d(xMin, xMax, yMin, yMax, xGS, yGS)
         for edi in range(0, self.numEdges):
             n1 = self.edgeNodes[edi, 0]
             n2 = self.edgeNodes[edi, 1]
             midPt = 0.5 * (self.nodes[n1] + self.nodes[n2])
             self.edgeGL.addEntry(edi, midPt)
 
-        self.triElGL = SpatialGridList2D(xMin, xMax, yMin, yMax, xGS, yGS)
+        self.triElGL = spatial_grid_list2d(xMin, xMax, yMin, yMax, xGS, yGS)
 
         self.getBoundaryEdgeNormals()
 

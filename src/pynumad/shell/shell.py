@@ -11,6 +11,8 @@ from pynumad.utils.interpolation import interpolator_wrap
 from pynumad.shell.surface import Surface
 from pynumad.shell.mesh3d import Mesh3D
 from pynumad.shell.shell_region import ShellRegion
+from pynumad.shell.mesh_tools import *
+from pynumad.shell.element_utils import *
 #from pynumad.analysis.ansys.write import writeAnsysShellModel
 
 
@@ -311,11 +313,13 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
             newSec["type"] = "shell"
             layup = list()
             for pg in stacks[j, i].plygroups:
-                totThick = pg.thickness * pg.nPlies
+                totThick = 0.001*pg.thickness * pg.nPlies
                 ply = [pg.materialid, totThick, pg.angle]
                 layup.append(ply)
             newSec["layup"] = layup
             newSec["elementSet"] = stacks[j, i].name
+            newSec["xDir"] = (shellKp[3,:] - shellKp[0,:]) + (shellKp[2,:] - shellKp[1,:])
+            newSec["xyDir"] = (shellKp[1,:] - shellKp[0,:]) + (shellKp[2,:] - shellKp[3,:])
             secList.append(newSec)
             stSp = stSp + 3
         stPt = stPt + 3
@@ -414,11 +418,13 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
             newSec["type"] = "shell"
             layup = list()
             for pg in swstacks[0][i].plygroups:
-                totThick = pg.thickness * pg.nPlies
+                totThick = 0.001*pg.thickness * pg.nPlies
                 ply = [pg.materialid, totThick, pg.angle]
                 layup.append(ply)
             newSec["layup"] = layup
             newSec["elementSet"] = swstacks[0][i].name
+            newSec["xDir"] = np.array([0.0,0.0,1.0])
+            newSec["xyDir"] = (shellKp[1,:] - shellKp[0,:]) + (shellKp[2,:] - shellKp[3,:])
             secList.append(newSec)
         if swstacks[1][i].plygroups:
             shellKp = np.zeros((16, 3))
@@ -482,20 +488,75 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
             newSec["type"] = "shell"
             layup = list()
             for pg in swstacks[1][i].plygroups:
-                totThick = pg.thickness * pg.nPlies
+                totThick = 0.001*pg.thickness * pg.nPlies
                 ply = [pg.materialid, totThick, pg.angle]
                 layup.append(ply)
             newSec["layup"] = layup
             newSec["elementSet"] = swstacks[1][i].name
+            newSec["xDir"] = np.array([0.0,0.0,1.0])
+            newSec["xyDir"] = (shellKp[1,:] - shellKp[0,:]) + (shellKp[2,:] - shellKp[3,:])
             secList.append(newSec)
         stPt = stPt + 3
 
     ## Generate Shell mesh
 
+    print('getting blade mesh')
     shellData = bladeSurf.getSurfaceMesh()
     shellData["sections"] = secList
+    
+    ## Get local direction cosine orientations for individual elements
+    print('getting element orientations')
+    nodes = shellData["nodes"]
+    elements = shellData["elements"]
+    numEls = len(shellData["elements"])
+    elOri = np.zeros((numEls,9),dtype=float)
+    
+    esi = 0
+    for sec in secList:
+        dirCos = get_direction_cosines(sec["xDir"],sec["xyDir"])
+        es = shellData["sets"]["element"][esi]
+        for ei in es["labels"]:
+            eX = list()
+            eY = list()
+            eZ = list()
+            for ndi in elements[ei]:
+                if(ndi > -1):
+                    eX.append(nodes[ndi,0])
+                    eY.append(nodes[ndi,1])
+                    eZ.append(nodes[ndi,2])
+            if(len(eX) == 3):
+                elType = "shell3"
+            else:
+                elType = "shell4"
+            elCrd = np.array([eX,eY,eZ])
+            elDirCos = correct_orient(dirCos,elCrd,elType)
+            elOri[ei,0:3] = elDirCos[0]
+            elOri[ei,3:6] = elDirCos[1]
+            elOri[ei,6:9] = elDirCos[2]
+        esi = esi + 1
+        
+    shellData["elementOrientations"] = elOri
+    
+    ## Get root (Zmin) node set
+    minZ = np.min(splineZi)
+    rootLabs = list()
+    lab = 0
+    for nd in nodes:
+        if(np.abs(nd[2] - minZ) < 0.25*elementSize):
+            rootLabs.append(lab)
+        lab = lab + 1
+    newSet = dict()
+    newSet["name"] = "RootNodes"
+    newSet["labels"] = rootLabs
+    try:
+        shellData["sets"]["node"].append(newSet)
+    except:
+        nodeSets = list()
+        nodeSets.append(newSet)
+        shellData["sets"]["node"] = nodeSets
 
     ## Generate mesh for trailing edge adhesive if requested
+    print('getting adhesive mesh')
     if includeAdhesive == 1:
         stPt = frstXS
         v1x = splineXi[stPt, 6] - splineXi[stPt, 4]
@@ -569,6 +630,11 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
         labList = list(range(0, adEls))
         adhesSet["labels"] = labList
         shellData["adhesiveElSet"] = adhesSet
+        
+        print('getting constraints')
+        if(not forSolid):
+            constraints = tie_2_meshes_constraints(adMeshData,shellData,0.015*elementSize)
+            shellData["constraints"] = constraints
 
     return shellData
 
@@ -624,7 +690,7 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
         numSec, numStat = stacks.shape
         j = 0
         for es in elSets:
-            layerThick = 0.001 * sectns[j]["layup"][i][1]
+            layerThick = sectns[j]["layup"][i][1]
             for el in es["labels"]:
                 for nd in shElements[el]:
                     if nd != -1:
@@ -637,11 +703,6 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
                 nodeDist[j] = nodeDist[j] / nodeHitCt[j]
                 newLayer[j] = prevLayer[j] + nodeDist[j] * nodeNorms[j]
 
-        ##
-        # print('layer ' + str(i))
-        # for deb in range(0,10):
-        # print(newLayer[deb])
-        ##
         guideNds.append(newLayer)
         prevLayer = newLayer.copy()
 
@@ -690,7 +751,7 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
 
 def get_solid_mesh(blade, layerNumEls, elementSize):
     ## Edit stacks to be usable for 3D solid mesh
-    blade.edit_stacks_for_solid_mesh()
+    blade.stackdb.edit_stacks_for_solid_mesh()
     ## Create shell mesh as seed
     ## Note the new output structure of shellMeshGeneral, as a single python dictionary  -E Anderson
     shellMesh = shell_mesh_general(blade, 1, 1, elementSize)

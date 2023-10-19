@@ -71,7 +71,6 @@ class Surface:
             regi = regi + 1
         mshi = 0
         for msh in self.meshes:
-            allNds.extend(msh["nodes"])
             setList = list()
             eli = 0
             for el in msh["elements"]:
@@ -85,6 +84,7 @@ class Surface:
             thisSet["name"] = self.meshNames[mshi]
             thisSet["labels"] = setList
             elSetList.append(thisSet)
+            allNds.extend(msh["nodes"])
             numNds = len(allNds)
             numEls = len(allEls)
             mshi = mshi + 1
