@@ -6,7 +6,7 @@ from os.path import join
 from pynumad.shell.shell import get_shell_mesh
 
 abqFileName = "shellBlade.inp"
-adhesiveMat = 'Adhesive'
+adhesiveMat = "Adhesive"
 
 ## Read blade data from yaml file
 blade = pynu.Blade()

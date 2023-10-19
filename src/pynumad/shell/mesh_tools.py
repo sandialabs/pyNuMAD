@@ -30,6 +30,32 @@ def get_average_node_spacing(nodes,elements):
                         ct = ct + 1
     return totDist/ct
 
+def check_all_jacobians(nodes,elements):
+    failedEls = set()
+    ei = 0
+    for el in elements:
+        xC = []
+        yC = []
+        zC = []
+        for nd in el:
+            if(nd > -1):
+                xC.append(nodes[nd,0])
+                yC.append(nodes[nd,1])
+                zC.append(nodes[nd,2])
+        elCrd = np.array([xC,yC,zC])
+        nn = len(xC)
+        if(nn == 8):
+            elType = 'brick8'
+        elif(nn == 6):
+            elType = 'wedge6'
+        else:
+            elType = ''
+        passed = check_jacobian(elCrd,elType)
+        if(not passed):
+            failedEls.add(ei)
+        ei = ei + 1
+    return failedEls
+
 def get_mesh_spatial_list(nodes,xSpacing=0,ySpacing=0,zSpacing=0):
     totNds = len(nodes)
     spaceDim = len(nodes[0])
@@ -395,7 +421,7 @@ def tie_2_sets_constraints(mesh,tiedSetName,tgtSetName,maxDist):
             pO = get_proj_dist(elCrd,elType,nd)
             if(elType in solidStr):
                 if(pO['distance'] > 0.0):
-                    solidPO = getSolidSurfProj(elCrd,elType,nd)
+                    solidPO = get_solid_surf_proj(elCrd,elType,nd)
                     if(solidPO['distance'] < minDist):
                         minDist = solidPO['distance']
                         minPO = solidPO
@@ -409,7 +435,7 @@ def tie_2_sets_constraints(mesh,tiedSetName,tgtSetName,maxDist):
                     minDist = pO['distance']
                     minPO = pO
                     minEi = ei
-        if(minDist < maxDist):
+        if(minDist < maxDist and (ni not in elements[minEi])):
             newConst = dict()
             terms = list()
             newTerm = dict()
