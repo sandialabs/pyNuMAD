@@ -139,50 +139,87 @@ def write_beamdyn_axis(directory, wt_name, blade,radial_stations):
     file.write('      2E+07   PitchK      - Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]\n')
     file.write('     500000   PitchC      - Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]\n')
     file.write('---------------------- OUTPUTS -------------------------------------------------\n')
-    file.write('False          SumPrint       - Print summary data to "<RootName>.sum" (flag)\n')
+    file.write('True          SumPrint       - Print summary data to "<RootName>.sum" (flag)\n')
     file.write('"ES10.3E2"    OutFmt         - Format used for text tabular output, excluding the time channel.\n')
-    file.write('          1   NNodeOuts      - Number of nodes to output to file [0 - 9] (-)\n')
-    file.write('3, 6, 9, 12, 15, 18, 21, 24, 27    OutNd          - Nodes whose values will be output  (-)\n')
+    file.write('          9   NNodeOuts      - Number of nodes to output to file [0 - 9] (-)\n')
+    file.write('2,3, 6, 9, 12, 15, 18, 21, 50, 59    OutNd          - Nodes whose values will be output  (-)\n')
     file.write('          OutList            - The next line(s) contains a list of output parameters. See OutListParameters.xlsx for a listing of available output channels, (-)\n')
 
-    coordinate={}
-    coordinate['F']='l'
-    coordinate['M']='l'
-    coordinate['RD']='r'
-    coordinate['TD']='r'
+    # coordinate={}
+    # coordinate['F']='l'
+    # coordinate['M']='l'
+    # coordinate['RD']='r'
+    # coordinate['TD']='r'
     
-    channelList=['F','M','RD','TD']
-    for iNode in range(9):
-        for load in channelList:
-            for dir in ['x','y','z']:
-                file.write(f'"N{iNode+1}{load}{dir}{coordinate[load]}"\n')
+    # channelList=['F','M','RD','TD']
+    # for iNode in range(9):
+    #     for load in channelList:
+    #         for dir in ['x','y','z']:
+    #             file.write(f'"N{iNode+1}{load}{dir}{coordinate[load]}"\n')
 
     
-    #Root
-    coordinate={}
-    coordinate['F']='r'
-    coordinate['M']='r'
+    # #Root
+    # coordinate={}
+    # coordinate['F']='r'
+    # coordinate['M']='r'
     
-    channelList=['F','M']
-    for iNode in ['Root']:
-        for load in channelList:
-            for dir in ['x','y','z']:
-                file.write(f'"{iNode}{load}{dir}{coordinate[load]}"\n')
+    # channelList=['F','M']
+    # for iNode in ['Root']:
+    #     for load in channelList:
+    #         for dir in ['x','y','z']:
+    #             file.write(f'"{iNode}{load}{dir}{coordinate[load]}"\n')
 
-    #Tip
-    coordinate={}
-    coordinate['RD']='r'
-    coordinate['TD']='r'
+    # #Tip
+    # coordinate={}
+    # coordinate['RD']='r'
+    # coordinate['TD']='r'
     
-    channelList=['RD','TD']
-    for iNode in ['Tip']:
-        for load in channelList:
-            for dir in ['x','y','z']:
-                file.write(f'"{iNode}{load}{dir}{coordinate[load]}"\n')
+    # channelList=['RD','TD']
+    # for iNode in ['Tip']:
+    #     for load in channelList:
+    #         for dir in ['x','y','z']:
+    #             file.write(f'"{iNode}{load}{dir}{coordinate[load]}"\n')
                 
 
     file.write('END of input file (the word "END" must appear in the first 3 columns of this last OutList line)\n')
+    file.write('---------------------- NODE OUTPUTS --------------------------------------------\n')
+    file.write('         99   BldNd_BlOutNd   - Blade nodes on each blade (currently unused)\n')
+    file.write('              OutList     - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx, BeamDyn_Nodes tab for a listing of available output channels, (-)\n')
+    file.write('"FxL"\n')
+    file.write('"FyL"\n')
+    file.write('"FzL"\n')
+    file.write('"MxL"\n')
+    file.write('"MyL"\n')
+    file.write('"MzL"\n')
+    file.write('"TDxr"\n')
+    file.write('"TDyr"\n')
+    file.write('"TDzr"\n')
+    file.write('"RDxr"\n')
+    file.write('"RDyr"\n')
+    file.write('"RDzr"\n')
+    file.write('"AbsXr"\n')
+    file.write('"AbsYr"\n')
+    file.write('"AbsZr"\n')
+    file.write('END of input file (the word "END" must appear in the first 3 columns of this last OutList line)\n')
     file.write('---------------------------------------------------------------------------------------\n')
+    file.write('PFxL\n')
+    file.write('PFyL\n')
+    file.write('PFzL\n')
+    file.write('PMxL\n')
+    file.write('PMyL\n')
+    file.write('PMzL\n')
+    file.write('DFxL\n')
+    file.write('DFyL\n')
+    file.write('DFzL\n')
+    file.write('DMxL\n')
+    file.write('DMyL\n')
+    file.write('DMzL\n')
+    file.write('DFxR\n')
+    file.write('DFyR\n')
+    file.write('DFzR\n')
+    file.write('DMxR\n')
+    file.write('DMyR\n')
+    file.write('DMzR\n')
 
     file.close()
 
