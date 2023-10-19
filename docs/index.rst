@@ -1,8 +1,5 @@
 .. _home:
 
-.. figure:: /_static/images/NuMAD-header.png
-   :target: https://github.com/sandialabs/NuMAD
-
 pyNuMAD
 ========
 
@@ -33,10 +30,8 @@ Citing NuMAD
 
 To cite pyNuMAD, please utilize the reference below.
 
-[1] Camarena, E., Anderson, E., Bonney, K. L., Clarke, R. J., & Paquette, J. (2023). pyNuMAD (0.1). Zenodo. https://doi.org/XX.XXXX/zenodo.XXXXXXX
+[1] Camarena, E., Anderson, E., Bonney, K. L., Clarke, R. J., & Paquette, J. (2023). pyNuMAD 1.0.0. Zenodo. https://doi.org/10.5281/zenodo.10023189
 
-..
-   Kelley: replace with DOI citation once release is tagged
 
 
 .. _developers:
