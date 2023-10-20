@@ -80,12 +80,20 @@ For a solid mesh, use pynumad.mesh_gen.mesh_gen.get_solid_mesh():
 The output, denoted shellMesh or solidMesh in this example is a python dictionary object, containing the following data fields:
 
 nodes: a numpy array containing the x-y-z coordinates of the nodes in the blade and shear webs.
+
 elements: a numpy array containing the nodal connectivity of blade and shear web elements.
+
 sets: a collection of node and element sets, each with a name and label list in the form of a python dictionary.
+
+
 sections: a list of sections, each specifying an element set and  material, layup and orientation information for a given blade section.
+
 adhesiveNds: a numpy array containing the x-y-z coordinates of the nodes in the trailing edge adhesive.
+
 adhesiveEls: a numpy array containing the nodal connectivity of trailing adhesive elements.
+
 elementOrientations:  a numpy array containing the direction cosine orientation matrix for each individual element.
+
 constraints: a list of nodal constraint equations, which tie the movement of adhesive and/or shear webs to the outer shell of the blade.  Each constraint is a series of terms, giving a node and coefficient such that the corresponding sum of displacement degrees of freedom is zero.
 
 This output information can be accessed and used in the environment of the user's choice, or alternatively written in yaml format using pynumad.io.mesh_to_yaml.mesh_to_yaml():
