@@ -4,7 +4,7 @@ import pickle
 from pprint import pprint
 from os.path import join
 
-from pynumad.shell.shell import get_shell_mesh
+from pynumad.mesh_gen.mesh_gen import get_shell_mesh
 
 blade = pynu.Blade()
 file_name = join("example_data","blade.yaml")
