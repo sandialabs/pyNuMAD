@@ -1,1 +1,1 @@
-from .shell import get_shell_mesh, get_solid_mesh
+from .mesh_gen import get_shell_mesh, get_solid_mesh

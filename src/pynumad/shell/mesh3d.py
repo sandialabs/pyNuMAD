@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import interpolate
-from pynumad.shell.spatial_grid_list3d import *
+from pynumad.mesh_gen.spatial_grid_list3d import *
 
 
 class Mesh3D:

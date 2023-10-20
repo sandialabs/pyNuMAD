@@ -1,5 +1,5 @@
 import numpy as np
-from pynumad.shell.spatial_grid_list2d import *
+from pynumad.mesh_gen.spatial_grid_list2d import *
 import plotly.graph_objects as go
 
 
