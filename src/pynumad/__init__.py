@@ -5,7 +5,7 @@ from pynumad.objects.material import Material
 from pynumad.objects.station import Station
 from pynumad.io.mesh_to_yaml import mesh_to_yaml
 
-from pynumad import shell
+from pynumad import mesh_gen
 from pynumad import utils
 from pynumad import analysis
 from pynumad import graphics

@@ -3,7 +3,7 @@ import numpy as np
 import os
 from os.path import join
 
-from pynumad.shell.shell import get_shell_mesh
+from pynumad.mesh_gen.mesh_gen import get_shell_mesh
 
 abqFileName = "shellBlade.inp"
 adhesiveMat = "Adhesive"

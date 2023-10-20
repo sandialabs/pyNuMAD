@@ -7,12 +7,12 @@ import subprocess
 import pynumad
 from pynumad.utils.interpolation import interpolator_wrap
 
-##from pynumad.shell.shellClasses import shellRegion, elementSet, NuMesh3D, spatialGridList2D, spatialGridList3D
-from pynumad.shell.surface import Surface
-from pynumad.shell.mesh3d import Mesh3D
-from pynumad.shell.shell_region import ShellRegion
-from pynumad.shell.mesh_tools import *
-from pynumad.shell.element_utils import *
+##from pynumad.mesh_gen.shellClasses import shellRegion, elementSet, NuMesh3D, spatialGridList2D, spatialGridList3D
+from pynumad.mesh_gen.surface import Surface
+from pynumad.mesh_gen.mesh3d import Mesh3D
+from pynumad.mesh_gen.shell_region import ShellRegion
+from pynumad.mesh_gen.mesh_tools import *
+from pynumad.mesh_gen.element_utils import *
 #from pynumad.analysis.ansys.write import writeAnsysShellModel
 
 
@@ -655,7 +655,6 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
         adhesSet["labels"] = labList
         shellData["adhesiveElSet"] = adhesSet
         
-        #if(not forSolid):
         print('getting constraints')
         constraints = tie_2_meshes_constraints(adMeshData,shellData,0.015*elementSize)
         shellData["constraints"] = constraints
