@@ -1,8 +1,8 @@
 import numpy as np
 import plotly.graph_objects as go
-from pynumad.shell.spatial_grid_list2d import *
-from pynumad.shell.spatial_grid_list3d import *
-from pynumad.shell.element_utils import *
+from pynumad.mesh_gen.spatial_grid_list2d import *
+from pynumad.mesh_gen.spatial_grid_list3d import *
+from pynumad.mesh_gen.element_utils import *
 
 def get_direction_cosines(xDir,xyDir):
     mag = np.linalg.norm(xDir)

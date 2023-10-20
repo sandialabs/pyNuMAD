@@ -1,8 +1,8 @@
 from scipy import interpolate
-from pynumad.shell.segment2d import *
-from pynumad.shell.boundary2d import *
-from pynumad.shell.mesh2d import *
-import pynumad.shell.mesh_tools as mt
+from pynumad.mesh_gen.segment2d import *
+from pynumad.mesh_gen.boundary2d import *
+from pynumad.mesh_gen.mesh2d import *
+import pynumad.mesh_gen.mesh_tools as mt
 import numpy as np
 
 
