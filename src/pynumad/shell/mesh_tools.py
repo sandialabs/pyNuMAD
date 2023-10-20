@@ -112,49 +112,17 @@ def get_mesh_spatial_list(nodes,xSpacing=0,ySpacing=0,zSpacing=0):
 
 ## - Convert list of mesh objects into a single merged mesh, returning sets representing the elements/nodes from the original meshes
 def mergeDuplicateNodes(meshData):
-    allNds = meshData["nodes"]
-    allEls = meshData["elements"]
+    allNds = meshData['nodes']
+    allEls = meshData['elements']
     totNds = len(allNds)
-    spaceDim = len(allNds[0])
     totEls = len(allEls)
     elDim = len(allEls[0])
 
-    maxX = np.amax(allNds[:, 0])
-    minX = np.amin(allNds[:, 0])
-    maxY = np.amax(allNds[:, 1])
-    minY = np.amin(allNds[:, 1])
-    nto1_2 = np.power(totNds, 0.5)
-    nto1_3 = np.power(totNds, 0.3333333)
-    nto1_4 = np.power(totNds, 0.25)
-    if spaceDim == 3:
-        maxZ = np.amax(allNds[:, 2])
-        minZ = np.amin(allNds[:, 2])
-        dimVec = np.array([(maxX - minX), (maxY - minY), (maxZ - minZ)])
-        meshDim = np.linalg.norm(dimVec)
-        maxX = maxX + 0.01 * meshDim
-        minX = minX - 0.01 * meshDim
-        maxY = maxY + 0.01 * meshDim
-        minY = minY - 0.01 * meshDim
-        maxZ = maxZ + 0.01 * meshDim
-        minZ = minZ - 0.01 * meshDim
-        xSpacing = 0.5 * (maxX - minX) / nto1_3
-        ySpacing = 0.5 * (maxY - minY) / nto1_3
-        zSpacing = 0.5 * (maxZ - minZ) / nto1_3
-        nodeGL = spatial_grid_list3d(
-            minX, maxX, minY, maxY, minZ, maxZ, xSpacing, ySpacing, zSpacing
-        )
-        tol = 1.0e-6 * meshDim / nto1_3
-    else:
-        dimVec = np.array([(maxX - minX), (maxY - minY)])
-        meshDim = np.linalg.norm(dimVec)
-        maxX = maxX + 0.01 * meshDim
-        minX = minX - 0.01 * meshDim
-        maxY = maxY + 0.01 * meshDim
-        minY = minY - 0.01 * meshDim
-        xSpacing = 0.5 * (maxX - minX) / nto1_3
-        ySpacing = 0.5 * (maxY - minY) / nto1_3
-        nodeGL = spatial_grid_list2d(minX, maxX, minY, maxY, xSpacing, ySpacing)
-        tol = 1.0e-6 * meshDim / nto1_2
+    nodeGL = get_mesh_spatial_list(allNds)
+    glDim = nodeGL.getDim()
+    mag = np.linalg.norm(glDim)
+    nto1_3 = np.power(len(allNds),0.3333333333)
+    tol = 1.0e-6*mag/nto1_3
 
     i = 0
     for nd in allNds:
