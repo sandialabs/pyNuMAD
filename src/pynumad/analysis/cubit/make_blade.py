@@ -125,6 +125,10 @@ def cubit_make_cross_sections(
     ).transpose()
     spanwise_mat_ori_curve = 1
 
+    if model2Dor3D.lower() == "3d":
+        write_spline_from_coordinate_points(cubit, refLineCoords)
+    #else: do it in cross section loop
+    
     #Get last round station index
     # is_station_flatback = []
     # for i_station in range(len(blade.geometry.ispan)):
@@ -570,6 +574,11 @@ def cubit_make_solid_blade(
     theta1 = {}
     theta3 = {}
 
+    global_ids=[]
+    theta1s=[]
+    theta2s=[]
+    theta3s=[]
+
     for volume_id in all_volume_ids:
         surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
         volume_name = cubit.get_entity_name("volume", volume_id)
@@ -614,16 +623,30 @@ def cubit_make_solid_blade(
 
 
             global_id=get_global_element_id('hex',hex_id)
+            
             dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
 
             theta1[global_id], theta2[global_id], theta3[global_id] = dcmToEulerAngles(
                 dcm
             )
 
+            global_ids.append(global_id)
+            theta1s.append(theta1[global_id])
+            theta2s.append(theta2[global_id])
+            theta3s.append(theta3[global_id])
+
+    n_el=len(global_ids)
     cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
     cubit.cmd(f"delete vertex all with Is_Free except {spanwise_mat_ori_curve}")
     if settings["export"] is not None:
         if "g" in settings["export"].lower():
+            cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
+            cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
+            cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
+
+            cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
+            cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
+            cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
             cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
         if "cub" in settings["export"].lower():
             cubit.cmd(f'save as "{wt_name}.cub" overwrite')
