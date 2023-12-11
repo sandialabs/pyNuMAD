@@ -570,9 +570,6 @@ def cubit_make_solid_blade(
 
     parse_string = f'in volume with name "*volume*"'
     all_volume_ids = parse_cubit_list("volume", parse_string)
-    theta2 = {}
-    theta1 = {}
-    theta3 = {}
 
     global_ids=[]
     theta1s=[]
@@ -626,14 +623,12 @@ def cubit_make_solid_blade(
             
             dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
 
-            theta1[global_id], theta2[global_id], theta3[global_id] = dcmToEulerAngles(
-                dcm
-            )
+            temp1, temp2, temp3 = dcmToEulerAngles(dcm)
 
             global_ids.append(global_id)
-            theta1s.append(theta1[global_id])
-            theta2s.append(theta2[global_id])
-            theta3s.append(theta3[global_id])
+            theta1s.append(-1*temp1)
+            theta2s.append(-1*temp2)
+            theta3s.append(-1*temp3)
 
     n_el=len(global_ids)
     cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
@@ -650,8 +645,6 @@ def cubit_make_solid_blade(
             cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
         if "cub" in settings["export"].lower():
             cubit.cmd(f'save as "{wt_name}.cub" overwrite')
-        with open("euler", "wb") as file:
-            # A new file will be created
-            pickle.dump((theta1, theta2, theta3), file)
+
 
     return materials_used

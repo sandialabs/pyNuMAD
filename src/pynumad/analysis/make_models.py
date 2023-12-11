@@ -109,13 +109,7 @@ def write_sierra_model(wt_name,settings,blade,materials_used,directory='.'):
     materials = blade.definition.materials
     solver_string=settings['make_input_for'].lower()
     if 'sm' in solver_string or 'sd' in solver_string:
-        templateFileName=template_path+'mat_ori.py.template'
-        mat_ori_file_name='mat_ori.py'
 
-        copy_and_replace(templateFileName, mat_ori_file_name,
-            {
-                'IN_MESH':wt_name+'.g',
-            })
         if 'sm' in settings['make_input_for'].lower():
 
             templateFileName=template_path+'sm.i.template'
