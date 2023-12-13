@@ -37,6 +37,16 @@ def make_spanwise_splines(surface_dict, ordered_list):
                 vertex_id = surface_dict[i_surface]["verts"][i_point]
                 vertex_list.append(vertex_id)
                 vertex_name = cubit.get_entity_name("vertex", vertex_id)
+                if 'linear' in vertex_name:
+                    print('')
+                    vertex_id2 = surface_dict[aligned_surfaces[index+1]]["verts"][i_point]
+                    cubit.cmd(f"create curve vertex {vertex_id} {vertex_id2}")
+
+                    n_start = get_last_id("vertex") + 1
+                    cubit.cmd(f'create vertex on curve {get_last_id("curve")} segment 10')
+                    n_end = get_last_id("vertex")
+                    vertex_list += list(range(n_start, n_end + 1))
+
 
             curve = cubit.cmd(f"create curve spline vertex {l2s(vertex_list)}")
             tempList.append(get_last_id("curve"))
