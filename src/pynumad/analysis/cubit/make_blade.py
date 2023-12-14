@@ -441,12 +441,12 @@ def cubit_make_solid_blade(
     Raises
     ------
     ValueError
-        "Need more that one cross section to make a solid model"
+        "Need more than one cross section to make a solid model"
     """
     if stationList is None or len(stationList) == 0:
         stationList = list(range(len(blade.ispan)))
     elif len(stationList) == 1:
-        raise ValueError("Need more that one cross section to make a solid model")
+        raise ValueError("Need more than one cross section to make a solid model")
 
     (
         cubit,
@@ -518,9 +518,9 @@ def cubit_make_solid_blade(
     cubit.cmd(f"reset volume all")
 
     cubit.cmd(f"delete surface with Is_Free")
-    #cubit.cmd("vol all size 0.2")
+    cubit.cmd("vol all size 0.2")
     # cubit.cmd(f'curve with name "layer_thickness*" interval {cs_params["nel_per_layer"]}')
-    #cubit.cmd("set default autosize on")
+    cubit.cmd("set default autosize on")
     cubit.cmd(f"mesh volume {l2s(mesh_vol_list)}")
     cubit.cmd(f"draw volume {l2s(mesh_vol_list)}")
 

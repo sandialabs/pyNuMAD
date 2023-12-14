@@ -70,14 +70,16 @@ BLADE_BLOCKS
 	   
         at time 0.0 increment = 1.0
 
-        # Elastic Orthotropic outputs
+
          element variables = cauchy_stress
          element variables = green_lagrange_strain
          element variables = material_direction_1
          element variables = material_direction_2
          element variables = material_direction_3
 
-        nodal variables = displacement
+         nodal variables = force_external
+         nodal variables = reaction
+         nodal variables = displacement
       end results output results
       
 # #### initial conditions (material directors)
@@ -130,12 +132,19 @@ BLADE_BLOCKS
           component = x y z
        end
 
-      begin prescribed displacement
-         node set = tip
-         components = Y
-         function = u3
-         #active periods = p1
-      end prescribed displacement
+      begin prescribed force
+         nodeset = oml 
+         read variable = node_forces
+         time = first
+         #function = ramp
+      end prescribed force
+
+      #begin prescribed displacement
+      #   node set = tip
+      #   components = Y
+      #   function = u3
+      #   #active periods = p1
+      #end prescribed displacement
 
         ### ------------------###
         ### Solver definition ###
@@ -148,7 +157,7 @@ BLADE_BLOCKS
          target relative residual = 1.0e-3
          target residual = 1.0e-4
          maximum iterations       = 3000
-         iteration print          = 1
+         iteration print          = 100
              begin full tangent preconditioner
                 linear solver = FETI
              end

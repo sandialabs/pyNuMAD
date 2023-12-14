@@ -97,8 +97,7 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
 def write_sierra_model(wt_name,settings,blade,materials_used,directory='.'):
    # import pynumad.analysis.beam_utils as beam_utils
 
-#     #Runs VABS or OpenSG to homogenize
-#     #Makes beamDyn or GEBT files
+
 
     template_path=SOFTWARE_PATHS['pynumad']+'src/data/templates/'
 
