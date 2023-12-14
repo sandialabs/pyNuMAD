@@ -146,9 +146,9 @@ def cubit_make_cross_sections(
 
 ########################
     #### Step one create outer mold line
-    flatback_lengths=[]
+    excess_lengths=[]
     te_angles=[]
-    for i_station_geometry in range(len(blade.geometry.ispan)):
+    for i_station_geometry in range(len(blade.geometry.ispan)-1): #-1 b/c fewer stacks than stations
         xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
         
         npts=5
@@ -165,7 +165,15 @@ def cubit_make_cross_sections(
 
         first_point = xyz[-2, :]
         second_point = xyz[1, :]
-        flatback_lengths.append(np.linalg.norm(second_point - first_point))
+
+        flatback_length=np.linalg.norm(second_point - first_point)
+
+        athickness=cs_params["te_adhesive_thickness"][i_station_geometry]
+        stack_thicknesses_hp=sum(stackdb.stacks[1, i_station_geometry].layer_thicknesses())/1000
+        stack_thicknesses_lp=sum(stackdb.stacks[-2, i_station_geometry].layer_thicknesses())/1000
+
+        excess_lengths.append(flatback_length-(stack_thicknesses_lp+stack_thicknesses_hp+athickness))
+
 
 
         curve_fraction = 0
@@ -178,7 +186,18 @@ def cubit_make_cross_sections(
         # print(f"te_angle {te_angle}")
 
     last_round_station=next((i-1 for i, x in enumerate(te_angles) if x < 50.0), None)
+    last_flat_station=next((i-1 for i, x in enumerate(te_angles) if x < 10.0), None)
+
+    for i_length, excess_length in enumerate(excess_lengths[last_flat_station+1:]):
+        athickness=cs_params["te_adhesive_thickness"][last_flat_station+1+i_length]
+        print(f'i {last_flat_station+1+i_length},excess_length {excess_length*1000}, athickness{athickness*1000}')
+        if (excess_length-athickness)/excess_length > 0.025:
+            last_flat_station=last_flat_station+1+i_length
+        else:
+            break
+
 ########################
+
 
 
 
@@ -259,6 +278,7 @@ def cubit_make_cross_sections(
                 geometry_scaling,
                 thickness_scaling,
                 last_round_station,
+                last_flat_station,
                 materials_used,
                 cs_normal,
             )
@@ -276,6 +296,7 @@ def cubit_make_cross_sections(
                 geometry_scaling,
                 thickness_scaling,
                 last_round_station,
+                last_flat_station,
                 materials_used,
                 cs_normal,
             )
@@ -518,9 +539,9 @@ def cubit_make_solid_blade(
     cubit.cmd(f"reset volume all")
 
     cubit.cmd(f"delete surface with Is_Free")
-    cubit.cmd("vol all size 0.2")
+    #cubit.cmd("vol all size 0.2")
     # cubit.cmd(f'curve with name "layer_thickness*" interval {cs_params["nel_per_layer"]}')
-    cubit.cmd("set default autosize on")
+    #cubit.cmd("set default autosize on")
     cubit.cmd(f"mesh volume {l2s(mesh_vol_list)}")
     cubit.cmd(f"draw volume {l2s(mesh_vol_list)}")
 

@@ -694,6 +694,7 @@ def make_cs_perimeter_layer_areas(wt_name,
     thickness_scaling,
     lp_hp_side,
     last_round_station,
+    last_flat_station,
     part_name_id,
     n_modeled_layers,
     cs_normal,
@@ -1054,11 +1055,14 @@ def make_cs_perimeter_layer_areas(wt_name,
                 current_stack_left_curves_splited.append(temp_list_left)
             #current_stack_left_curves_splited.append(temp_list_right)
             
-            if is_flatback:
+            #if is_flatback:
+            if i_station in list(range(last_round_station+1,last_flat_station+1)):
                 for i_split in range(len(current_stack_left_curves_splited)-1):
                     lp_hp_dict["round_te_adhesive_curve_list"][lp_hp_side_index].append(current_stack_left_curves_splited[i_split][-1])
-
+            
+            if i_station >= last_flat_station:
                 lp_hp_dict["flat_te_adhesive_curve_list"][lp_hp_side_index].append(current_stack_left_curves_splited[-1][-1])
+            
             #### Next Stack (the panel might intersect the camberline so the following is needed
             next_stack_curves = []
             cubit.cmd(f"curve {right_bottom_curve} copy")
@@ -1143,7 +1147,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                         i_modeled_layers,
                         materials_used,
                     )
-                if i_station <= last_round_station+1:
+                if i_station <= last_flat_station:
                 #if not is_flatback:
                     lp_hp_dict["round_te_adhesive_curve_list"][lp_hp_side_index].append(
                         surface_dict[get_last_id("surface")]["curves"][-1]
@@ -1549,6 +1553,7 @@ def make_a_cross_section(wt_name,
     geometry_scaling,
     thickness_scaling,
     last_round_station,
+    last_flat_station,
     materials_used,
     cs_normal,
 ):
@@ -1677,7 +1682,8 @@ def make_a_cross_section(wt_name,
         camberID = get_last_id("curve")
 
     #Special treatment for station that will connect round to flatback
-    if i_station == last_round_station+1:
+    #if i_station == last_round_station+1:
+    if i_station in list(range(last_round_station+1,last_flat_station+1)):
         cubit.create_curve(cubit.vertex(flatback_vBot), cubit.vertex(flatback_vTop))
         flatback_curve_id=get_last_id("curve")
         v1,v2 = selCurveVerts(flatback_curve_id)
@@ -1863,6 +1869,7 @@ def make_a_cross_section(wt_name,
         thickness_scaling,
         lp_hp_side,
         last_round_station,
+        last_flat_station,
         part_name_id,
         n_modeled_layers,
         cs_normal,
@@ -1881,6 +1888,7 @@ def make_a_cross_section(wt_name,
         thickness_scaling,
         lp_hp_side,
         last_round_station,
+        last_flat_station,
         part_name_id,
         n_modeled_layers,
         cs_normal,
@@ -1902,19 +1910,23 @@ def make_a_cross_section(wt_name,
 
     part_name_id = 0  # Reset since outer areoshell is complete (LE adhesive is accouted for as aeroshell)
     part_name = "roundTEadhesive"
-
+    
+    if i_station <= last_round_station:
+        mat_name = cs_params["adhesive_mat_name"]
+    else:
+        mat_name = stackdb.stacks[1, i_station].plygroups[0].materialid
     part_name_id = create_simplist_surface_for_TE_or_LE_adhesive(
         i_station,
         surface_dict,
         part_name,
         lp_hp_dict["round_te_adhesive_curve_list"],
-        cs_params["adhesive_mat_name"],
+        mat_name,
         part_name_id,
         n_modeled_layers,
-        materials_used,
-    )
+        materials_used)
     
 
+        
     if is_flatback:
         part_name = "flatTEadhesive"
         part_name_id = 0  # Reset 
