@@ -220,10 +220,10 @@ def make_birds_mouth(
 
     # Make the birds mouth cut-out start 5% from where the web meets the aeroshell
     cubit.cmd(
-        f'create vertex on curve {get_last_id("curve")}  distance {0.05*distance} from start'
+        f'create vertex on curve {get_last_id("curve")}  distance {0.10*distance} from start'
     )
     cubit.cmd(
-        f'create vertex on curve {get_last_id("curve")}  distance {0.05*distance} from end'
+        f'create vertex on curve {get_last_id("curve")}  distance {0.10*distance} from end'
     )
     v1 = cubit.vertex(get_last_id("vertex") - 1)
     v2 = cubit.vertex(get_last_id("vertex"))
