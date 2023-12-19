@@ -12,13 +12,39 @@ Begin Sierra Job
 
    ############### Function Definitions ########################
    # { tf = 1.0 } 
-   # { umax = 1.0e-5 } 
+   # { umax = 1.0e0 } 
    begin function u3
       type = analytic
       expression variable: t = GLOBAL time
       evaluate expression is "(t*{umax}/{tf})"
    end function u3
 
+   begin function ramp
+      type = analytic
+      expression variable: t = GLOBAL time
+      evaluate expression is "(t*{1}/{tf})"
+   end function ramp
+
+   begin function apply_force_x
+     type = analytic
+      expression variable: t = GLOBAL time
+      expression variable: f = NODAL node_forces_var(x)
+      evaluate expression is "(t*{1}/{tf}*f)" 
+   end
+
+     begin function apply_force_y
+     type = analytic
+      expression variable: t = GLOBAL time
+      expression variable: f = NODAL node_forces_var(y)
+      evaluate expression is "(t*{1}/{tf}*f)" 
+   end
+
+   begin function apply_force_z
+     type = analytic
+      expression variable: t = GLOBAL time
+      expression variable: f = NODAL node_forces_var(z)
+      evaluate expression is "(t*{1}/{tf}*f)" 
+   end 
 
 BLADE_MATERIALS
 
@@ -29,7 +55,6 @@ BLADE_MATERIALS
     decomposition method = rcb
 
 BLADE_BLOCKS
-
     
   end finite element model adagio_model
 
@@ -38,7 +63,7 @@ BLADE_BLOCKS
         begin time stepping block p1
           start time = 0
           begin parameters for adagio region adagio
-            time increment = 0.1
+            time increment = {tf/10}
           end parameters for adagio region adagio
         end time stepping block p1
         termination time = {tf}
@@ -46,6 +71,11 @@ BLADE_BLOCKS
 
 ###REGION
     begin adagio region adagio
+
+      begin user variable node_forces_var 
+        type = node vector
+      end
+
       use finite element model adagio_model
       #begin heartbeat out
       #  labels = off
@@ -68,9 +98,9 @@ BLADE_BLOCKS
        database name = OUT_MESH
        database type = exodusii
 	   
-        at time 0.0 increment = 1.0
+        at step 0 increment = 1
 
-
+        # Elastic Orthotropic outputs
          element variables = cauchy_stress
          element variables = green_lagrange_strain
          element variables = material_direction_1
@@ -83,6 +113,13 @@ BLADE_BLOCKS
       end results output results
       
 # #### initial conditions (material directors)
+      begin initial condition
+        include all blocks
+        Initialize Variable Name = node_forces_var
+        Variable Type = node
+        Read variable = node_forces
+      end
+
       Begin Initial Condition
         Include all blocks
         Initialize Variable Name = ANGLE_1
@@ -134,10 +171,22 @@ BLADE_BLOCKS
 
       begin prescribed force
          nodeset = oml 
-         read variable = node_forces
-         time = first
-         #function = ramp
+         function = apply_force_x
+         component = x
       end prescribed force
+
+      begin prescribed force
+         nodeset = oml 
+         function = apply_force_y
+         component = y
+      end prescribed force
+
+      begin prescribed force
+         nodeset = oml 
+         function = apply_force_z
+         component = z
+      end prescribed force
+
 
       #begin prescribed displacement
       #   node set = tip
