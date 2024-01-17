@@ -325,7 +325,7 @@ def cubit_make_cross_sections(
             # tangent_direction=vectNorm(list(tangent))  #Unit vector of tangent.
             # crossSectionRotationAngle=math.atan2(tangent_direction[1],tangent_direction[0])*180/pi
 
-            parse_string = f'with name "*Station{str(i_station)}*"'
+            parse_string = f'with name "*Station{str(i_station).zfill(3)}*"'
             volume_ids = parse_cubit_list("surface", parse_string)
 
             # Undo initial twist
@@ -557,34 +557,32 @@ def cubit_make_solid_blade(
 
     addColor(blade, "volume")
 
-    # Adding Nodesets
-    # Root Nodeset
-    parse_string = f'with name "*station{i_station_start}*"'
-    print(f"parse_string{parse_string}")
-    surface_ids = parse_cubit_list("surface", parse_string)
-    cubit.cmd(f"nodeset 1 add surface {l2s(surface_ids)} ")
-    cubit.cmd(f'nodeset 1 name "root"')
 
-    for iLoop, i_station in enumerate(stationList[1:-1]):
-        parse_string = f'with name "*station{i_station}*"'
-        print(f"parse_string{parse_string}")
+    # # Adding Nodesets
+    for iLoop, i_station in enumerate(stationList):
+
+        if iLoop ==0:
+            node_set_name='root'
+        elif iLoop==len(stationList)-1:
+            node_set_name='tip'
+        else:
+            node_set_name=f'station{str(i_station).zfill(3)}'
+            
+            
+        parse_string = f'with name "*station{str(i_station).zfill(3)}*"'
         surface_ids = parse_cubit_list("surface", parse_string)
-        cubit.cmd(f"nodeset {iLoop+2} add surface {l2s(surface_ids)} ")
-        cubit.cmd(f'nodeset {iLoop+2} name "station{i_station}"')
-    if not stationList[1:-1]:
-        iLoop = -1
-    # Tip Nodeset
-    parse_string = f'with name "*station{i_station_end}*"'
-    surface_ids = parse_cubit_list("surface", parse_string)
-    cubit.cmd(f"nodeset {iLoop+3} add surface {l2s(surface_ids)} ")
-    cubit.cmd(f'nodeset {iLoop+3} name "tip"')
+
+        cubit.cmd(f"nodeset {iLoop+1} add surface {l2s(surface_ids)} ")
+        cubit.cmd(f'nodeset {iLoop+1} name "{node_set_name}"')
+
+
 
     # Outer mold-line nodeset
     cubit.cmd('draw surf with name "*layer0_bottomFace*"')
     parse_string = f'with name "*layer0_bottomFace*"'
     surface_ids = parse_cubit_list("surface", parse_string)
-    cubit.cmd(f"nodeset {iLoop+4} add surface {l2s(surface_ids)} ")
-    cubit.cmd(f'nodeset {iLoop+4} name "oml"')
+    cubit.cmd(f"nodeset {iLoop+1} add surface {l2s(surface_ids)} ")
+    cubit.cmd(f'nodeset {iLoop+1} name "oml"')
 
     # ####################################
     # ### Assign material orientations ###

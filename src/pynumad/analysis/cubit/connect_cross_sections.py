@@ -249,10 +249,8 @@ def make_birds_mouth(
     tangent = straight_line.tangent(midPoint)
 
     # Get the cross-section normal
-    parse_string = f'in surface with name "*webStation{i_station_first_web}*"'
-    surface_id = parse_cubit_list("surface", parse_string)[
-        0
-    ]  # Pick the first surface in this list since all on same plane
+    parse_string = f'in surface with name "*webStation{str(i_station_first_web).zfill(3)}*"'
+    surface_id = parse_cubit_list("surface", parse_string)[0]  # Pick the first surface in this list since all on same plane
     coords = cubit.get_center_point("surface", surface_id)
     surface_normal = cubit.surface(surface_id).normal_at(coords)
     cut_block_length = 5 * max(geometry.ichord)

@@ -322,10 +322,12 @@ def extend_curve_past_curve_and_trim(
 def rename_last_surface(part_name, i_station, i_modeled_layers, material_name, part_name_id):
     # Every cross sectional surface that is created must be followed by a call to this function
     part_name_id += 1
+
+
     surface_name = (
         part_name
         + "Station"
-        + str(i_station)
+        + str(i_station).zfill(3)
         + "_layer"
         + str(i_modeled_layers)
         + "_"
@@ -1959,7 +1961,7 @@ def make_a_cross_section(wt_name,
             materials_used,
         )
 
-    parse_string = f'with name "*station{i_station}*"'
+    parse_string = f'with name "*station{str(i_station).zfill(3)}*"'
     cs_surfaces = parse_cubit_list("surface", parse_string)
     for surface_id in cs_surfaces:
         n = get_surface_normal(surface_id)
