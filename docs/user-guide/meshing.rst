@@ -54,8 +54,55 @@ The table below summarizes the differences between the two meshing capabilities.
 
 In-house mesher
 ---------------
-This is how to make in in-house mesh 
 
+Constructing a blade mesh using the in-house capability can be done with a single command, once a blade object has been created.  To generate a shell mesh, use pynumad.mesh_gen.mesh_gen.get_shell_mesh(), as demonstrated below:
+
+.. code-block:: python
+
+   from pynumad.mesh_gen.mesh_gen import get_shell_mesh
+   
+   adhes = 1     ## Specify whether to include solid-element trailing edge adhesive (1 for yes, 0 for no)
+   elSize = 0.1  ## Approximate element size in meters
+   shellMesh = get_shell_mesh(blade, adhes, elSize) 
+   ## blade is the blade object, to be pre-generated either with Blade.read_yaml() or otherwise loaded
+   
+   
+For a solid mesh, use pynumad.mesh_gen.mesh_gen.get_solid_mesh():
+
+.. code-block:: python
+
+   from pynumad.mesh_gen.mesh_gen import get_solid_mesh
+   
+   elSize = 0.1         ## Approximate element size in meters
+   layNumEls = [1,3,1]  ## Number of elements through the thickness of each major blade layer, (outer skin, filler, inner skin)
+   solidMesh = get_solid_mesh(blade,layNumEls,elSize)
+   
+The output, denoted shellMesh or solidMesh in this example is a python dictionary object, containing the following data fields:
+
+nodes: a numpy array containing the x-y-z coordinates of the nodes in the blade and shear webs.
+
+elements: a numpy array containing the nodal connectivity of blade and shear web elements.
+
+sets: a collection of node and element sets, each with a name and label list in the form of a python dictionary.
+
+
+sections: a list of sections, each specifying an element set and  material, layup and orientation information for a given blade section.
+
+adhesiveNds: a numpy array containing the x-y-z coordinates of the nodes in the trailing edge adhesive.
+
+adhesiveEls: a numpy array containing the nodal connectivity of trailing adhesive elements.
+
+elementOrientations:  a numpy array containing the direction cosine orientation matrix for each individual element.
+
+constraints: a list of nodal constraint equations, which tie the movement of adhesive and/or shear webs to the outer shell of the blade.  Each constraint is a series of terms, giving a node and coefficient such that the corresponding sum of displacement degrees of freedom is zero.
+
+This output information can be accessed and used in the environment of the user's choice, or alternatively written in yaml format using pynumad.io.mesh_to_yaml.mesh_to_yaml():
+
+.. code-block:: python
+   
+   from pynumad.io.mesh_to_yaml import mesh_to_yaml
+   
+   mesh_to_yaml(meshData, "bladeMesh.yaml") ## meshData is the output from one of the meshing functions above
 
 Meshing with Cubit
 ------------------

@@ -7,12 +7,12 @@ import subprocess
 import pynumad
 from pynumad.utils.interpolation import interpolator_wrap
 
-##from pynumad.shell.shellClasses import shellRegion, elementSet, NuMesh3D, spatialGridList2D, spatialGridList3D
-from pynumad.shell.surface import Surface
-from pynumad.shell.mesh3d import Mesh3D
-from pynumad.shell.shell_region import ShellRegion
-from pynumad.shell.mesh_tools import *
-from pynumad.shell.element_utils import *
+##from pynumad.mesh_gen.shellClasses import shellRegion, elementSet, NuMesh3D, spatialGridList2D, spatialGridList3D
+from pynumad.mesh_gen.surface import Surface
+from pynumad.mesh_gen.mesh3d import Mesh3D
+from pynumad.mesh_gen.shell_region import ShellRegion
+from pynumad.mesh_gen.mesh_tools import *
+from pynumad.mesh_gen.element_utils import *
 #from pynumad.analysis.ansys.write import writeAnsysShellModel
 
 
@@ -196,6 +196,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
     ## Generate the mesh using the splines as surface guides
     bladeSurf = Surface()
     ## Outer shell sections
+    outShES = set()
     secList = list()
     stPt = 0
     for i in range(rws - 1):
@@ -309,6 +310,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
                 elType="quad",
                 meshMethod="structured",
             )
+            outShES.add(stacks[j,i].name)
             newSec = dict()
             newSec["type"] = "shell"
             layup = list()
@@ -346,12 +348,13 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
                     ux = magInv * vx
                     uy = magInv * vy
                     uz = magInv * vz
-                    splineXi[stPt, spl] = splineXi[stPt, spl] + totalThick * ux
-                    splineYi[stPt, spl] = splineYi[stPt, spl] + totalThick * uy
-                    splineZi[stPt, spl] = splineZi[stPt, spl] + totalThick * uz
+                    splineXi[stPt, spl] = splineXi[stPt, spl] + 0.1*totalThick * ux
+                    splineYi[stPt, spl] = splineYi[stPt, spl] + 0.1*totalThick * uy
+                    splineZi[stPt, spl] = splineZi[stPt, spl] + 0.1*totalThick * uz
                     stPt = stPt + 1
 
     ## Shear web sections
+    swES = set()
     stPt = 0
     web1Sets = np.array([])
     web2Sets = np.array([])
@@ -414,6 +417,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
                 elType="quad",
                 meshMethod="structured",
             )
+            swES.add(swstacks[0][i].name)
             newSec = dict()
             newSec["type"] = "shell"
             layup = list()
@@ -484,6 +488,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
                 elType="quad",
                 meshMethod="structured",
             )
+            swES.add(swstacks[1][i].name)
             newSec = dict()
             newSec["type"] = "shell"
             layup = list()
@@ -536,6 +541,25 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
         esi = esi + 1
         
     shellData["elementOrientations"] = elOri
+    
+    ## Get all outer shell and all shear web element sets
+    
+    outerLab = list()
+    swLab = list()
+    for es in shellData["sets"]["element"]:
+        nm = es["name"]
+        if(nm in outShES):
+            outerLab.extend(es["labels"])
+        elif(nm in swES):
+            swLab.extend(es["labels"])
+    outerSet = dict()
+    outerSet["name"] = "allOuterShellEls"
+    outerSet["labels"] = outerLab
+    shellData["sets"]["element"].append(outerSet)
+    swSet = dict()
+    swSet["name"] = "allShearWebEls"
+    swSet["labels"] = swLab
+    shellData["sets"]["element"].append(swSet)
     
     ## Get root (Zmin) node set
     minZ = np.min(splineZi)
@@ -632,20 +656,20 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
         shellData["adhesiveElSet"] = adhesSet
         
         print('getting constraints')
-        if(not forSolid):
-            constraints = tie_2_meshes_constraints(adMeshData,shellData,0.015*elementSize)
-            shellData["constraints"] = constraints
+        constraints = tie_2_meshes_constraints(adMeshData,shellData,0.015*elementSize)
+        shellData["constraints"] = constraints
 
     return shellData
 
 
 
-def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
+def solidMeshFromShell(blade, shellMesh, layerNumEls, elementSize):
     shNodes = shellMesh["nodes"]
     shElements = shellMesh["elements"]
     elSets = shellMesh["sets"]["element"]
     sectns = shellMesh["sections"]
 
+    print('building solid mesh')
     ## Initialize 3D solid mesh from the shell mesh
     bladeMesh = Mesh3D(shNodes, shElements)
     ## Calculate unit normal vectors for all nodes
@@ -687,11 +711,12 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
     for i in range(0, len(layerNumEls)):
         nodeDist = np.zeros(numNds)
         nodeHitCt = np.zeros(numNds, dtype=int)
-        numSec, numStat = stacks.shape
+        numSec, numStat = blade.stackdb.stacks.shape
         j = 0
-        for es in elSets:
-            layerThick = sectns[j]["layup"][i][1]
-            for el in es["labels"]:
+        for sec in sectns:
+            layerThick = sec["layup"][i][1]
+            #layerThick = sectns[j]["layup"][i][1]
+            for el in elSets[j]["labels"]:
                 for nd in shElements[el]:
                     if nd != -1:
                         nodeDist[nd] = nodeDist[nd] + layerThick
@@ -713,11 +738,13 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
         interpMethod="linear",
     )
 
+    print('getting element sets')
     ## Construct the element set list, extrapolated from the shell model
     newSetList = list()
     newSectList = list()
     esi = 0
-    for es in elSets:
+    for sec in sectns:
+        es = elSets[esi]
         elArray = np.array(es["labels"])
         elLayer = 0
         li = 1
@@ -733,7 +760,9 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
             newSec = dict()
             newSec["type"] = "solid"
             newSec["elementSet"] = newSet["name"]
-            newSec["material"] = sectns[esi]["layup"][li - 1][0]
+            newSec["material"] = sec["layup"][li - 1][0]
+            newSec["xDir"] = sec["xDir"]
+            newSec["xyDir"] = sec["xyDir"]
             newSectList.append(newSec)
             li = li + 1
         esi = esi + 1
@@ -745,6 +774,70 @@ def solidMeshFromShell(blade, shellMesh, layerNumEls=[]):
     solidMesh["adhesiveNds"] = shellMesh["adhesiveNds"]
     solidMesh["adhesiveEls"] = shellMesh["adhesiveEls"]
     solidMesh["adhesiveElSet"] = shellMesh["adhesiveElSet"]
+    
+    numBdEls = len(solidMesh["elements"])
+    totElLrs = sum(layerNumEls)
+    
+    ## Get orientations for all elements
+    elOri = np.zeros((numBdEls,9),dtype=float)
+    for li in range(0,totElLrs):
+        shft = li*numShEls
+        oi = 0
+        for ori in shellMesh["elementOrientations"]:
+            elOri[oi+shft] = ori
+            oi = oi + 1
+    solidMesh["elementOrientations"] = elOri
+    
+    ## Get extruded node and element sets
+    extSets = get_extruded_sets(shellMesh, totElLrs)
+    solidMesh["sets"]["node"] = extSets["node"]
+    solidMesh["sets"]["element"].extend(extSets["element"])
+    
+    ## Get section node sets
+    solidMesh = get_matching_node_sets(solidMesh)
+    
+    ## Get shear web edge set
+    
+    numBdNds = len(solidMesh["nodes"])
+    ndElCt = np.zeros(numBdNds,dtype=int)
+    for el in solidMesh["elements"]:
+        for nd in el:
+            if(nd > -1):
+                ndElCt[nd] = ndElCt[nd] + 1
+    
+    edgeLab = list()
+    for ns in solidMesh["sets"]["node"]:
+        if(ns["name"] == "allShearWebEls"):
+            for nd in ns["labels"]:
+                if(ndElCt[nd] <= 2):
+                    edgeLab.append(nd)
+    
+    newSet = dict()
+    newSet["name"] = "shearWebEdges"
+    newSet["labels"] = edgeLab
+    
+    solidMesh["sets"]["node"].append(newSet)
+    
+    print('getting shear web constraints.  This can take a few minutes...')
+    ## Get tie constraints for shear webs
+    
+    constraints = shellMesh["constraints"]
+    
+    webConst = tie_2_sets_constraints(solidMesh, "shearWebEdges", "allOuterShellEls", 0.05*elementSize)
+    
+    constraints.extend(webConst)
+    
+    #print('getting adhesive constraints')
+    ## Get tie constraints for adhesive
+    
+    # adMesh = dict()
+    # adMesh["nodes"] = solidMesh["adhesiveNds"]
+    # adMesh["elements"] = solidMesh["adhesiveEls"]
+    # adConst = tie_2_meshes_constraints(adMesh,solidMesh,0.015*ndSp)
+    
+    #constraints.extend(adConst)
+    
+    solidMesh["constraints"] = constraints
 
     return solidMesh
 
@@ -756,7 +849,7 @@ def get_solid_mesh(blade, layerNumEls, elementSize):
     ## Note the new output structure of shellMeshGeneral, as a single python dictionary  -E Anderson
     shellMesh = shell_mesh_general(blade, 1, 1, elementSize)
     print("finished shell mesh")
-    solidMesh = solidMeshFromShell(blade, shellMesh, layerNumEls)
+    solidMesh = solidMeshFromShell(blade, shellMesh, layerNumEls, elementSize)
     return solidMesh
 
 
