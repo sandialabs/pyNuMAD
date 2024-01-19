@@ -97,6 +97,32 @@ def get_el_basis(elType,sVec):
     
     return nOut
 
+def check_jacobian(elCrd,elType):
+    sPts = []
+    if(elType == "brick8"):
+        sPts = [[-1.0,-1.0,-1.0],
+                [1.0,-1.0,-1.0],
+                [1.0,1.0,-1.0],
+                [-1.0,1.0,-1.0],
+                [-1.0,-1.0,1.0],
+                [1.0,-1.0,1.0],
+                [1.0,1.0,1.0],
+                [-1.0,1.0,1.0]]
+    elif(elType == "wedge6"):
+        sPts = [[0.0,0.0,-1.0,],
+                [1.0,0.0,-1.0],
+                [0.0,1.0,-1.0],
+                [0.0,0.0,1.0,],
+                [1.0,0.0,1.0],
+                [0.0,1.0,1.0]]
+    for sp in sPts:
+        nOut = get_el_basis(elType,sp)
+        jac = np.matmul(elCrd,nOut['dNds'])
+        det = np.linalg.det(jac)
+        if(det <= 0.0):
+            return False
+    return True
+
 def get_el_centroid(elCrd):
     elCent = np.zeros(3,dtype=float)
     nnds = len(elCrd[0])
