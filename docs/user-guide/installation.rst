@@ -24,7 +24,9 @@ Installation
 After downloading the source, pyNuMAD can be installed by running
 the following command in the root of the repository::
 
-    pip install .
+    pip install -e .
+
+Currently, it is necessary to use `-e` for a local installation so that certain data files are not lost in the installation process.
 
 Developers are recommended to install using the instructions on
 :ref:`contributing<contributing>` page.
