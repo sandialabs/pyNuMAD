@@ -56,6 +56,47 @@ def check_all_jacobians(nodes,elements):
         ei = ei + 1
     return failedEls
 
+def get_element_volumes(meshData):
+    elVols = dict()
+    elMats = dict()
+    nodes = meshData['nodes']
+    elements = meshData['elements']
+    elSets = meshData['sets']['element']
+    if(len(elements[0]) > 4):
+        for i, sec in enumerate(meshData['sections']):
+            for ei in elSets[i]['labels']:
+                elCrd = get_el_coord(elements[ei],nodes)
+                if(elements[ei][6] == -1):
+                    elType = 'wedge6'
+                else:
+                    elType = 'brick8'
+                eVol = get_volume(elCrd,elType)
+                stei = str(ei+1)
+                elVols[stei] = eVol
+                elMats[stei] = sec['material']
+    else:
+        for i, sec in enumerate(meshData['sections']):
+            for ei in elSets[i]['labels']:
+                elCrd = get_el_coord(elements[ei],nodes)
+                if(elements[ei][3] == -1):
+                    elType = 'shell3'
+                else:
+                    elType = 'shell4'
+                eVol = get_volume(elCrd,elType)
+                layVol = list()
+                layMat = list()
+                for lay in sec['layup']:
+                    layVol.append(eVol*lay[1])
+                    layMat.append(lay[0])
+                stei = str(ei+1)
+                elVols[stei] = layVol
+                elMats[stei] = layMat
+    
+    output = dict()
+    output['elVols'] = elVols
+    output['elMats'] = elMats
+    return output
+
 def get_mesh_spatial_list(nodes,xSpacing=0,ySpacing=0,zSpacing=0):
     totNds = len(nodes)
     spaceDim = len(nodes[0])
@@ -65,7 +106,7 @@ def get_mesh_spatial_list(nodes,xSpacing=0,ySpacing=0,zSpacing=0):
     maxY = np.amax(nodes[:,1])
     minY = np.amin(nodes[:,1])
     nto1_2 = np.power(totNds,0.5)
-    nto1_3 = np.power(totNds,0.3333333)
+    nto1_3 = np.power(totNds,0.333333333333)
     if(spaceDim == 3):
         maxZ = np.amax(nodes[:,2])
         minZ = np.amin(nodes[:,2])
