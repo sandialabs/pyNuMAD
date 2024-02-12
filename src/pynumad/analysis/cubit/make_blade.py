@@ -5,8 +5,45 @@ import numpy as np
 import os
 import glob
 import pickle
+def sweep_volumes(vol_to_mesh):
+    failed_volumes=[]
+    for volume_id in vol_to_mesh:
 
+        cubit.cmd(f"mesh vol {volume_id}")
+        if not is_meshed('volume',volume_id): #Try and fix unmeshed volumes by explicitly sweeping
+            volume_name=cubit.get_entity_name("volume", volume_id)
+            source_target_side=[]
+            source_target_side_is_meshed=[]
 
+            for surface in cubit.volume(volume_id).surfaces():
+                surface_name=cubit.get_entity_name("surface", surface.id())
+                if volume_name.split('_')[0] == surface_name.split('_')[0]:
+                    if 'Face' in surface_name:
+                        source_target_side.append(surface.id())
+                        if is_meshed('surface',surface.id()):
+                            source_target_side_is_meshed.append(True)
+                        else:
+                            source_target_side_is_meshed.append(False)
+
+            if len(source_target_side)==2:
+                if source_target_side_is_meshed[0]:
+                    source_side=source_target_side[0]
+                    target_side=source_target_side[1]
+                elif source_target_side_is_meshed[1]:
+                    source_side=source_target_side[1]
+                    target_side=source_target_side[0]
+                else:
+                    source_side=source_target_side[0]
+                    target_side=source_target_side[1]
+
+                cubit.cmd(f"volume {volume_id} scheme Sweep source surface {source_side} target surface {target_side} sweep transform least squares")
+                cubit.cmd(f"mesh vol {volume_id}")
+        if not is_meshed('volume',volume_id):
+            failed_volumes.append(volume_id)
+    return failed_volumes
+def debug():
+    cubit.cmd(f"delete curve 1")
+    cubit.cmd(f'save as "Debug.cub" overwrite')
 def cubit_make_cross_sections(
     blade,
     wt_name,
@@ -535,44 +572,260 @@ def cubit_make_solid_blade(
             i_station_last_web,
         )
     mesh_vol_list=shell_vol_list+web_vol_list+roundTEadhesive_vol_list+flatTEadhesive_vol_list
-
-    cubit.cmd(f"merge volume {l2s(mesh_vol_list)}")
-    cubit.cmd(f"reset volume all")
-
+    
+    # cubit.cmd(f"merge tol 1e-3")
     cubit.cmd(f"delete surface with Is_Free")
+    cubit.cmd(f"merge volume all")
+    
 
-    if float(cs_params['element_size']) != 0.0:
-        cubit.cmd(f"vol all size {float(cs_params['element_size'])}")
-        cubit.cmd(f'curve with name "layer_thickness*" interval {cs_params["nel_per_layer"]}')
+    addColor(blade, "volume")
+
+
+# Mesh sizing
+    if float(cs_params['element_ar']) != 0.0:
         cubit.cmd("set default autosize on")
+        omit_surf_mesh=[]
+        hplp_max_stack_ct = 14 #The number of stacks in HP surface. Hard code for now.
 
-    cubit.cmd(f"mesh volume {l2s(mesh_vol_list)}")
-    cubit.cmd(f"draw volume {l2s(mesh_vol_list)}")
+        #cubit.cmd(f'surface with name "*shellStation*layer0_bottomFace*" scheme map')
+        cubit.cmd(f"surf with name '*Station*surface*' scheme map") #All cross sections are map
 
-    if get_mesh_error_count() !=0:
+        ### Hoop direcrtion mesh spacing for every cross section
+        
+
+        #Find transition from round to flatback adhesive
+        flatback_adhesive_station_list=[]
+        round_adhesive_station_list=[]
+        for i_station, station_id in enumerate(stationList):
+            i_stack=0
+            parse_string = f'with name "hoop_direction{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
+            curve_ids = parse_cubit_list("curve", parse_string)
+            if len(curve_ids)==5:
+                flatback_adhesive_station_list.append(station_id)
+            else:
+                round_adhesive_station_list.append(station_id)
+
+        e_size=[]
+
+        #hoop spacing for flatback_adhesive_stations, if any
+        for i_station, station_id in enumerate(flatback_adhesive_station_list):
+            t_1=get_mean_layer_thickness_at_station(station_id) #Find mean layer thickness for first station
+            e_size_1=t_1/cs_params['nel_per_layer']*cs_params['element_ar'] #Get spanwise element size at station_id cross section
+            
+            e_size.append(e_size_1)
+
+            for i_stack in range(2*hplp_max_stack_ct):
+                parse_string = f'with name "hoop_direction{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
+                curve_ids = parse_cubit_list("curve", parse_string)
+                if i_stack == 12 or i_stack == 26:
+                    cubit.cmd(f"curve {l2s(curve_ids)} interval {cs_params['nel_per_layer']}") 
+                else:
+                    cubit.cmd(f"curve {curve_ids[0]} scheme bias fine size {e_size_1} coarse size {e_size_1} ")  ### SAME FOR NOW
+                current_hoop_interval=get_mesh_intervals("curve" , curve_ids[0])
+
+                #Adjust intervals if needed
+                if i_station > 0:
+                    #get prior stack interval count
+                    parse_string = f'with name "hoop_direction{str(station_id-1).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
+                    temp_curve_ids = parse_cubit_list("curve", parse_string)
+                    prior_hoop_interval=get_mesh_intervals("curve" , temp_curve_ids[0])
+
+                    if abs(current_hoop_interval-prior_hoop_interval)<2:
+                        current_hoop_interval=prior_hoop_interval
+                    
+                    #Make sure that interval count is even in surface loop. Otherwise meshing is impossible. 
+                    elif (prior_hoop_interval-current_hoop_interval) % 2:
+                        current_hoop_interval+=1
+
+                if i_stack == hplp_max_stack_ct and station_id != flatback_adhesive_station_list[-1]:
+                    parse_string = f'with name "shellStation{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}_layer0_bottomFace"' 
+                    omit_surf_mesh.append(parse_cubit_list("surface", parse_string)[0])
+
+                cubit.cmd(f"curve {l2s(curve_ids)} interval {current_hoop_interval}")  ### SAME FOR NOW
+
+                if i_stack == 0:
+                    save_interval =  current_hoop_interval #Make sure TE intervals match
+                elif i_stack == hplp_max_stack_ct:
+                    parse_string = f'with name "hoop_direction{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
+                    curve_ids = parse_cubit_list("curve", parse_string)
+                    cubit.cmd(f"curve {l2s(curve_ids)} interval {save_interval}")  
+
+
+        #hoop spacing for round_adhesive_station_list, if any
+        if len(round_adhesive_station_list)>1:
+            round_adhesive_station_list.reverse()
+        for i_station, station_id in enumerate(round_adhesive_station_list):
+
+            
+            t_1=get_mean_layer_thickness_at_station(station_id) #Find mean layer thickness for first station
+            e_size_1=t_1/cs_params['nel_per_layer']*cs_params['element_ar'] #Get spanwise element size at station_id cross section
+            
+            e_size.insert(0,e_size_1)
+
+            for i_stack in range(2*hplp_max_stack_ct):
+
+                parse_string = f'with name "hoop_direction{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
+                curve_ids = parse_cubit_list("curve", parse_string)
+                if i_stack == 12 or i_stack == 26:
+                    cubit.cmd(f"curve {l2s(curve_ids)} interval {cs_params['nel_per_layer']}") 
+                else:
+                    cubit.cmd(f"curve {curve_ids[0]} scheme bias fine size {e_size_1} coarse size {e_size_1} ")  ### SAME FOR NOW
+                current_hoop_interval=get_mesh_intervals("curve" , curve_ids[0])
+
+                #Adjust intervals if needed
+                if i_station > 0 or len(flatback_adhesive_station_list)>0:
+                    #get prior stack interval count
+                    parse_string = f'with name "hoop_direction{str(station_id+1).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
+                    temp_curve_ids = parse_cubit_list("curve", parse_string)
+                    prior_hoop_interval=get_mesh_intervals("curve" , temp_curve_ids[0])
+
+                    if abs(current_hoop_interval-prior_hoop_interval)<2:
+                        current_hoop_interval=prior_hoop_interval
+                    
+                    #Make sure that interval count is even in surface loop. Otherwise meshing is impossible. 
+                    elif (prior_hoop_interval-current_hoop_interval) % 2:
+                        current_hoop_interval+=1
+
+                cubit.cmd(f"curve {l2s(curve_ids)} interval {current_hoop_interval}")  ### SAME FOR NOW
+
+
+
+
+        #Set each surface mesh scheme
+        parse_string = f"shellStation*_stack*_layer0_bottomFace"
+        oml_to_mesh = parse_cubit_list("surf", parse_string)
+        for surface_id in oml_to_mesh:
+            curves=cubit.surface(surface_id).curves()
+            hoop_intervals=[]
+            if len(curves) == 4:
+                for curve in curves:
+                    curve_id=curve.id()
+                    curve_name = cubit.get_entity_name("curve", curve_id)
+                    if 'hoop_dir' in curve_name:
+                        hoop_intervals.append(get_mesh_intervals("curve" , curve_id))
+
+
+                if len(hoop_intervals)==2:
+                    if hoop_intervals[0] == hoop_intervals[1]:  #Only pave the surfaces that actually need it. Otherwise, the mesh will be unnecessarily goofy. 
+                        cubit.cmd(f'surface {surface_id} scheme map')
+                    else:
+                        cubit.cmd(f'surface {surface_id} scheme pave')
+                else:
+                    raise ValueError(f'Found {len(hoop_intervals)} hoop curves in surface {surface_id}. Expecting 2')
+            else:
+                raise ValueError(f'Found {len(curves)} curves in surface {surface_id}. Expecting 4')
+        
+        #Spanwise spacing for every segment then mesh OML surface
+        for iLoop, station_id in enumerate(stationList[:-1]): #Skip the last station since there are n_stations-1 spanwise volumes
+            
+            e_size_1=e_size[iLoop]
+            e_size_2=e_size[iLoop+1]
+            # t_2=get_mean_layer_thickness_at_station(stationList[iLoop+1]) #Find mean layer thickness for station station_id+1
+            # e_size_2=t_2/cs_params['nel_per_layer']*cs_params['element_ar'] #Get spanwise element size at station_id+1 cross section
+
+            parse_string = f'with name "*shellStation{str(station_id).zfill(3)}*layer0*bottomFace*"' #WOrks for TE only (use later)
+            oml_to_mesh = parse_cubit_list("surf", parse_string)
+            
+            surface_id=oml_to_mesh[0]
+            curves=cubit.surface(surface_id).curves()
+            if len(curves) == 4:
+                for curve in curves:
+                    curve_id=curve.id()
+                    curve_name = cubit.get_entity_name("curve", curve_id)
+
+                    if 'span_dir' in curve_name:
+                        cubit.cmd(f"curve {curve_id} scheme bias fine size {e_size_1} coarse size {e_size_2} ") 
+                        span_interval=get_mesh_intervals("curve" , curve_id) 
+                        break
+            else:
+                raise ValueError(f'Found {len(curves)} curves in {volume_id}. Expecting 4')
+            
+            cubit.cmd(f"curve with name 'span_dir{str(station_id).zfill(3)}*' interval {span_interval}") 
+            
+
+            cubit.cmd(f"mesh surface {l2s(oml_to_mesh)} except surf {l2s(omit_surf_mesh)}")
+
+
+        cubit.cmd(f'curve with name "layer_thickness*" interval {cs_params["nel_per_layer"]}')
+        cubit.cmd(f'curve with name "*web_thickness*" interval {cs_params["nel_per_layer"]}')
+
+        parse_string = f"with name 'shellStation*layer0*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
+        vol_to_mesh = parse_cubit_list("volume", parse_string)
+        failed_volumes=sweep_volumes(vol_to_mesh)   
+
+        parse_string = f"with name 'shellStation*layer1*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
+        vol_to_mesh = parse_cubit_list("volume", parse_string)
+        failed_volumes+=sweep_volumes(vol_to_mesh)   
+
+        parse_string = f"with name 'shellStation*layer2*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
+        vol_to_mesh = parse_cubit_list("volume", parse_string)
+        failed_volumes+=sweep_volumes(vol_to_mesh)   
+
+        cubit.cmd(f"mesh vol with name 'flatTEad*'")
+        cubit.cmd(f"mesh vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'")
+        cubit.cmd(f"mesh vol with name 'shell_web_thicknessStation*'")
+        cubit.cmd(f"mesh vol with name '*layer3*'")
+        cubit.cmd(f"mesh vol with name '*layer4*'")
+
+        #Spanwise spacing for every segment then mesh OML surface
+        for iLoop, station_id in enumerate(stationList[:-1]): #Skip the last station since there are n_stations-1 spanwise volumes
+            e_size_1=e_size[iLoop]
+            e_size_2=e_size[iLoop+1]
+
+            parse_string = f'with name "webStation{str(station_id).zfill(3)}_layer6*_topFace"' #
+            surf_to_mesh = parse_cubit_list("surf", parse_string)
+
+            cubit.cmd(f'surface {l2s(surf_to_mesh)} scheme pave')
+            cubit.cmd(f'surface {l2s(surf_to_mesh)} size {(e_size_1+e_size_2)/2}')
+            cubit.cmd(f'mesh surface {l2s(surf_to_mesh)}')
+
+            parse_string = f'with name "webStation{str(station_id).zfill(3)}_layer9*_topFace"' #
+            surf_to_mesh = parse_cubit_list("surf", parse_string)
+
+            cubit.cmd(f'surface {l2s(surf_to_mesh)} scheme pave')
+            cubit.cmd(f'surface {l2s(surf_to_mesh)} size {(e_size_1+e_size_2)/2}')
+            cubit.cmd(f'mesh surface {l2s(surf_to_mesh)}')
+
+        cubit.cmd(f"mesh vol with name 'webStation*'")
+
+
+
+    else:
+        cubit.cmd(f"reset volume all")
+        
+
+    if get_mesh_error_count():
         with open(f"{wt_name}.log", "a") as logFile:
-            logFile.write(f"    Warning: {get_mesh_error_count()} cross section mesh errors exist in station {i_station}\n")
+            logFile.write(f"    Warning: There are {get_mesh_error_count()} mesh errors\n")
+
+    parse_string = f'with not is_meshed'
+    un_meshed_vol_ids=parse_cubit_list("volume", parse_string)
+    if un_meshed_vol_ids:
+        un_meshed_vol_names=[]
+        for volume_id in un_meshed_vol_ids:
+            un_meshed_vol_names.append(cubit.get_entity_name("volume", volume_id))
+        raise ValueError(f'There are {len(un_meshed_vol_ids)} unmeshed volumes. The following volumes failed to mesh: {un_meshed_vol_names}\n\nVolume IDs: {un_meshed_vol_ids}')
+
             
     # Blocks
     for imat, material_name in enumerate(materials_used):
         cubit.cmd(f'block {imat+1} add volume with name "*{material_name}*"')
         cubit.cmd(f'block {imat+1} name "{material_name}"')
 
-    addColor(blade, "volume")
-
+    
 
     # # Adding Nodesets
-    for iLoop, i_station in enumerate(stationList):
+    for iLoop, station_id in enumerate(stationList):
 
         if iLoop ==0:
             node_set_name='root'
         elif iLoop==len(stationList)-1:
             node_set_name='tip'
         else:
-            node_set_name=f'station{str(i_station).zfill(3)}'
+            node_set_name=f'station{str(station_id).zfill(3)}'
             
             
-        parse_string = f'with name "*station{str(i_station).zfill(3)}*"'
+        parse_string = f'with name "*station{str(station_id).zfill(3)}*_surface*"'
         surface_ids = parse_cubit_list("surface", parse_string)
 
         cubit.cmd(f"nodeset {iLoop+1} add surface {l2s(surface_ids)} ")

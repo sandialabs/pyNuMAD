@@ -10,17 +10,21 @@ from pynumad.analysis.cubit.make_cross_sections import print_sine_curve_between_
 import numpy as np
 import re
 
-
+def debug():
+    cubit.cmd(f"delete curve 1")
+    cubit.cmd(f'save as "Debug.cub" overwrite')
 def get_ordered_list(part_name):
 
     ordered_list = []
     surfaces_to_connect = [1]  # Initialize to enter loop
     i_surface = -1  # Initialize
+    temp=[]
     while surfaces_to_connect:
         i_surface += 1
-        parse_string = f'with name "*{part_name}*surface{i_surface+1}"'
+        parse_string = f'with name "{part_name}*Station*surface{i_surface+1}"'
         surfaces_to_connect = parse_cubit_list("surface", parse_string)
-
+        if len(surfaces_to_connect)==4:
+            temp.append(surfaces_to_connect)
         if surfaces_to_connect:
             ordered_list.append(surfaces_to_connect)
 
@@ -30,6 +34,7 @@ def get_ordered_list(part_name):
 def make_spanwise_splines(surface_dict, ordered_list):
     spanwise_splines = []
     for aligned_surfaces in ordered_list:
+
         tempList = []
         for i_point in range(4):
             vertex_list = []
@@ -50,15 +55,16 @@ def make_spanwise_splines(surface_dict, ordered_list):
                     except:
                         pass
 
+            cubit.cmd(f"create curve spline vertex {l2s(vertex_list)}") 
+            cubit.cmd(f'curve {get_last_id("curve")} rename "span_dir"')       
 
-            curve = cubit.cmd(f"create curve spline vertex {l2s(vertex_list)}")
             tempList.append(get_last_id("curve"))
         spanwise_splines.append(tempList)
     return spanwise_splines
 
 
 def make_a_volume(
-    current_surface_id, next_surface_id, spanwise_splines_for_a_volume, surface_dict, i_station_end
+    i_span,current_surface_id, next_surface_id, spanwise_splines_for_a_volume, surface_dict, i_station_end
 ):
     cubit.cmd(f"surface {current_surface_id} copy")
     current_surface_id_copy = get_last_id("surface")
@@ -74,6 +80,10 @@ def make_a_volume(
 
     current_surface_vertices = surface_dict[current_surface_id]["verts"]
     next_surface_vertices = surface_dict[next_surface_id]["verts"]
+    
+    surf_name = cubit.get_entity_name("surface", current_surface_id)
+    i_station = surf_name.split('_')[0][-3:]
+    cubit.cmd(f'curve {l2s(spanwise_splines_for_a_volume)} rename "span_dir{str(i_station).zfill(3)}"')    
 
     spanwise_splines_for_a_volume.append(
         spanwise_splines_for_a_volume[0]
@@ -85,14 +95,24 @@ def make_a_volume(
             f"create surface curve {current_surface_curves[i_curve]} {spanwise_splines_for_a_volume[i_curve]} {next_surface_curves[i_curve]} {spanwise_splines_for_a_volume[i_curve+1]}"
         )
         transverse_surface_ids.append(get_last_id("surface"))
+    
+    surf_name = cubit.get_entity_name("surface", current_surface.id())
+    surf_name_split = surf_name.split("_")
+    
 
-    surf_name = cubit.get_entity_name("surface", current_surface.id()).split("_")
-    regex = re.compile("layer")
-    layer_name = [string for string in surf_name if re.match(regex, string)][0]
-    string_name = layer_name + "_bottomFace"
-    cubit.cmd(f'surface {transverse_surface_ids[0]} rename "{string_name}"')
+
+    layer_name = surf_name_split[0]+'_'+surf_name_split[1]+'_'+surf_name_split[2]
     string_name = layer_name + "_topFace"
     cubit.cmd(f'surface {transverse_surface_ids[2]} rename "{string_name}"')
+
+    if 'web_thickness' in surf_name:
+        append_str='_web_thickness'
+    else:
+        append_str=''
+
+    string_name = layer_name + "_bottomFace" + append_str
+    cubit.cmd(f'surface {transverse_surface_ids[0]} rename "{string_name}"')
+
 
     # cubit.cmd(f'save as "Debug.cub" overwrite')
     # raise Exception(f'Volume "{volume_name}" creation failed')
@@ -167,7 +187,7 @@ def make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end):
                     spanwise_splines[part_surface_ids],
                     surface_dict[next_surface_id]["verts"],
                 )
-                make_a_volume(
+                make_a_volume(i_span,
                     current_surface_id,
                     next_surface_id,
                     spanwise_splines_for_a_volume,

@@ -9,7 +9,9 @@ except ModuleNotFoundError:
 import numpy as np
 import os
 
-
+def debug():
+    cubit.cmd(f"delete curve 1")
+    cubit.cmd(f'save as "Debug.cub" overwrite')
 def addColor(blade, volume_or_surface):
     # Adds color to volume or surfaces by material
 
@@ -373,15 +375,41 @@ def make_cross_section_surface(
     part_name_id,
     i_modeled_layers,
     materials_used,
+    stack_id
 ):
     # Given two curves in a cross section, create a surface by connecting the end points then
     # rename the surface and add to the surface dictionary
     surface_from_two_curves(top_curve, bottom_curve)
     materials_used.add(material_name)
 
-    part_name_id = rename_last_surface(
-        part_name, i_station, i_modeled_layers, material_name, part_name_id
-    )
+    curve_name = cubit.get_entity_name("curve", bottom_curve)
+
+    if 'web_thickness' in curve_name:
+        append_str='_web_thickness'
+    else:
+        append_str=''
+
+    # Rename last surface
+    part_name_id += 1
+    if 'web_thickness' in curve_name:
+        part_name+='_web_thickness'
+        surface_name = (
+            part_name+ "Station"+ str(i_station).zfill(3)+ "_layer"+ str(i_modeled_layers)+ "_"+ material_name+ "_surface"+ str(part_name_id))
+    else:
+        if stack_id>-1:
+            surface_name = (
+                part_name+ "Station"+ str(i_station).zfill(3)+ '_stack'+str(stack_id).zfill(3)+"_layer"+ str(i_modeled_layers)+ "_"+ 
+                material_name+ "_surface"+ str(part_name_id))
+        else:
+            surface_name = (
+                part_name+ "Station"+ str(i_station).zfill(3)+ "_layer"+ str(i_modeled_layers)+ "_"+ material_name+ "_surface"+ str(part_name_id))
+
+    # surface_name = (
+    #     part_name+ "Station"+ str(i_station).zfill(3)+ "_layer"+ str(i_modeled_layers)+ "_"+ material_name+ "_surface"+ str(part_name_id))
+    cubit.cmd(f'surface {get_last_id("surface")} rename "{surface_name}"')
+
+    # part_name_id = rename_last_surface(
+    #     part_name+append_str, i_station, i_modeled_layers, material_name, part_name_id)
     add_surface_dict_entry(
         surface_dict,
         cubit.surface(get_last_id("surface")),
@@ -390,16 +418,27 @@ def make_cross_section_surface(
         material_name,
         ply_angle,
     )
+    
 
-    cubit.cmd(
-        f'curve {surface_dict[get_last_id("surface")]["curves"][1]} rename "layer_thickness"'
-    )
-    cubit.cmd(
-        f'curve {surface_dict[get_last_id("surface")]["curves"][-1]} rename "layer_thickness"'
-    )
-    cubit.cmd(
-        f'curve {surface_dict[get_last_id("surface")]["verts"][-1]} rename "layer_thickness"'
-    )
+    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][1]} rename "layer_thickness{str(i_station).zfill(3)}_right"')
+    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][-1]} rename "layer_thickness{str(i_station).zfill(3)}_left"')
+
+    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["verts"][-1]} rename "layer_thickness"')
+    
+   # if i_modeled_layers == 0:
+    curve_id = surface_dict[get_last_id("surface")]["curves"][0]
+    curve_name = cubit.get_entity_name("curve", curve_id)
+
+    if 'web_thickness' in curve_name:
+        append_str='_web_thickness'
+    else:
+        if stack_id>-1:
+            append_str = '_stack'+str(stack_id).zfill(3)
+        else:
+            append_str =''
+        
+    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][0]} rename "hoop_direction{str(i_station).zfill(3)+append_str}"')
+    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][2]} rename "hoop_direction{str(i_station).zfill(3)+append_str}"')
 
     return part_name_id, materials_used
 
@@ -623,6 +662,10 @@ def split_key_curves(key_curves, aft_web_stack, fore_web_stack, web_adhesive_wid
     n_start = get_last_id("curve") + 1
     cubit.cmd(f"split curve {key_curves[2]} at vertex {l2s(vertex_list)}")
     n_end = get_last_id("curve")
+
+    cubit.cmd(f'curve {n_start} to {n_start+2} rename "web_thickness"')
+    cubit.cmd(f'curve {n_end-2} to {n_end} rename "web_thickness"') 
+
     temp_base_curve_ids.append(n_start)
     temp_base_curve_ids.append(n_end)
     spar_cap_base_curves = list(range(n_start + 1, n_end))
@@ -702,8 +745,10 @@ def make_cs_perimeter_layer_areas(wt_name,
     cs_normal,
     lp_hp_dict,
     materials_used,
+    stack_ct
 ):
-    part_name = lp_hp_side + "shell"
+    # part_name = lp_hp_side + "shell"
+    part_name = "shell"
     
     if i_station > last_round_station:
         is_flatback = True
@@ -729,9 +774,7 @@ def make_cs_perimeter_layer_areas(wt_name,
 
     last_perimeter = nStationLayups - 2
 
-    for i_perimeter in range(
-        nStationLayups - 1
-    ):  # Skip the last stack since the current and the next stack are generated at the same time.
+    for i_perimeter in range(nStationLayups - 1):  # Skip the last stack since the current and the next stack are generated at the same time.
         with open(f"{wt_name}.log", "a") as logFile:
             logFile.write(f"\tlp_hp_side {lp_hp_side}, i_perimeter={i_perimeter}\n")
 
@@ -1148,6 +1191,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                         part_name_id,
                         i_modeled_layers,
                         materials_used,
+                        stack_ct
                     )
                 if i_station <= last_flat_station:
                 #if not is_flatback:
@@ -1266,6 +1310,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 part_name_id,
                 i_modeled_layers,
                 materials_used,
+                stack_ct+1
             )
             current_stack_surface_list.append(get_last_id("surface"))
 
@@ -1283,6 +1328,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 part_name_id,
                 i_modeled_layers,
                 materials_used,
+                stack_ct+2
             )
             transition_stack_surface_list.append(get_last_id("surface"))
 
@@ -1300,6 +1346,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 part_name_id,
                 i_modeled_layers,
                 materials_used,
+                stack_ct+3
             )
             next_stack_surface_list.append(get_last_id("surface"))
 
@@ -1318,6 +1365,7 @@ def make_cs_perimeter_layer_areas(wt_name,
         # Build spar caps
         if i_perimeter == 1:
             lp_hp_dict["web_interface_curves"][lp_hp_side_index] = [right_top_curve]
+            temp_ct=0
             for ic, current_curveID in enumerate(
                 lp_hp_dict["spar_cap_base_curves"][lp_hp_side_index]
             ):
@@ -1325,7 +1373,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 offSetSign = get_curve_offset_direction(
                     bottom_curve, lp_hp_side, cs_normal
                 )
-
+                temp_ct+=1
                 for it, thickness in enumerate(next_stack_layer_thicknesses):
                     cubit.cmd(
                         f"create curve offset curve {bottom_curve} distance {offSetSign*thickness} extended"
@@ -1345,6 +1393,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                         part_name_id,
                         it,
                         materials_used,
+                        stack_ct+temp_ct
                     )
                     next_stack_surface_list.append(get_last_id("surface"))
 
@@ -1353,9 +1402,13 @@ def make_cs_perimeter_layer_areas(wt_name,
                             top_curve
                         )
                     bottom_curve = top_curve
+                    
+            stack_ct+=1
         elif i_perimeter == 2:
             lp_hp_dict["web_interface_curves"][lp_hp_side_index].append(leftTopCurve)
-    return part_name_id, lp_hp_dict
+
+        stack_ct+=3
+    return part_name_id, lp_hp_dict, stack_ct
 
 
 ####################################################
@@ -1374,6 +1427,7 @@ def create_simplist_surface_for_TE_or_LE_adhesive(
     part_name_id,
     n_modeled_layers,
     materials_used,
+    stack_id
 ):
     for i_curve in range(len(adhesive_curve_list[0])):
         ply_angle = (
@@ -1390,6 +1444,7 @@ def create_simplist_surface_for_TE_or_LE_adhesive(
             part_name_id,
             n_modeled_layers + 1,
             materials_used,
+            stack_id
         )
 
     return part_name_id
@@ -1492,6 +1547,7 @@ def make_cs_web_layer_areas(
                     part_name_id,
                     n_modeled_layers + it,
                     materials_used,
+                    -1
                 )
 
                 bottom_curve = top_curve
@@ -1538,6 +1594,7 @@ def make_cs_web_layer_areas(
             part_name_id,
             n_modeled_layers + it + 2 + i_curve,
             materials_used,
+            -1
         )
     return part_name_id, (vHP, vLP)
 
@@ -1862,8 +1919,9 @@ def make_a_cross_section(wt_name,
     n_modeled_layers = 3
 
     lp_hp_side = "HP"
-
-    part_name_id, lp_hp_dict = make_cs_perimeter_layer_areas(wt_name,
+    
+    stack_ct=0
+    part_name_id, lp_hp_dict,stack_ct = make_cs_perimeter_layer_areas(wt_name,
         surface_dict,
         i_station,
         stackdb.stacks[1:6, i_station],
@@ -1877,12 +1935,14 @@ def make_a_cross_section(wt_name,
         cs_normal,
         lp_hp_dict,
         materials_used,
+        stack_ct
     )
-
+    stack_ct+=1
+    
     lp_hp_side = "LP"
     temp = stackdb.stacks[:, i_station]
     temp = np.flip(temp)
-    part_name_id, lp_hp_dict = make_cs_perimeter_layer_areas(wt_name,
+    part_name_id, lp_hp_dict,stack_ct = make_cs_perimeter_layer_areas(wt_name,
         surface_dict,
         i_station,
         temp[1:6],
@@ -1896,6 +1956,7 @@ def make_a_cross_section(wt_name,
         cs_normal,
         lp_hp_dict,
         materials_used,
+        stack_ct
     )
 
     part_name = "shell"
@@ -1908,6 +1969,7 @@ def make_a_cross_section(wt_name,
         part_name_id,
         n_modeled_layers,
         materials_used,
+        -1
     )
 
     part_name_id = 0  # Reset since outer areoshell is complete (LE adhesive is accouted for as aeroshell)
@@ -1925,7 +1987,8 @@ def make_a_cross_section(wt_name,
         mat_name,
         part_name_id,
         n_modeled_layers,
-        materials_used)
+        materials_used,
+        -1)
     
 
         
@@ -1941,6 +2004,7 @@ def make_a_cross_section(wt_name,
             part_name_id,
             n_modeled_layers,
             materials_used,
+            0
         )
 
 
@@ -2123,3 +2187,24 @@ def get_te_angle(hp_key_curve, lp_key_curve, fraction):
     return math.degrees(
         math.acos(v1.dot(np.transpose(v2)) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
     )
+
+
+def get_mean_layer_thickness_at_station(i_stations):
+        parse_string = f'with name "*layer_thickness{str(i_stations).zfill(3)}*"'
+        thickness_curve_ids = parse_cubit_list("curve", parse_string)
+
+        sum_length=0
+        for curve_id in thickness_curve_ids:
+            sum_length+=cubit.curve(curve_id).length()
+        return sum_length/len(thickness_curve_ids)
+
+def get_min_layer_thickness_at_station(i_stations):
+        parse_string = f'with name "*layer_thickness{str(i_stations).zfill(3)}*"'
+        thickness_curve_ids = parse_cubit_list("curve", parse_string)
+
+        min_length=999999
+        for curve_id in thickness_curve_ids:
+            curve_len=cubit.curve(curve_id).length()
+            if curve_len < min_length:
+                min_length=curve_len
+        return min_length

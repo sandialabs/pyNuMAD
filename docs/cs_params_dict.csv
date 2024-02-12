@@ -1,6 +1,6 @@
 ﻿Key,Description
 ``nel_per_layer``,"Type: Int. Number of intervals assigned to Cubit curves named ""layer_thickness"""
-``element_size``,"Type: Float or Int. Approximate element size in meters. Zero will generate maximally coarse mesh "
+``element_size``,"Type: Float or Int. Approximate element aspect ratio. Zero will generate maximally coarse mesh "
 ``element_shape``,"Type: str. Could be either ""quad"" or ""tri"""
 ``layer_transition_angle``,Type: float. Angle in degrees to connect adjacent componets with different thicknesses
 ``birds_mouth_amplitude_fraction``,Type: float. Total brid's mouth depth as a fraction web height. 
