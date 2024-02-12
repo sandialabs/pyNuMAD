@@ -97,6 +97,18 @@ def get_el_basis(elType,sVec):
     
     return nOut
 
+def get_el_coord(elNds,ndCrd):
+    xCrd = []
+    yCrd = []
+    zCrd = []
+    for nd in elNds:
+        if(nd > -1):
+            xCrd.append(ndCrd[nd][0])
+            yCrd.append(ndCrd[nd][1])
+            zCrd.append(ndCrd[nd][2])
+    elCrd = np.array([xCrd,yCrd,zCrd])
+    return elCrd
+
 def check_jacobian(elCrd,elType):
     sPts = []
     if(elType == "brick8"):
@@ -122,6 +134,47 @@ def check_jacobian(elCrd,elType):
         if(det <= 0.0):
             return False
     return True
+
+def get_volume(elCrd,elType):
+    sPts = []
+    rt3 = 1.0/np.sqrt(3)
+    op3 = 0.333333333333333333
+    if(elType == "brick8"):
+        sPts = rt3*np.array([[-1.0,-1.0,-1.0],
+                [1.0,-1.0,-1.0],
+                [1.0,1.0,-1.0],
+                [-1.0,1.0,-1.0],
+                [-1.0,-1.0,1.0],
+                [1.0,-1.0,1.0],
+                [1.0,1.0,1.0],
+                [-1.0,1.0,1.0]])
+        wt = [1.,1.,1.,1.,1.,1.,1.,1.,1.]
+    elif(elType == "wedge6"):
+        sPts = np.array([[op3,op3,-rt3],
+                [op3,op3,rt3]])
+        wt = [0.5,0.5]
+    elif(elType == "shell4"):
+        sPts = rt3*np.array([[-1.0,-1.0,0.0],
+                [1.0,-1.0,0.0],
+                [1.0,1.0,0.0],
+                [-1.0,1.0,0.0]])
+        wt = [1.,1.,1.,1.]
+    elif(elType == "shell3"):
+        sPts = np.array([[op3,op3,0.0],
+                         [op3,op3,0.0]])
+        wt = [0.25,0.25]
+    eVol = 0.0
+    for i, sp in enumerate(sPts):
+        nOut = get_el_basis(elType,sp)
+        jac = np.matmul(elCrd,nOut['dNds'])
+        if("shell" in elType):
+            cp = cross_prod(jac[:,0],jac[:,1])
+            norm = np.linalg.norm(cp)
+            eVol = eVol + norm*wt[i]
+        else:
+            det = np.linalg.det(jac)
+            eVol = eVol + det*wt[i]
+    return eVol
 
 def get_el_centroid(elCrd):
     elCent = np.zeros(3,dtype=float)
