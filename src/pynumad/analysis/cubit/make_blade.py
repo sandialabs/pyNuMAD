@@ -225,14 +225,19 @@ def cubit_make_cross_sections(
     last_round_station=next((i-1 for i, x in enumerate(te_angles) if x < 50.0), None)
     last_flat_station=next((i-1 for i, x in enumerate(te_angles) if x < 10.0), None)
     
-    last_10deg_station=last_flat_station
-    for i_length, excess_length in enumerate(excess_lengths[last_10deg_station+1:]):
-        athickness=cs_params["te_adhesive_thickness"][last_10deg_station+1+i_length]
-        print(f'i {last_10deg_station+1+i_length},excess_length {excess_length*1000}, athickness{athickness*1000}')
-        if (excess_length-athickness)/excess_length > 0.025:
-            last_flat_station=last_flat_station+1+i_length
-        else:
-            break
+    if last_round_station == None and last_round_station == None:
+        last_round_station = len(te_angles)+1000 #Arbitrarily large
+        last_flat_station = last_round_station+1 #Arbitrarily large
+    else:
+
+        last_10deg_station=last_flat_station
+        for i_length, excess_length in enumerate(excess_lengths[last_10deg_station+1:]):
+            athickness=cs_params["te_adhesive_thickness"][last_10deg_station+1+i_length]
+            print(f'i {last_10deg_station+1+i_length},excess_length {excess_length*1000}, athickness{athickness*1000}')
+            if (excess_length-athickness)/excess_length > 0.025:
+                last_flat_station=last_flat_station+1+i_length
+            else:
+                break
 
 ########################
 
