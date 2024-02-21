@@ -4,7 +4,7 @@ import subprocess
 import glob
 import numpy as np
 from pynumad.utils.misc_utils import copy_and_replace
-from pynumad.paths import SOFTWARE_PATHS
+
 
 def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
     import pynumad.analysis.beam_utils as beam_utils
@@ -93,115 +93,99 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
     return [axisFileName,propFileName]
 
 
+def write_sierra_sm_model(template_file,wt_name,blade,materials_used,directory='.'):
 
-def write_sierra_model(wt_name,settings,blade,materials_used,directory='.'):
-   # import pynumad.analysis.beam_utils as beam_utils
-
-
-
-    template_path=SOFTWARE_PATHS['pynumad']+'src/data/templates/'
 
     # radial_stations=blade.ispan/blade.ispan[-1]
     # nStations=len(radial_stations)
     # #Run input files
     
     materials = blade.definition.materials
-    solver_string=settings['make_input_for'].lower()
-    if 'sm' in solver_string or 'sd' in solver_string:
 
-        if 'sm' in settings['make_input_for'].lower():
+    adagioFileName=f'{wt_name}_sm.i'
 
-            templateFileName=template_path+'sm.i.template'
-            adagioFileName='sm.i'
+    materialLines=f''
+    blockLines=f''
+    for material_name in materials_used:
+        material=materials[material_name]
+        print(material.name)
+        materialLines+=f'begin property specification for material {material.name}\n'
+        materialLines+=f'   DENSITY      = {material.density}\n'
+        materialLines+='    begin parameters for model elastic_orthotropic\n'
+        materialLines+='        youngs modulus = 70e9\n'
+        materialLines+='        poissons ratio  = 0.33\n'
+        materialLines+=f'        E11          = {material.ex}\n'
+        materialLines+=f'        E22          = {material.ey}\n'
+        materialLines+=f'        E33          = {material.ez}\n'
+        materialLines+=f'        NU12         = {material.prxy}\n'
+        materialLines+=f'        NU13         = {material.prxz}\n'
+        materialLines+=f'        NU23         = {material.pryz}\n'
+        materialLines+=f'        G12          = {material.gxy}\n'
+        materialLines+=f'        G13          = {material.gxz}\n'
+        materialLines+=f'        G23          = {material.gyz}\n'
 
-            materialLines=f''
-            blockLines=f''
-            for material_name in materials_used:
-                material=materials[material_name]
-                print(material.name)
-                materialLines+=f'begin property specification for material {material.name}\n'
-                materialLines+=f'   DENSITY      = {material.density}\n'
-                materialLines+='    begin parameters for model elastic_orthotropic\n'
-                materialLines+='        youngs modulus = 70e9\n'
-                materialLines+='        poissons ratio  = 0.33\n'
-                materialLines+=f'        E11          = {material.ex}\n'
-                materialLines+=f'        E22          = {material.ey}\n'
-                materialLines+=f'        E33          = {material.ez}\n'
-                materialLines+=f'        NU12         = {material.prxy}\n'
-                materialLines+=f'        NU13         = {material.prxz}\n'
-                materialLines+=f'        NU23         = {material.pryz}\n'
-                materialLines+=f'        G12          = {material.gxy}\n'
-                materialLines+=f'        G13          = {material.gxz}\n'
-                materialLines+=f'        G23          = {material.gyz}\n'
+        materialLines+='\n' 
+        materialLines+='        # Coordinate system\n'
+        materialLines+='        COORDINATE SYSTEM = sysR\n' 
+        materialLines+='    end parameters for model elastic_orthotropic\n' 
+        materialLines+=f'end property specification for material {material.name}\n' 
+        materialLines+='\n\n' 
+        
 
+        blockLines+=f'begin parameters for block {material.name}\n'
+        blockLines+=f'    material {material.name}\n'
+        blockLines+=f'    solid mechanics use model elastic_orthotropic\n'
+        blockLines+=f'end parameters for block {material.name}\n'
+        blockLines+='\n\n' 
 
-                
-                materialLines+='\n' 
-                materialLines+='        # Coordinate system\n'
-                materialLines+='        COORDINATE SYSTEM = sysR\n' 
-                materialLines+='    end parameters for model elastic_orthotropic\n' 
-                materialLines+=f'end property specification for material {material.name}\n' 
-                materialLines+='\n\n' 
-                
+    copy_and_replace(template_file, adagioFileName,
+        {
+            'BLADE_MATERIALS': materialLines,
+            'IN_MESH':wt_name+'.g',
+            'OUT_MESH':wt_name+'.e',
+            'BLADE_BLOCKS': blockLines,
+        })
+    
+def write_sierra_sd_model(template_file,wt_name,blade,materials_used,directory='.'):
 
-                blockLines+=f'begin parameters for block {material.name}\n'
-                blockLines+=f'    material {material.name}\n'
-                blockLines+=f'    solid mechanics use model elastic_orthotropic\n'
-                blockLines+=f'end parameters for block {material.name}\n'
-                blockLines+='\n\n' 
-                
+    materials = blade.definition.materials
 
+    template_file=template_path+'sd.i.template'
+    adagioFileName=f'{wt_name}_sd.i'
 
-            copy_and_replace(templateFileName, adagioFileName,
-                {
-                    'BLADE_MATERIALS': materialLines,
-                    'IN_MESH':wt_name+'.g',
-                    'OUT_MESH':wt_name+'.e',
-                    'BLADE_BLOCKS': blockLines,
-                })
-        if 'sd' in settings['make_input_for'].lower():
-            templateFileName=template_path+'sd.i.template'
-            adagioFileName='sd.i'
+    materialLines=f''
+    blockLines=f''
+    for material_name in materials_used:
+        material=materials[material_name]
+        print(material.name)
+        materialLines+=f'material {material.name}\n'
+        materialLines+=f'orthotropic_prop\n'
+        materialLines+=f'    E1          = {material.ex}\n'
+        materialLines+=f'    E2          = {material.ey}\n'
+        materialLines+=f'    E3          = {material.ez}\n'
+        materialLines+=f'    nu12         = {material.prxy}\n'
+        materialLines+=f'    nu23         = {material.pryz}\n'
+        materialLines+=f'    nu13         = {material.prxz}\n'
+        materialLines+=f'    G12          = {material.gxy}\n'
+        materialLines+=f'    G23          = {material.gyz}\n'
+        materialLines+=f'    G13          = {material.gxz}\n'
+        materialLines+=f'    density       = {material.density}\n'
+        materialLines+='\n' 
 
-            materialLines=f''
-            blockLines=f''
-            for material_name in materials_used:
-                material=materials[material_name]
-                print(material.name)
-                materialLines+=f'material {material.name}\n'
-                materialLines+=f'orthotropic_prop\n'
-                materialLines+=f'    E1          = {material.ex}\n'
-                materialLines+=f'    E2          = {material.ey}\n'
-                materialLines+=f'    E3          = {material.ez}\n'
-                materialLines+=f'    nu12         = {material.prxy}\n'
-                materialLines+=f'    nu23         = {material.pryz}\n'
-                materialLines+=f'    nu13         = {material.prxz}\n'
-                materialLines+=f'    G12          = {material.gxy}\n'
-                materialLines+=f'    G23          = {material.gyz}\n'
-                materialLines+=f'    G13          = {material.gxz}\n'
-                materialLines+=f'    density       = {material.density}\n'
-                materialLines+='\n' 
+        materialLines+=f'end \n' 
+        materialLines+='\n\n' 
+        
 
-                materialLines+=f'end \n' 
-                materialLines+='\n\n' 
-                
+        blockLines+=f'block {material.name}\n'
+        blockLines+=f'    material {material.name}\n'
+        blockLines+=f'end \n'
+        blockLines+='\n\n' 
 
-                blockLines+=f'block {material.name}\n'
-                blockLines+=f'    material {material.name}\n'
-                blockLines+=f'end \n'
-                blockLines+='\n\n' 
-                
-
-
-            copy_and_replace(templateFileName, adagioFileName,
-                {
-                    'BLADE_MATERIALS': materialLines,
-                    'IN_MESH':wt_name+'.g',
-                    'BLADE_BLOCKS': blockLines,
-                })
-
-
-    else:
-        raise ValueError('Unknown solver type')
+    copy_and_replace(template_file, adagioFileName,
+        {
+            'BLADE_MATERIALS': materialLines,
+            'IN_MESH':wt_name+'.g',
+            'BLADE_BLOCKS': blockLines,
+        })
 
 

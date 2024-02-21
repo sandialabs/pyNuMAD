@@ -5,6 +5,7 @@ import numpy as np
 import os
 import glob
 import pickle
+import time
 def sweep_volumes(vol_to_mesh):
     failed_volumes=[]
     for volume_id in vol_to_mesh:
@@ -822,12 +823,12 @@ def cubit_make_solid_blade(
     # # Adding Nodesets
     for iLoop, station_id in enumerate(stationList):
 
-        if iLoop ==0:
-            node_set_name='root'
-        elif iLoop==len(stationList)-1:
-            node_set_name='tip'
-        else:
-            node_set_name=f'station{str(station_id).zfill(3)}'
+        #if iLoop ==0:
+        #    node_set_name='root'
+        #elif iLoop==len(stationList)-1:
+        #    node_set_name='tip'
+        #else:
+        node_set_name=f'station{str(station_id).zfill(3)}'
             
             
         parse_string = f'with name "*station{str(station_id).zfill(3)}*_surface*"'
@@ -842,8 +843,8 @@ def cubit_make_solid_blade(
     cubit.cmd('draw surf with name "*layer0_bottomFace*"')
     parse_string = f'with name "*layer0_bottomFace*"'
     surface_ids = parse_cubit_list("surface", parse_string)
-    cubit.cmd(f"nodeset {iLoop+1} add surface {l2s(surface_ids)} ")
-    cubit.cmd(f'nodeset {iLoop+1} name "oml"')
+    cubit.cmd(f"sideset 1 add surface {l2s(surface_ids)} ")
+    cubit.cmd(f'sideset 1 name "oml"')
 
     # ####################################
     # ### Assign material orientations ###
@@ -856,7 +857,7 @@ def cubit_make_solid_blade(
     theta1s=[]
     theta2s=[]
     theta3s=[]
-
+    t0 = time.time()
     for volume_id in all_volume_ids:
         surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
         volume_name = cubit.get_entity_name("volume", volume_id)
@@ -910,7 +911,7 @@ def cubit_make_solid_blade(
             theta1s.append(-1*temp1)
             theta2s.append(-1*temp2)
             theta3s.append(-1*temp3)
-
+    t1 = time.time()
     n_el=len(global_ids)
     cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
     cubit.cmd(f"delete vertex all with Is_Free except {spanwise_mat_ori_curve}")

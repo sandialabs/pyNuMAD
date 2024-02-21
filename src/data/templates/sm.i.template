@@ -165,7 +165,7 @@ BLADE_BLOCKS
       
        ################ Kinematic Boundary Conditions ##########
        begin fixed displacement
-          node set = root
+          node set = station000
           component = x y z
        end
 
@@ -188,12 +188,6 @@ BLADE_BLOCKS
       end prescribed force
 
 
-      #begin prescribed displacement
-      #   node set = tip
-      #   components = Y
-      #   function = u3
-      #   #active periods = p1
-      #end prescribed displacement
 
         ### ------------------###
         ### Solver definition ###
