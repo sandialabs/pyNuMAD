@@ -6,6 +6,75 @@ import os
 import glob
 import pickle
 import time
+def assign_material_orientations(spanwise_mat_ori_curve):
+    # # ####################################
+    # # ### Assign material orientations ###
+    # # ####################################
+    
+    parse_string = f'in volume with name "*volume*"'
+    all_volume_ids = parse_cubit_list("volume", parse_string)
+
+    global_ids=[]
+    theta1s=[]
+    theta2s=[]
+    theta3s=[]
+    t0 = time.time()
+    for volume_id in all_volume_ids:
+        surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+        volume_name = cubit.get_entity_name("volume", volume_id)
+        for hex_id in get_volume_hexes(volume_id):
+            coords = cubit.get_center_point("hex", hex_id)
+
+            if surf_id_for_mat_ori:
+                surface_normal = vectNorm(
+                    list(
+                        sign
+                        * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
+                    )
+                )
+                if 'web' in volume_name.lower():
+                    spanwise_direction = [0,0,1]
+                else:
+                    curve_location_for_tangent = cubit.curve(
+                        spanwise_mat_ori_curve
+                    ).closest_point(coords)
+                    x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
+                    y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
+                    z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
+                    spanwise_direction = vectNorm([x, y, z])
+
+                perimeter_direction = vectNorm(
+                    crossProd(surface_normal, spanwise_direction)
+                )
+
+                # Recalculate to garantee orthogonal system
+                surface_normal = crossProd(spanwise_direction, perimeter_direction)
+            else:
+                perimeter_direction = [1, 0, 0]
+                surface_normal = [0, 1, 0]
+                spanwise_direction = [0, 0, 1]
+
+            newCoordinateSystemVectors = [
+                spanwise_direction,
+                perimeter_direction,
+                surface_normal,
+            ]
+            globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+
+
+            global_id=get_global_element_id('hex',hex_id)
+            
+            dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
+
+            temp1, temp2, temp3 = dcmToEulerAngles(dcm)
+
+            global_ids.append(global_id)
+            theta1s.append(-1*temp1)
+            theta2s.append(-1*temp2)
+            theta3s.append(-1*temp3)
+    t1 = time.time()
+    n_el=len(global_ids)
+    return global_ids,theta1s,theta2s,theta3s,n_el
 def sweep_volumes(vol_to_mesh):
     failed_volumes=[]
     for volume_id in vol_to_mesh:
@@ -846,87 +915,22 @@ def cubit_make_solid_blade(
     cubit.cmd(f"sideset 1 add surface {l2s(surface_ids)} ")
     cubit.cmd(f'sideset 1 name "oml"')
 
-    # ####################################
-    # ### Assign material orientations ###
-    # ####################################
 
-    parse_string = f'in volume with name "*volume*"'
-    all_volume_ids = parse_cubit_list("volume", parse_string)
-
-    global_ids=[]
-    theta1s=[]
-    theta2s=[]
-    theta3s=[]
-    t0 = time.time()
-    for volume_id in all_volume_ids:
-        surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
-        volume_name = cubit.get_entity_name("volume", volume_id)
-        for hex_id in get_volume_hexes(volume_id):
-            coords = cubit.get_center_point("hex", hex_id)
-
-            if surf_id_for_mat_ori:
-                surface_normal = vectNorm(
-                    list(
-                        sign
-                        * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
-                    )
-                )
-                if 'web' in volume_name.lower():
-                    spanwise_direction = [0,0,1]
-                else:
-                    curve_location_for_tangent = cubit.curve(
-                        spanwise_mat_ori_curve
-                    ).closest_point(coords)
-                    x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
-                    y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
-                    z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
-                    spanwise_direction = vectNorm([x, y, z])
-
-                perimeter_direction = vectNorm(
-                    crossProd(surface_normal, spanwise_direction)
-                )
-
-                # Recalculate to garantee orthogonal system
-                surface_normal = crossProd(spanwise_direction, perimeter_direction)
-            else:
-                perimeter_direction = [1, 0, 0]
-                surface_normal = [0, 1, 0]
-                spanwise_direction = [0, 0, 1]
-
-            newCoordinateSystemVectors = [
-                spanwise_direction,
-                perimeter_direction,
-                surface_normal,
-            ]
-            globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-
-
-            global_id=get_global_element_id('hex',hex_id)
-            
-            dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
-
-            temp1, temp2, temp3 = dcmToEulerAngles(dcm)
-
-            global_ids.append(global_id)
-            theta1s.append(-1*temp1)
-            theta2s.append(-1*temp2)
-            theta3s.append(-1*temp3)
-    t1 = time.time()
-    n_el=len(global_ids)
     cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
     cubit.cmd(f"delete vertex all with Is_Free except {spanwise_mat_ori_curve}")
-    if settings["export"] is not None:
-        if "g" in settings["export"].lower():
-            cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
-            cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
-            cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
+    
+    # if settings["export"] is not None:
+    #     if "g" in settings["export"].lower():
+    #         cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
+    #         cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
+    #         cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
 
-            cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
-            cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
-            cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
-            cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
-        if "cub" in settings["export"].lower():
-            cubit.cmd(f'save as "{wt_name}.cub" overwrite')
+    #         cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
+    #         cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
+    #         cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
+    #         cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
+    #     if "cub" in settings["export"].lower():
+    #         cubit.cmd(f'save as "{wt_name}.cub" overwrite')
 
 
     return materials_used
