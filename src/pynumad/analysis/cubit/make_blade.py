@@ -6,7 +6,7 @@ import os
 import glob
 import pickle
 import time
-def assign_material_orientations(spanwise_mat_ori_curve):
+def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
     # # ####################################
     # # ### Assign material orientations ###
     # # ####################################
@@ -18,62 +18,124 @@ def assign_material_orientations(spanwise_mat_ori_curve):
     theta1s=[]
     theta2s=[]
     theta3s=[]
-    t0 = time.time()
-    for volume_id in all_volume_ids:
-        surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
-        volume_name = cubit.get_entity_name("volume", volume_id)
-        for hex_id in get_volume_hexes(volume_id):
-            coords = cubit.get_center_point("hex", hex_id)
 
-            if surf_id_for_mat_ori:
-                surface_normal = vectNorm(
-                    list(
-                        sign
-                        * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
+    if 'hex' in element_shape:
+        t0 = time.time()
+        for volume_id in all_volume_ids:
+            surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+            volume_name = cubit.get_entity_name("volume", volume_id)
+            for el_id in get_volume_hexes(volume_id):
+                coords = cubit.get_center_point("hex", el_id)
+
+                if surf_id_for_mat_ori:
+                    surface_normal = vectNorm(
+                        list(
+                            sign
+                            * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
+                        )
                     )
-                )
-                if 'web' in volume_name.lower():
-                    spanwise_direction = [0,0,1]
+                    if 'web' in volume_name.lower():
+                        spanwise_direction = [0,0,1]
+                    else:
+                        curve_location_for_tangent = cubit.curve(
+                            spanwise_mat_ori_curve
+                        ).closest_point(coords)
+                        x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
+                        y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
+                        z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
+                        spanwise_direction = vectNorm([x, y, z])
+
+                    perimeter_direction = vectNorm(
+                        crossProd(surface_normal, spanwise_direction)
+                    )
+
+                    # Recalculate to garantee orthogonal system
+                    surface_normal = crossProd(spanwise_direction, perimeter_direction)
                 else:
-                    curve_location_for_tangent = cubit.curve(
-                        spanwise_mat_ori_curve
-                    ).closest_point(coords)
-                    x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
-                    y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
-                    z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
-                    spanwise_direction = vectNorm([x, y, z])
+                    perimeter_direction = [1, 0, 0]
+                    surface_normal = [0, 1, 0]
+                    spanwise_direction = [0, 0, 1]
 
-                perimeter_direction = vectNorm(
-                    crossProd(surface_normal, spanwise_direction)
-                )
-
-                # Recalculate to garantee orthogonal system
-                surface_normal = crossProd(spanwise_direction, perimeter_direction)
-            else:
-                perimeter_direction = [1, 0, 0]
-                surface_normal = [0, 1, 0]
-                spanwise_direction = [0, 0, 1]
-
-            newCoordinateSystemVectors = [
-                spanwise_direction,
-                perimeter_direction,
-                surface_normal,
-            ]
-            globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+                newCoordinateSystemVectors = [
+                    spanwise_direction,
+                    perimeter_direction,
+                    surface_normal,
+                ]
+                globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
 
-            global_id=get_global_element_id('hex',hex_id)
-            
-            dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
+                global_id=get_global_element_id('hex',el_id)
+                
+                dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
 
-            temp1, temp2, temp3 = dcmToEulerAngles(dcm)
+                temp1, temp2, temp3 = dcmToEulerAngles(dcm)
 
-            global_ids.append(global_id)
-            theta1s.append(-1*temp1)
-            theta2s.append(-1*temp2)
-            theta3s.append(-1*temp3)
-    t1 = time.time()
-    n_el=len(global_ids)
+                global_ids.append(global_id)
+                theta1s.append(-1*temp1)
+                theta2s.append(-1*temp2)
+                theta3s.append(-1*temp3)
+        t1 = time.time()
+        n_el=len(global_ids)
+    elif 'tet' in element_shape:
+        t0 = time.time()
+        for volume_id in all_volume_ids:
+            surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+            volume_name = cubit.get_entity_name("volume", volume_id)
+            for el_id in get_volume_tets(volume_id):
+                coords = cubit.get_center_point("tet", el_id)
+
+                if surf_id_for_mat_ori:
+                    surface_normal = vectNorm(
+                        list(
+                            sign
+                            * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
+                        )
+                    )
+                    if 'web' in volume_name.lower():
+                        spanwise_direction = [0,0,1]
+                    else:
+                        curve_location_for_tangent = cubit.curve(
+                            spanwise_mat_ori_curve
+                        ).closest_point(coords)
+                        x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
+                        y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
+                        z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
+                        spanwise_direction = vectNorm([x, y, z])
+
+                    perimeter_direction = vectNorm(
+                        crossProd(surface_normal, spanwise_direction)
+                    )
+
+                    # Recalculate to garantee orthogonal system
+                    surface_normal = crossProd(spanwise_direction, perimeter_direction)
+                else:
+                    perimeter_direction = [1, 0, 0]
+                    surface_normal = [0, 1, 0]
+                    spanwise_direction = [0, 0, 1]
+
+                newCoordinateSystemVectors = [
+                    spanwise_direction,
+                    perimeter_direction,
+                    surface_normal,
+                ]
+                globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+
+
+                global_id=get_global_element_id('tet',el_id)
+                
+                dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
+
+                temp1, temp2, temp3 = dcmToEulerAngles(dcm)
+
+                global_ids.append(global_id)
+                theta1s.append(-1*temp1)
+                theta2s.append(-1*temp2)
+                theta3s.append(-1*temp3)
+        t1 = time.time()
+        n_el=len(global_ids)
+    else:
+        raise NameError(f'Unknown element shape {element_shape}')
+    
     return global_ids,theta1s,theta2s,theta3s,n_el
 def sweep_volumes(vol_to_mesh):
     failed_volumes=[]
@@ -660,6 +722,7 @@ def cubit_make_solid_blade(
     if 'tet' in cs_params['element_shape']:
         cubit.cmd("set default autosize on")
         cubit.cmd("volume all scheme tetmesh")
+        cubit.cmd("set trimesher geometry sizing off")
         cubit.cmd("volume all size auto factor 10")
         cubit.cmd("mesh vol all")
     elif float(cs_params['element_ar']) != 0.0:
@@ -915,9 +978,12 @@ def cubit_make_solid_blade(
 
 
     # Outer mold-line nodeset
-    cubit.cmd('draw surf with name "*layer0_bottomFace*"')
     parse_string = f'with name "*layer0_bottomFace*"'
-    surface_ids = parse_cubit_list("surface", parse_string)
+    surface_ids = list(parse_cubit_list("surface", parse_string))
+
+    parse_string = f'with name "shell_web_thickness*bottomFace_web_thickness*" and not is_merged'
+    surface_ids += list(parse_cubit_list("surface", parse_string))
+
     cubit.cmd(f"sideset 1 add surface {l2s(surface_ids)} ")
     cubit.cmd(f'sideset 1 name "oml"')
 
