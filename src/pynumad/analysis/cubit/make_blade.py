@@ -657,7 +657,12 @@ def cubit_make_solid_blade(
 
 
 # Mesh sizing
-    if float(cs_params['element_ar']) != 0.0:
+    if 'tet' in cs_params['element_shape']:
+        cubit.cmd("set default autosize on")
+        cubit.cmd("volume all scheme tetmesh")
+        cubit.cmd("volume all size auto factor 10")
+        cubit.cmd("mesh vol all")
+    elif float(cs_params['element_ar']) != 0.0:
         cubit.cmd("set default autosize on")
         omit_surf_mesh=[]
         hplp_max_stack_ct = 14 #The number of stacks in HP surface. Hard code for now.
@@ -867,6 +872,7 @@ def cubit_make_solid_blade(
 
     else:
         cubit.cmd(f"reset volume all")
+        cubit.cmd(f"mesh volume all")
         
 
     if get_mesh_error_count():
