@@ -34,16 +34,17 @@ def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
                             * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
                         )
                     )
-                    if 'web' in volume_name.lower():
-                        spanwise_direction = [0,0,1]
+                    if 'layer6' in volume_name or 'layer7' in volume_name or 'layer8' in volume_name or 'layer9' in volume_name or  'layer10' in volume_name or 'layer11' in volume_name: #Need a better way to select the "vertical" portion of webs
+                        ref_line_direction = [0,0,1]
                     else:
-                        curve_location_for_tangent = cubit.curve(
-                            spanwise_mat_ori_curve
-                        ).closest_point(coords)
+                        curve_location_for_tangent = cubit.curve(spanwise_mat_ori_curve).closest_point(coords)
                         x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
                         y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
                         z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
-                        spanwise_direction = vectNorm([x, y, z])
+                        ref_line_direction = vectNorm([x, y, z])
+
+                    #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
+                    spanwise_direction = np.array(ref_line_direction)-dotProd(ref_line_direction,surface_normal)*np.array(surface_normal)
 
                     perimeter_direction = vectNorm(
                         crossProd(surface_normal, spanwise_direction)
@@ -91,23 +92,20 @@ def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
                             * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
                         )
                     )
-                    if 'web' in volume_name.lower():
-                        spanwise_direction = [0,0,1]
+                    if 'layer6' in volume_name or 'layer7' in volume_name or 'layer8' in volume_name or 'layer9' in volume_name or  'layer10' in volume_name or 'layer11' in volume_name: #Need a better way to select the "vertical" portion of webs
+                        ref_line_direction = [0,0,1]
                     else:
-                        curve_location_for_tangent = cubit.curve(
-                            spanwise_mat_ori_curve
-                        ).closest_point(coords)
+                        curve_location_for_tangent = cubit.curve(spanwise_mat_ori_curve).closest_point(coords)
                         x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
                         y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
                         z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
-                        spanwise_direction = vectNorm([x, y, z])
+                        ref_line_direction = vectNorm([x, y, z])
 
-                    perimeter_direction = vectNorm(
-                        crossProd(surface_normal, spanwise_direction)
-                    )
 
-                    # Recalculate to garantee orthogonal system
-                    surface_normal = crossProd(spanwise_direction, perimeter_direction)
+                    spanwise_direction = np.array(ref_line_direction)-dotProd(ref_line_direction,surface_normal)*np.array(surface_normal)
+
+                    perimeter_direction = vectNorm(crossProd(surface_normal, spanwise_direction))
+
                 else:
                     perimeter_direction = [1, 0, 0]
                     surface_normal = [0, 1, 0]

@@ -82,5 +82,5 @@ materials_used=cubit_make_solid_blade(blade, wt_name, settings, cs_params, stati
 
 from pynumad.paths import SOFTWARE_PATHS
 template_path=SOFTWARE_PATHS['pynumad']+'src/data/templates/'
-write_sierra_sm_model(template_path+'sm.i.template',wt_name,settings,blade,materials_used,'.') 
-write_sierra_sd_model(template_path+'sd.i.template',wt_name,settings,blade,materials_used,'.') 
+write_sierra_sm_model(template_path+'sm.i.template',wt_name,blade,materials_used,'.') 
+write_sierra_sd_model(template_path+'sd.i.template',wt_name,blade,materials_used,'.') 
