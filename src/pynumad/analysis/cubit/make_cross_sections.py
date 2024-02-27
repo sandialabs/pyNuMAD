@@ -1198,7 +1198,12 @@ def make_cs_perimeter_layer_areas(wt_name,
                     lp_hp_dict["round_te_adhesive_curve_list"][lp_hp_side_index].append(
                         surface_dict[get_last_id("surface")]["curves"][-1]
                     )
-
+                else:
+                    surf_id=get_last_id("surface")
+                    curve_id = cubit.surface(surf_id).curves()[-1].id()
+                    curve_name_split = cubit.get_entity_name("curve", curve_id).split('_')
+                    curve_name=curve_name_split[0]+'_'+curve_name_split[1]+'_oml'
+                    cubit.cmd(f'curve {curve_id} rename "{curve_name}"')
                 if i_station == last_round_station - 1:
                     v1 = surface_dict[get_last_id("surface")]["verts"][0]
                     cubit.cmd(f'vertex {v1} rename "linear"')
@@ -1971,26 +1976,40 @@ def make_a_cross_section(wt_name,
         materials_used,
         -1
     )
+    surf_id=get_last_id("surface")-2
+    curve_id = cubit.surface(surf_id).curves()[-1].id()
+    curve_name_split = cubit.get_entity_name("curve", curve_id).split('_')
+    curve_name=curve_name_split[0]+'_'+curve_name_split[1]+'_oml'
+    cubit.cmd(f'curve {curve_id} rename "{curve_name}"')
+
 
     part_name_id = 0  # Reset since outer areoshell is complete (LE adhesive is accouted for as aeroshell)
     part_name = "roundTEadhesive"
     
-    if i_station <= last_round_station:
-        mat_name = cs_params["adhesive_mat_name"]
+    if lp_hp_dict["round_te_adhesive_curve_list"][0] and lp_hp_dict["round_te_adhesive_curve_list"][1]:
+        round_te_present=True
+        if i_station <= last_round_station:
+            mat_name = cs_params["adhesive_mat_name"]
+        else:
+            mat_name = stackdb.stacks[1, i_station].plygroups[0].materialid
+        part_name_id = create_simplist_surface_for_TE_or_LE_adhesive(
+            i_station,
+            surface_dict,
+            part_name,
+            lp_hp_dict["round_te_adhesive_curve_list"],
+            mat_name,
+            part_name_id,
+            n_modeled_layers,
+            materials_used,
+            -1)
+        
+        surf_id=get_last_id("surface")-2
+        curve_id = cubit.surface(surf_id).curves()[-1].id()
+        curve_name_split = cubit.get_entity_name("curve", curve_id).split('_')
+        curve_name=curve_name_split[0]+'_'+curve_name_split[1]+'_oml'
+        cubit.cmd(f'curve {curve_id} rename "{curve_name}"')
     else:
-        mat_name = stackdb.stacks[1, i_station].plygroups[0].materialid
-    part_name_id = create_simplist_surface_for_TE_or_LE_adhesive(
-        i_station,
-        surface_dict,
-        part_name,
-        lp_hp_dict["round_te_adhesive_curve_list"],
-        mat_name,
-        part_name_id,
-        n_modeled_layers,
-        materials_used,
-        -1)
-    
-
+        round_te_present=False
         
     if is_flatback:
         part_name = "flatTEadhesive"
@@ -2007,6 +2026,12 @@ def make_a_cross_section(wt_name,
             0
         )
 
+        if not round_te_present:
+            surf_id=get_last_id("surface")
+            curve_id = cubit.surface(surf_id).curves()[-1].id()
+            curve_name_split = cubit.get_entity_name("curve", curve_id).split('_')
+            curve_name=curve_name_split[0]+'_'+curve_name_split[1]+'_oml'
+            cubit.cmd(f'curve {curve_id} rename "{curve_name}"')
 
     birds_mouth_verts = []
     if hasWebs:
@@ -2208,3 +2233,44 @@ def get_min_layer_thickness_at_station(i_stations):
             if curve_len < min_length:
                 min_length=curve_len
         return min_length
+
+def get_locus_of_cross_sectional_centroids(station_list):
+    # # Adding Nodesets
+    x_bar_list=[]
+    y_bar_list=[]
+    z_bar_list=[]
+    n_start=get_last_id("vertex")
+    for iLoop, station_id in enumerate(station_list):
+            
+        parse_string = f'with name "*station{str(station_id).zfill(3)}*_surface*"'
+        surface_ids = parse_cubit_list("surface", parse_string)
+
+        #Find centroid
+        x_bar=0
+        y_bar=0
+        z_bar=0
+        total_area=0
+        for surface_id in surface_ids:
+            coords = get_surface_centroid(surface_id)
+            area=cubit.surface(surface_id).area()
+
+            total_area+=area
+            x_bar+=coords[0]*area
+            y_bar+=coords[1]*area
+            z_bar+=coords[2]*area
+
+        x_bar=x_bar/total_area
+        y_bar=y_bar/total_area
+        z_bar=z_bar/total_area
+
+        x_bar_list.append(x_bar)
+        y_bar_list.append(y_bar)
+        z_bar_list.append(z_bar)
+    n_end=get_last_id("vertex")
+
+
+    centroidal_ref_line_coords = np.vstack([x_bar_list,y_bar_list,z_bar_list]).transpose()
+    write_spline_from_coordinate_points(cubit, centroidal_ref_line_coords)
+
+
+    return get_last_id('curve'),centroidal_ref_line_coords

@@ -11,7 +11,7 @@ import numpy as np
 import re
 
 def debug():
-    cubit.cmd(f"delete curve 1")
+    #cubit.cmd(f"delete curve 1")
     cubit.cmd(f'save as "Debug.cub" overwrite')
 def get_ordered_list(part_name):
 

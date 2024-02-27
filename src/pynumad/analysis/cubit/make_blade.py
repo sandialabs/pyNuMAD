@@ -26,7 +26,7 @@ def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
             volume_name = cubit.get_entity_name("volume", volume_id)
             for el_id in get_volume_hexes(volume_id):
                 coords = cubit.get_center_point("hex", el_id)
-
+                    
                 if surf_id_for_mat_ori:
                     surface_normal = vectNorm(
                         list(
@@ -44,14 +44,12 @@ def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
                         ref_line_direction = vectNorm([x, y, z])
 
                     #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
-                    spanwise_direction = np.array(ref_line_direction)-dotProd(ref_line_direction,surface_normal)*np.array(surface_normal)
+                    spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
-                    perimeter_direction = vectNorm(
-                        crossProd(surface_normal, spanwise_direction)
-                    )
+                    perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
 
                     # Recalculate to garantee orthogonal system
-                    surface_normal = crossProd(spanwise_direction, perimeter_direction)
+                    #surface_normal = np.cross(spanwise_direction, perimeter_direction)
                 else:
                     perimeter_direction = [1, 0, 0]
                     surface_normal = [0, 1, 0]
@@ -75,6 +73,7 @@ def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
                 theta1s.append(-1*temp1)
                 theta2s.append(-1*temp2)
                 theta3s.append(-1*temp3)
+
         t1 = time.time()
         n_el=len(global_ids)
     elif 'tet' in element_shape:
@@ -172,7 +171,7 @@ def sweep_volumes(vol_to_mesh):
             failed_volumes.append(volume_id)
     return failed_volumes
 def debug():
-    cubit.cmd(f"delete curve 1")
+    #cubit.cmd(f"delete curve 1")
     cubit.cmd(f'save as "Debug.cub" overwrite')
 def cubit_make_cross_sections(
     blade,
@@ -975,12 +974,20 @@ def cubit_make_solid_blade(
 
 
 
-    # Outer mold-line nodeset
+    # Outer mold-line sideset
     parse_string = f'with name "*layer0_bottomFace*"'
     surface_ids = list(parse_cubit_list("surface", parse_string))
 
     parse_string = f'with name "shell_web_thickness*bottomFace_web_thickness*" and not is_merged'
     surface_ids += list(parse_cubit_list("surface", parse_string))
+
+    parse_string = f'in curve with name "*oml*"'
+    temp_ids = list(parse_cubit_list("surface", parse_string))
+
+    for surf_id in temp_ids:
+        if 'Station' not in cubit.get_entity_name("surface", surf_id):
+            surface_ids+=[surf_id]
+
 
     cubit.cmd(f"sideset 1 add surface {l2s(surface_ids)} ")
     cubit.cmd(f'sideset 1 name "oml"')

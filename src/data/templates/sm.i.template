@@ -170,19 +170,19 @@ BLADE_BLOCKS
        end
 
       begin prescribed force
-         nodeset = oml 
+         sideset = oml 
          function = apply_force_x
          component = x
       end prescribed force
 
       begin prescribed force
-         nodeset = oml 
+         sideset = oml 
          function = apply_force_y
          component = y
       end prescribed force
 
       begin prescribed force
-         nodeset = oml 
+         sideset = oml 
          function = apply_force_z
          component = z
       end prescribed force
