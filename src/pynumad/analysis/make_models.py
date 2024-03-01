@@ -93,16 +93,19 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
     return [axisFileName,propFileName]
 
 
-def write_sierra_sm_model(template_file,wt_name,blade,materials_used,directory='.'):
+def write_sierra_sm_model(template_file,wt_name,station_list,blade,materials_used,directory='.'):
 
-
+    if station_list is None or len(station_list) == 0:
+        station_list = list(range(len(blade.ispan)))
+    elif len(station_list) == 1:
+        raise ValueError("Need more than one cross section to make a solid model")
     # radial_stations=blade.ispan/blade.ispan[-1]
     # nStations=len(radial_stations)
     # #Run input files
     
     materials = blade.definition.materials
 
-    adagioFileName=f'{wt_name}_sm.i'
+    adagioFileName=f'sm_{wt_name}.i'
 
     materialLines=f''
     blockLines=f''
@@ -140,18 +143,24 @@ def write_sierra_sm_model(template_file,wt_name,blade,materials_used,directory='
 
     copy_and_replace(template_file, adagioFileName,
         {
+            'ROOT_STATION': 'station'+str(station_list[0]).zfill(3),
+            'TIP_STATION': 'station'+str(station_list[-1]).zfill(3),
             'BLADE_MATERIALS': materialLines,
             'IN_MESH':wt_name+'.g',
             'OUT_MESH':wt_name+'.e',
             'BLADE_BLOCKS': blockLines,
         })
     
-def write_sierra_sd_model(template_file,wt_name,blade,materials_used,directory='.'):
-
+def write_sierra_sd_model(template_file,wt_name,station_list,blade,materials_used,directory='.'):
+    if station_list is None or len(station_list) == 0:
+        station_list = list(range(len(blade.ispan)))
+    elif len(station_list) == 1:
+        raise ValueError("Need more than one cross section to make a solid model")
+    
     materials = blade.definition.materials
 
     template_file=template_path+'sd.i.template'
-    adagioFileName=f'{wt_name}_sd.i'
+    adagioFileName=f'sd_{wt_name}.i'
 
     materialLines=f''
     blockLines=f''

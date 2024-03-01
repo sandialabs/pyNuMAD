@@ -950,7 +950,7 @@ def cubit_make_solid_blade(
             
     # Blocks
     for imat, material_name in enumerate(materials_used):
-        cubit.cmd(f'block {imat+1} add volume with name "*{material_name}*"')
+        cubit.cmd(f'block {imat+1} add volume with name "*_{material_name}_*"')
         cubit.cmd(f'block {imat+1} name "{material_name}"')
 
     
