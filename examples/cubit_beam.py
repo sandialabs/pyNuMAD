@@ -17,6 +17,7 @@ def get_cs_params():
     cs_params['nel_per_layer'] = 3 
     cs_params['element_ar'] = 5
     cs_params['element_shape'] = 'quad'
+    cs_params['ref_line_type'] ='centroid' # or 'ref_axis'
 
 
     cs_params['layer_transition_angle'] = 30

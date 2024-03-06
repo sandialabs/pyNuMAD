@@ -286,13 +286,13 @@ def cubit_make_cross_sections(
 
     # Create Referece line as a spline
 
-    refLineCoords = np.vstack(
+    ref_line_coords = np.vstack(
         ([definition.sweep, definition.prebend, definition.ispan])
     ).transpose()
     spanwise_mat_ori_curve = 1
 
     if model2Dor3D.lower() == "3d":
-        write_spline_from_coordinate_points(cubit, refLineCoords)
+        write_spline_from_coordinate_points(cubit, ref_line_coords)
     #else: do it in cross section loop
     
     #Get last round station index
@@ -387,7 +387,7 @@ def cubit_make_cross_sections(
             cubit.cmd(
                 "reset "
             )  # This is needed to restart node numbering for VABS. VABS neeeds every element and node starting from 1 to nelem/nnode should be present
-        write_spline_from_coordinate_points(cubit, refLineCoords)
+        write_spline_from_coordinate_points(cubit, ref_line_coords)
         i_station_geometry = i_station
         if i_station == len(geometry.ispan) - 1:  # Only do this for the last station
             blade.add_interpolated_station(geometry.ispan[-1] * 0.999)
@@ -479,6 +479,35 @@ def cubit_make_cross_sections(
         # Chord line for rotation of cross-section for homogenization
         if model2Dor3D.lower() == "2d":
             #         #Blocks
+            if 'd_tube' in cs_params.keys() and cs_params['d_tube']:
+                keep_list=[]
+
+                cubit.cmd(f'delete surface with x_coord < 0"')
+                cubit.cmd(f'delete surface with name "*layer9*"')
+                cubit.cmd(f'delete surface with name "*layer10*"')
+                cubit.cmd(f'delete surface with name "*layer11*"')
+
+                delete_list=[]
+                parse_string = f'with name "*layer3*"'
+                delete_list += list(parse_cubit_list("surface", parse_string))
+                parse_string = f'with name "*layer4*"'
+                delete_list += list(parse_cubit_list("surface", parse_string))
+
+                keep_list=[]
+                #LE
+                for i in [121,122,123]:
+                    parse_string = f'with name "shellStation*surface{i}"'
+                    keep_list += list(parse_cubit_list("surface", parse_string))
+
+                #Web
+                for i in [1,2,3,4,5,6,17,18,19,20,21,22]:
+                    parse_string = f'with name "web_web*surface{i}"'
+                    keep_list += list(parse_cubit_list("surface", parse_string))
+
+                vol_ids=set(delete_list).difference(set(keep_list))
+
+                cubit.cmd(f'delete vol {l2s(vol_ids)}')
+                cubit.cmd(f'delete vol with name "*Station005*"')
 
             for imat, material_name in enumerate(materials_used):
                 cubit.cmd(f'block {imat+1} add surface with name "*{material_name}*"')
@@ -506,13 +535,20 @@ def cubit_make_cross_sections(
 
             # Undo prebend
             if definition.prebend[i_station] != 0:
-                cubit.cmd(
-                    f"move surface {l2s(volume_ids)} y {-1*definition.prebend[i_station]} include_merged"
-                )
+                cubit.cmd(f"move surface {l2s(volume_ids)} y {-1*definition.prebend[i_station]} include_merged")
 
             # Undo sweep
             if definition.sweep[i_station] != 0:
                 raise ValueError("Presweep is untested for cross-sectional meshing")
+
+            if 'centroid' in cs_params['ref_line_type'].lower():
+                centroidal_vert_id, centroidal_ref_line_coords=get_locus_of_cross_sectional_centroids([i_station])
+                cubit.cmd(f"move surface {l2s(volume_ids)} x {-1*centroidal_ref_line_coords[0][0]} include_merged")
+                cubit.cmd(f"move surface {l2s(volume_ids)} y {-1*centroidal_ref_line_coords[0][1]} include_merged")
+                #cubit.cmd(f"move surface {l2s(volume_ids)} z {-1*centroidal_ref_line_coords[0][2]} include_merged")
+                
+                centroidal_vert_id, centroidal_ref_line_coords=get_locus_of_cross_sectional_centroids([i_station])
+
 
             # Mesh the cross-section
             cubit.cmd(
@@ -558,7 +594,43 @@ def cubit_make_cross_sections(
                 with open(f"{wt_name}.log", "a") as logFile:
                     logFile.write(f"    Warning: {get_mesh_error_count()} cross section mesh errors exist in station {i_station}\n")
     
+            if 'd_tube' in cs_params.keys() and cs_params['d_tube']:
+                
+                node_set_name='s1_thickness_path'
+                nodeset_id= cubit.get_next_nodeset_id()
+                cubit.cmd(f'nodeset {nodeset_id} add curve 925 928 932')
+                cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}"')
 
+                path_type='thickness'
+                node_order=get_path_node_order(node_set_name,path_type)
+                #def get_path_node_order(node_set_name,path_type):
+                node_ids=get_nodeset_nodes_inclusive(nodeset_id)
+
+                coords=[]
+                for node_id in node_ids:
+                    coords.append(get_nodal_coordinates(node_id))
+                
+                if path_type == 'thickness':
+                    pass
+
+
+                # file = open(directory +'/'+ axisFileName, 'w')
+                # file.write('--------- BEAMDYN with OpenFAST INPUT FILE -------------------------------------------\n')
+                
+                nodeset_id= cubit.get_next_nodeset_id()
+                cubit.cmd(f'nodeset {nodeset_id} add curve 1040 1065 1091')
+                cubit.cmd(f'nodeset {nodeset_id} name "s2_thickness_path"')
+
+
+                nodeset_id= cubit.get_next_nodeset_id()
+                cubit.cmd(f'nodeset {nodeset_id} add vertex 9985')
+                cubit.cmd(f'nodeset {nodeset_id} name "spanwise_path"')
+
+
+                nodeset_id= cubit.get_next_nodeset_id()
+                cubit.cmd(f'nodeset {nodeset_id} add curve 73 74 75 76 77 78 79 92 93 94 95 96 97 98 335 361 476 478 479 556 557 558 824 848 873 899 1014 1016 1017 1094 1095 1096 1196 1220 1224 1324 1328 1422')
+                cubit.cmd(f'nodeset {nodeset_id} name "circumferential_path"')
+                
             if settings["export"] is not None:
                 if (
                     "g" in settings["export"].lower()
@@ -583,9 +655,9 @@ def cubit_make_cross_sections(
         cubit.cmd("reset ")
         
         #Since cross sections were translated for cross sectional codes, remove prebend and sweep from ref axis.
-        refLineCoords[:,0]=np.zeros(len(refLineCoords[:,0]))
-        refLineCoords[:,1]=np.zeros(len(refLineCoords[:,0]))
-        write_spline_from_coordinate_points(cubit, refLineCoords)
+        ref_line_coords[:,0]=np.zeros(len(ref_line_coords[:,0]))
+        ref_line_coords[:,1]=np.zeros(len(ref_line_coords[:,0]))
+        write_spline_from_coordinate_points(cubit, ref_line_coords)
 
         for i_station in stationList:
             cubit.cmd(f'import cubit "{path_name}-{str(i_station)}.cub"')

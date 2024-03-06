@@ -4,84 +4,90 @@ import subprocess
 import glob
 import numpy as np
 from pynumad.utils.misc_utils import copy_and_replace
+from pynumad.paths import SOFTWARE_PATHS
 
-
-def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
+def write_beam_model(wt_name,station_list,settings,blade,mu,log,directory='.'):
     import pynumad.analysis.beam_utils as beam_utils
 
     #     #Runs VABS or OpenSG to homogenize
-    #     #Makes beamDyn or GEBT files
+    #     #Makes beamDyn files
+
+    if station_list is None or len(station_list) == 0:
+        station_list = list(range(len(blade.ispan)))
+    elif len(station_list) == 1:
+        raise ValueError("Need more than one cross section to make a solid model")
+    
     geometry = blade.geometry
 
 
     radial_stations=geometry.ispan/geometry.ispan[-1]
+    #radial_stations=radial_stations[station_list]
     nStations=len(radial_stations)
     # #Run input files
 
-    if 'vabs' in settings['make_input_for'].lower():
+    # if 'vabs' in settings['make_input_for'].lower():
 
-        log.info(f'\n\n\nRunning VABS homogenization.')
+    #     log.info(f'\n\n\nRunning VABS homogenization.')
         
-        fileCount=0
-        #First remove any lck files
-        pattern=directory+'/'+wt_name+'*.in'
-        if len(glob.glob(pattern))==0:
-            raise RuntimeError(f'Could not find files with pattern: {pattern}. Beam model generation failed')
-        MAXnLicenceTries=100
-        for filePath in glob.glob(directory+'/'+wt_name+'*.in'):
-            fileCount+=1
-            try:
-                this_cmd = SOFTWARE_PATHS['vabs']+' ' +filePath
-                log.info(f' running: {this_cmd}')
+    #     fileCount=0
+    #     #First remove any lck files
+    #     pattern=directory+'/'+wt_name+'*.in'
+    #     if len(glob.glob(pattern))==0:
+    #         raise RuntimeError(f'Could not find files with pattern: {pattern}. Beam model generation failed')
+    #     MAXnLicenceTries=100
+    #     for filePath in glob.glob(directory+'/'+wt_name+'*.in'):
+    #         fileCount+=1
+    #         try:
+    #             this_cmd = SOFTWARE_PATHS['vabs']+' ' +filePath
+    #             log.info(f' running: {this_cmd}')
 
-                licenseAvailable=False
-                nLicenceTries=0
-                while not licenseAvailable and nLicenceTries <=MAXnLicenceTries-1:
-                    subprocess.run(this_cmd, shell=True, check=True, capture_output=True)
+    #             licenseAvailable=False
+    #             nLicenceTries=0
+    #             while not licenseAvailable and nLicenceTries <=MAXnLicenceTries-1:
+    #                 subprocess.run(this_cmd, shell=True, check=True, capture_output=True)
 
-                    with open(filePath+'.ech', 'r') as f:
-                        lines = f.readlines()
-                    #log the last line of .ech file:
+    #                 with open(filePath+'.ech', 'r') as f:
+    #                     lines = f.readlines()
+    #                 #log the last line of .ech file:
                     
-                    if 'Congratulations! No errors' in lines[-1]:
-                        log.info(f'****************************\n{lines[-1]}\n******************************')
-                        licenseAvailable=True
-                        nLicenceTries=0
-                    elif 'license' in lines[-1].lower():
-                        nLicenceTries+=1
-                        log.info(f'****************************\nnLicenceTries: {nLicenceTries}, {lines[-1]}\n******************************')
+    #                 if 'Congratulations! No errors' in lines[-1]:
+    #                     log.info(f'****************************\n{lines[-1]}\n******************************')
+    #                     licenseAvailable=True
+    #                     nLicenceTries=0
+    #                 elif 'license' in lines[-1].lower():
+    #                     nLicenceTries+=1
+    #                     log.info(f'****************************\nnLicenceTries: {nLicenceTries}, {lines[-1]}\n******************************')
 
-                    else:
-                        log.error(f'****************************\n{lines[-1]}\n******************************')
-                        raise Exception(f'Cross-sectional homogenization for file {filePath} failed due to: \n {lines[-1]} \n Beam model creation failed.') 
-                if nLicenceTries ==MAXnLicenceTries:
-                        string=f'License failed to be obtained after {MAXnLicenceTries} tries. Beam model creation failed.'
-                        log.error(string)
-                        raise Exception(string) 
+    #                 else:
+    #                     log.error(f'****************************\n{lines[-1]}\n******************************')
+    #                     raise Exception(f'Cross-sectional homogenization for file {filePath} failed due to: \n {lines[-1]} \n Beam model creation failed.') 
+    #             if nLicenceTries ==MAXnLicenceTries:
+    #                     string=f'License failed to be obtained after {MAXnLicenceTries} tries. Beam model creation failed.'
+    #                     log.error(string)
+    #                     raise Exception(string) 
 
-            except subprocess.CalledProcessError as e:
-                log.error(f'Error running {this_cmd}: {e}')
+    #         except subprocess.CalledProcessError as e:
+    #             log.error(f'Error running {this_cmd}: {e}')
         
-        # if fileCount != nStations:
-        #     raise Exception('Error. Not enough VABS input files:')
 
-    elif 'anba' in settings['make_input_for'].lower():
-        raise ValueError('ANBA currently not supported')
+    # elif 'anba' in settings['make_input_for'].lower():
+    #     raise ValueError('ANBA currently not supported')
 
 
 
 ### Read inputs
     extension='K'
 
-    radial_stations=geometry.ispan/geometry.ispan[-1]
-    beam_stiff = np.zeros([len(radial_stations), 6, 6])
-    beam_inertia = np.zeros([len(radial_stations), 6, 6])
+    beam_stiff = np.zeros([len(radial_stations[station_list]), 6, 6])
+    beam_inertia = np.zeros([len(radial_stations[station_list]), 6, 6])
 
+    for i_station in range(len(radial_stations[station_list])):
+        file_name = f'{directory}/{wt_name}-{station_list[i_station]}-t-0.in.{extension}'
+        #directory+'/'+wt_name+"*." +extension
 
-
-    for file_name in glob.glob(directory+'/'+wt_name+"*." +extension):
-        i_station=int(file_name.split('-')[-3].split('.')[0])
-        print(f'file_name {file_name} i_station {i_station}')
+    #for file_name in glob.glob(directory+'/'+wt_name+"*." +extension):
+        #i_station=int(file_name.split('-')[-3].split('.')[0])
+        #print(f'file_name {file_name} i_station {i_station}')
 
         beam_stiff[i_station,:,:],beam_inertia[i_station,:,:]=beam_utils.readVABShomogenization(file_name)
     
@@ -89,7 +95,7 @@ def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
     if 'beamdyn' in settings['make_input_for'].lower():
         beam_stiff,beam_inertia=beam_utils.transformMatrixToBeamDyn(beam_stiff,beam_inertia)
         axisFileName=beam_utils.write_beamdyn_axis(directory, wt_name, blade,radial_stations)
-        propFileName=beam_utils.write_beamdyn_prop(directory, wt_name, radial_stations, beam_stiff, beam_inertia, mu)
+        propFileName=beam_utils.write_beamdyn_prop(directory, wt_name, radial_stations[station_list], beam_stiff, beam_inertia, mu)
     return [axisFileName,propFileName]
 
 
@@ -105,7 +111,7 @@ def write_sierra_sm_model(template_file,wt_name,station_list,blade,materials_use
     
     materials = blade.definition.materials
 
-    adagioFileName=f'sm_{wt_name}.i'
+    adagioFileName=f'{directory}/sm_{wt_name}.i'
 
     materialLines=f''
     blockLines=f''
@@ -160,7 +166,7 @@ def write_sierra_sd_model(template_file,wt_name,station_list,blade,materials_use
     materials = blade.definition.materials
 
     template_file=template_path+'sd.i.template'
-    adagioFileName=f'sd_{wt_name}.i'
+    adagioFileName=f'{directory}/sd_{wt_name}.i'
 
     materialLines=f''
     blockLines=f''

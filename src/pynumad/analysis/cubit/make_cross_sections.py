@@ -2235,6 +2235,7 @@ def get_min_layer_thickness_at_station(i_stations):
         return min_length
 
 def get_locus_of_cross_sectional_centroids(station_list):
+    
     # # Adding Nodesets
     x_bar_list=[]
     y_bar_list=[]
@@ -2270,7 +2271,14 @@ def get_locus_of_cross_sectional_centroids(station_list):
 
 
     centroidal_ref_line_coords = np.vstack([x_bar_list,y_bar_list,z_bar_list]).transpose()
-    write_spline_from_coordinate_points(cubit, centroidal_ref_line_coords)
+
+    if len(station_list)>0:
+        if len(station_list)==1:
+            cubit.cmd(f"create vertex location {x_bar_list[0]} {y_bar_list[0]} {z_bar_list[0]}")
+            return_index=get_last_id('vertex')
+        else:
+            write_spline_from_coordinate_points(cubit, centroidal_ref_line_coords)
+            return_index=get_last_id('curve')
 
 
-    return get_last_id('curve'),centroidal_ref_line_coords
+    return return_index,centroidal_ref_line_coords
