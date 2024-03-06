@@ -436,8 +436,11 @@ def make_cross_section_surface(
             append_str = '_stack'+str(stack_id).zfill(3)
         else:
             append_str =''
-        
-    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][0]} rename "hoop_direction{str(i_station).zfill(3)+append_str}"')
+
+    if i_modeled_layers==0:
+        cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][0]} rename "hoop_direction{str(i_station).zfill(3)+append_str}_oml"')
+    else:
+        cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][0]} rename "hoop_direction{str(i_station).zfill(3)+append_str}"')
     cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][2]} rename "hoop_direction{str(i_station).zfill(3)+append_str}"')
 
     return part_name_id, materials_used

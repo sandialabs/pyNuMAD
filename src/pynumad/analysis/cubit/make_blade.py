@@ -1047,18 +1047,13 @@ def cubit_make_solid_blade(
 
 
     # Outer mold-line sideset
-    parse_string = f'with name "*layer0_bottomFace*"'
-    surface_ids = list(parse_cubit_list("surface", parse_string))
-
-    parse_string = f'with name "shell_web_thickness*bottomFace_web_thickness*" and not is_merged'
-    surface_ids += list(parse_cubit_list("surface", parse_string))
 
     parse_string = f'in curve with name "*oml*"'
-    temp_ids = list(parse_cubit_list("surface", parse_string))
+    surface_ids = []
 
-    for surf_id in temp_ids:
-        if 'Station' not in cubit.get_entity_name("surface", surf_id):
-            surface_ids+=[surf_id]
+    for surf_id in parse_cubit_list("surface", parse_string):
+        if 'surface' not in cubit.get_entity_name("surface", surf_id):
+            surface_ids.append(surf_id)
 
 
     cubit.cmd(f"sideset 1 add surface {l2s(surface_ids)} ")
