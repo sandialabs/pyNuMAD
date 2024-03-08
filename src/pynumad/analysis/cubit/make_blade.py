@@ -6,6 +6,48 @@ import os
 import glob
 import pickle
 import time
+def write_path_abscissas_to_file(set_verts,file_name):
+
+    file = open(file_name, 'w')
+    for set_name in set_verts.keys():
+        all_set_coords=[]
+        
+        for vertex_id in set_verts[set_name]:
+            node_id=get_vertex_node(vertex_id)
+            coords=get_nodal_coordinates(node_id)
+            all_set_coords.append(coords)
+
+        non_dim_path_length=[]
+        if 'span' not in set_name:
+            all_set_coords=np.array(all_set_coords)
+            segment_lengths=list((np.sqrt((all_set_coords[:-1]-all_set_coords[1:])**2)).sum(1))
+            segment_lengths.insert(0,0.0)
+            path_length=sum(segment_lengths)
+            
+            for i_seg in range(len(segment_lengths)):
+                non_dim_path_length.append(sum(segment_lengths[:i_seg+1])/path_length)
+
+        file.write(f'{set_name} {" ".join(map(str,non_dim_path_length))}\n')
+    file.close()
+
+def write_path_coords_to_file(set_verts,directory):
+    for set_name in set_verts.keys():
+        file = open(f'{directory}/{set_name}_coords.txt', 'w')
+        for vertex_id in set_verts[set_name]:
+            node_id=get_vertex_node(vertex_id)
+            coords=get_nodal_coordinates(node_id)
+            file.write(f'{" ".join(map(str,coords))}\n')
+        file.close()
+def write_path_node_ids_to_file(set_verts,file_name):
+
+    file = open(file_name, 'w')
+    for set_name in set_verts.keys():
+        node_ids=[]
+        for vertex_id in set_verts[set_name]:
+            node_ids.append(get_vertex_node(vertex_id))
+        file.write(f'{set_name} {" ".join(map(str,node_ids))}\n')
+    file.close()
+    
 def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
     # # ####################################
     # # ### Assign material orientations ###
@@ -134,6 +176,53 @@ def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
         raise NameError(f'Unknown element shape {element_shape}')
     
     return global_ids,theta1s,theta2s,theta3s,n_el
+
+def order_path_points(points, ind):
+    points_new = [ points.pop(ind) ]  # initialize a new list of points with the known first point
+    pcurr      = points_new[-1]       # initialize the current point (as the known point)
+    pointer=[ind]
+    while len(points)>0:
+        d      = np.linalg.norm(np.array(points) - np.array(pcurr), axis=1)  # distances between pcurr and all other remaining points
+        ind    = d.argmin()                   # index of the closest point
+        points_new.append( points.pop(ind) )  # append the closest point to points_new
+        pointer.append(ind)
+        pcurr  = points_new[-1]               # update the current point
+    return pointer
+
+def get_nodal_coordinates_from_set_of_nodes(nodeset_nodes):
+    # nodeset_nodes is a list of ints
+    coords=[]
+    for node_id in nodeset_nodes:
+        coords.append(get_nodal_coordinates(node_id))
+    return coords
+
+def get_nodeset_nodes_from_name(set_name):
+
+        nodeset_id = parse_cubit_list('nodeset',set_name)
+        if len(nodeset_id)==1:
+            return get_nodeset_nodes_inclusive(nodeset_id[0])
+        else:
+            if len(nodeset_id)==0:
+                raise RuntimeError(f'No nodeset named {set_name} found.')
+            else:
+                raise RuntimeError(f'More than one nodeset with name {set_name} found.')
+
+
+def get_sideset_nodes_from_name(set_name):
+        node_ids=[]
+        sideset_id = parse_cubit_list('sideset',set_name)
+        if len(sideset_id)==1:
+            surface_ids=get_sideset_surfaces(sideset_id[0])
+            for surface_id in surface_ids:
+                node_ids+=list(get_surface_nodes(surface_id))
+            return node_ids
+        else:
+            if len(sideset_id)==0:
+                raise RuntimeError(f'No sideset named {set_name} found.')
+            else:
+                raise RuntimeError(f'More than one sideset with name {set_name} found.')
+        
+
 def sweep_volumes(vol_to_mesh):
     failed_volumes=[]
     for volume_id in vol_to_mesh:
@@ -595,42 +684,64 @@ def cubit_make_cross_sections(
                     logFile.write(f"    Warning: {get_mesh_error_count()} cross section mesh errors exist in station {i_station}\n")
     
             if 'd_tube' in cs_params.keys() and cs_params['d_tube']:
-                
-                node_set_name='s1_thickness_path'
-                nodeset_id= cubit.get_next_nodeset_id()
-                cubit.cmd(f'nodeset {nodeset_id} add curve 925 928 932')
-                cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}"')
 
-                path_type='thickness'
-                node_order=get_path_node_order(node_set_name,path_type)
+                set_verts={}
+                set_verts['s1_thickness_path']=[2804, 9817, 9823, 9831]
+                set_verts['s2_thickness_path']=[9985, 10001, 10039, 10083]
+                set_verts['spanwise_path_s2']=[9985]
+                set_verts['circumferential_path']=[9650,2801,2802,2804,2806,2808,2810,2812,2814,9979,9983,9985,10117,10114,10115,6396,6395,6398,6266,6264,6260,2764,2762,2760,2758,2756,2754,2752,2751,5931,5951,5989,6033,11530,11538,11714,11706,9752,9708,9670,9650]
+
+
+                file_name=f'{directory}/path_nodes_beam_{i_station}.txt'
+                write_path_node_ids_to_file(set_verts,file_name)
+
+                #write_path_coords_to_file(set_verts,directory)
+                
+                file_name=f'{directory}/path_abscissa_beam_{i_station}.txt'
+                write_path_abscissas_to_file(set_verts,file_name)   
+                
+
+                # nodeset_id= cubit.get_next_nodeset_id()
+                # cubit.cmd(f'nodeset {nodeset_id} add curve 925 928 932')
+                # cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}"')
+
+                # path_type='thickness'
+                #node_order=get_path_node_order(node_set_name,path_type)
                 #def get_path_node_order(node_set_name,path_type):
-                node_ids=get_nodeset_nodes_inclusive(nodeset_id)
 
-                coords=[]
-                for node_id in node_ids:
-                    coords.append(get_nodal_coordinates(node_id))
-                
-                if path_type == 'thickness':
-                    pass
+
+                # nodeset_nodes = get_nodeset_nodes_from_name(node_set_name)
+                # coords=get_nodal_coordinates_from_set_of_nodes(nodeset_nodes)
+
+                # pointer=order_path_points(coords, ind)
+
 
 
                 # file = open(directory +'/'+ axisFileName, 'w')
                 # file.write('--------- BEAMDYN with OpenFAST INPUT FILE -------------------------------------------\n')
                 
-                nodeset_id= cubit.get_next_nodeset_id()
-                cubit.cmd(f'nodeset {nodeset_id} add curve 1040 1065 1091')
-                cubit.cmd(f'nodeset {nodeset_id} name "s2_thickness_path"')
+                # nodeset_id= cubit.get_next_nodeset_id()
+                # cubit.cmd(f'nodeset {nodeset_id} add curve 1040 1065 1091')
+                # cubit.cmd(f'nodeset {nodeset_id} name "s2_thickness_path"')
 
 
-                nodeset_id= cubit.get_next_nodeset_id()
-                cubit.cmd(f'nodeset {nodeset_id} add vertex 9985')
-                cubit.cmd(f'nodeset {nodeset_id} name "spanwise_path"')
+                # nodeset_id= cubit.get_next_nodeset_id()
+                # cubit.cmd(f'nodeset {nodeset_id} add vertex 9985')
+                # cubit.cmd(f'nodeset {nodeset_id} name "spanwise_path"')
 
 
-                nodeset_id= cubit.get_next_nodeset_id()
-                cubit.cmd(f'nodeset {nodeset_id} add curve 73 74 75 76 77 78 79 92 93 94 95 96 97 98 335 361 476 478 479 556 557 558 824 848 873 899 1014 1016 1017 1094 1095 1096 1196 1220 1224 1324 1328 1422')
-                cubit.cmd(f'nodeset {nodeset_id} name "circumferential_path"')
+                # nodeset_id= cubit.get_next_nodeset_id()
+                # cubit.cmd(f'nodeset {nodeset_id} add curve 73 74 75 76 77 78 79 92 93 94 95 96 97 98 335 361 476 478 479 556 557 558 824 848 873 899 1014 1016 1017 1094 1095 1096 1196 1220 1224 1324 1328 1422')
+                # cubit.cmd(f'nodeset {nodeset_id} name "circumferential_path"')
                 
+
+
+                # nodeset_id= cubit.get_next_nodeset_id()
+                # cubit.cmd(f'nodeset {nodeset_id} add curve with name "*oml*"')
+                # cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}"')
+                # oml_nodes = get_nodeset_nodes_from_name(node_set_name)
+
+
             if settings["export"] is not None:
                 if (
                     "g" in settings["export"].lower()
