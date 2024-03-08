@@ -652,6 +652,11 @@ def cubit_make_cross_sections(
             else:
                 cubit.cmd(f"surface {l2s(volume_ids)} scheme map")
 
+
+            t_1=get_mean_layer_thickness_at_station(i_station) #Find mean layer thickness for first station
+            e_size_1=t_1/cs_params['nel_per_layer']*cs_params['element_ar'] #Get spanwise element size at station_id cross section
+            
+            cubit.cmd(f"surface all size {e_size_1}")
             cubit.cmd(f"mesh surface {l2s(volume_ids)}")
 
             file_name = wt_name + "-" + str(i_station) + "-t-0.in"

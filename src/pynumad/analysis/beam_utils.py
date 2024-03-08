@@ -238,7 +238,7 @@ def write_beamdyn_prop(folder, wt_name, radial_stations, beam_stiff, beam_inerti
     if not os.path.exists(folder):
         os.makedirs(folder)
         
-    propFileName= 'bd_props_'+wt_name + '.dat'
+    propFileName= 'bd_props_'+wt_name + '.inp'
     
     
     file = open(folder +'/'+propFileName, 'w')
