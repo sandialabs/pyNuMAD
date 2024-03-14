@@ -5,6 +5,7 @@ import glob
 import numpy as np
 from pynumad.utils.misc_utils import copy_and_replace
 from pynumad.paths import SOFTWARE_PATHS
+import os
 
 def write_beam_model(wt_name,station_list,settings,blade,mu,log,directory='.'):
     import pynumad.analysis.beam_utils as beam_utils
@@ -100,6 +101,8 @@ def write_beam_model(wt_name,station_list,settings,blade,mu,log,directory='.'):
 
 
 def write_sierra_sm_model(template_file,wt_name,station_list,blade,materials_used,directory='.'):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
     if station_list is None or len(station_list) == 0:
         station_list = list(range(len(blade.ispan)))
@@ -163,6 +166,9 @@ def write_sierra_sd_model(template_file,wt_name,station_list,blade,materials_use
     elif len(station_list) == 1:
         raise ValueError("Need more than one cross section to make a solid model")
     
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        
     materials = blade.definition.materials
 
     template_file=template_path+'sd.i.template'

@@ -6,7 +6,7 @@ import os
 import glob
 import pickle
 import time
-def write_path_abscissas_to_file(set_verts,file_name):
+def write_path_abscissas_to_file(set_verts,file_name,non_dim_span=[]):
 
     file = open(file_name, 'w')
     for set_name in set_verts.keys():
@@ -24,15 +24,20 @@ def write_path_abscissas_to_file(set_verts,file_name):
             segment_lengths.insert(0,0.0)
             path_length=sum(segment_lengths)
             
-            for i_seg in range(len(segment_lengths)):
-                non_dim_path_length.append(sum(segment_lengths[:i_seg+1])/path_length)
+            if path_length > 0:
+                for i_seg in range(len(segment_lengths)):
+                    non_dim_path_length.append(sum(segment_lengths[:i_seg+1])/path_length)
+            else:
+                non_dim_path_length = []
+        else:
+            non_dim_path_length=non_dim_span
 
         file.write(f'{set_name} {" ".join(map(str,non_dim_path_length))}\n')
     file.close()
 
-def write_path_coords_to_file(set_verts,directory):
+def write_path_coords_to_file(set_verts,directory,prepend=''):
     for set_name in set_verts.keys():
-        file = open(f'{directory}/{set_name}_coords.txt', 'w')
+        file = open(f'{directory}/{prepend}{set_name}.coords', 'w')
         for vertex_id in set_verts[set_name]:
             node_id=get_vertex_node(vertex_id)
             coords=get_nodal_coordinates(node_id)
@@ -691,18 +696,19 @@ def cubit_make_cross_sections(
             if 'd_tube' in cs_params.keys() and cs_params['d_tube']:
 
                 set_verts={}
-                set_verts['s1_thickness_path']=[2804, 9817, 9823, 9831]
-                set_verts['s2_thickness_path']=[9985, 10001, 10039, 10083]
-                set_verts['spanwise_path_s2']=[9985]
-                set_verts['circumferential_path']=[9650,2801,2802,2804,2806,2808,2810,2812,2814,9979,9983,9985,10117,10114,10115,6396,6395,6398,6266,6264,6260,2764,2762,2760,2758,2756,2754,2752,2751,5931,5951,5989,6033,11530,11538,11714,11706,9752,9708,9670,9650]
+                set_verts[f'thickness_{str(i_station).zfill(3)}_s1']=[2804, 9817, 9823, 9831]
+                set_verts[f'thickness_{str(i_station).zfill(3)}_s2']=[9985, 10001, 10039, 10083]
+                set_verts[f'spanwise_s2']=[9985]
+                set_verts[f'circumferential_{str(i_station).zfill(3)}']=[9650,2801,2802,2804,2806,2808,2810,2812,2814,9979,9983,9985,10117,10114,10115,6396,6395,6398,6266,6264,6260,2764,2762,2760,2758,2756,2754,2752,2751,5931,5951,5989,6033,11530,11538,11714,11706,9752,9708,9670,9650]
+                set_verts[f'p1']=[9650]
+                set_verts[f'p2']=[5931]
 
-
-                file_name=f'{directory}/path_nodes_beam_{i_station}.txt'
+                file_name=f'{directory}/beam_{str(i_station).zfill(3)}.nodes'
                 write_path_node_ids_to_file(set_verts,file_name)
 
                 #write_path_coords_to_file(set_verts,directory)
                 
-                file_name=f'{directory}/path_abscissa_beam_{i_station}.txt'
+                file_name=f'{directory}/beam_{str(i_station).zfill(3)}.abscissa'
                 write_path_abscissas_to_file(set_verts,file_name)   
                 
 
@@ -1146,20 +1152,20 @@ def cubit_make_solid_blade(
     # # Adding Nodesets
     for iLoop, station_id in enumerate(stationList):
 
-        #if iLoop ==0:
-        #    node_set_name='root'
-        #elif iLoop==len(stationList)-1:
-        #    node_set_name='tip'
-        #else:
+
         node_set_name=f'station{str(station_id).zfill(3)}'
             
             
         parse_string = f'with name "*station{str(station_id).zfill(3)}*_surface*"'
         surface_ids = parse_cubit_list("surface", parse_string)
 
-        cubit.cmd(f"nodeset {iLoop+1} add surface {l2s(surface_ids)} ")
-        cubit.cmd(f'nodeset {iLoop+1} name "{node_set_name}"')
+        nodeset_id=cubit.get_next_nodeset_id()
+        cubit.cmd(f"nodeset {nodeset_id} add surface {l2s(surface_ids)} ")
+        cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}_ns"')
 
+        sideset_id=cubit.get_next_sideset_id()
+        cubit.cmd(f"sideset {sideset_id} add surface {l2s(surface_ids)} ")
+        cubit.cmd(f'sideset {sideset_id} name "{node_set_name}_ss"')
 
 
     # Outer mold-line sideset
@@ -1171,9 +1177,9 @@ def cubit_make_solid_blade(
         if 'surface' not in cubit.get_entity_name("surface", surf_id):
             surface_ids.append(surf_id)
 
-
-    cubit.cmd(f"sideset 1 add surface {l2s(surface_ids)} ")
-    cubit.cmd(f'sideset 1 name "oml"')
+    sideset_id=cubit.get_next_sideset_id()
+    cubit.cmd(f"sideset {sideset_id} add surface {l2s(surface_ids)} ")
+    cubit.cmd(f'sideset {sideset_id} name "oml_ss"')
 
 
     cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
