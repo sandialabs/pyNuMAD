@@ -1,10 +1,11 @@
 #import logging
 import subprocess
-#import os
+from os.path import join
 import glob
 import numpy as np
 from pynumad.utils.misc_utils import copy_and_replace
-from pynumad.paths import SOFTWARE_PATHS
+from pynumad.paths import SOFTWARE_PATHS, DATA_PATH
+
 
 def write_beam_model(wt_name,settings,blade,mu,log,directory='.'):
     import pynumad.analysis.beam_utils as beam_utils
@@ -100,7 +101,7 @@ def write_sierra_model(wt_name,settings,blade,materials_used,directory='.'):
 #     #Runs VABS or OpenSG to homogenize
 #     #Makes beamDyn or GEBT files
 
-    template_path=SOFTWARE_PATHS['pynumad']+'src/data/templates/'
+    template_path=join(DATA_PATH, "templates")
 
     # radial_stations=blade.ispan/blade.ispan[-1]
     # nStations=len(radial_stations)
