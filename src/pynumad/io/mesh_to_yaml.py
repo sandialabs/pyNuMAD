@@ -1,4 +1,5 @@
 import yaml
+from yaml import CLoader as Loader
 import numpy as np
 import os
 
@@ -10,11 +11,11 @@ def mesh_to_yaml(meshData, file_name):
     mDataOut = dict()
     nodes = list()
     for nd in meshData["nodes"]:
-        ndstr = str(nd)
+        ndstr = str(list(nd))
         nodes.append(ndstr)
     elements = list()
     for el in meshData["elements"]:
-        elstr = str(el)
+        elstr = str(list(el))
         elements.append(elstr)
     esList = list()
     for es in meshData["sets"]["element"]:
@@ -66,15 +67,16 @@ def mesh_to_yaml(meshData, file_name):
     try:
         adNds = list()
         for nd in meshData["adhesiveNds"]:
-            ndstr = str(nd)
+            ndstr = str(list(nd))
             adNds.append(ndstr)
         adEls = list()
         for el in meshData["adhesiveEls"]:
-            elstr = str(el)
+            elstr = str(list(el))
             adEls.append(elstr)
         mDataOut["adhesiveNds"] = adNds
         mDataOut["adhesiveEls"] = adEls
         mDataOut["adhesiveElSet"] = meshData["adhesiveElSet"]
+        mDataOut["adhesiveSection"] = meshData["adhesiveSection"]
         constraints = list()
         for c in meshData["constraints"]:
             terms = list()
@@ -111,3 +113,16 @@ def mesh_to_yaml(meshData, file_name):
     outFile.close()
 
     os.remove("temp.yaml")
+    
+def yaml_to_mesh(fileName):
+    inFile = open(fileName,'r')
+    meshData = yaml.load(inFile,Loader=Loader)
+    inFile.close()
+    meshData['nodes'] = np.array(meshData['nodes'])
+    meshData['elements'] = np.array(meshData['elements'])
+    try:
+        meshData['adhesiveNds'] = np.array(meshData['adhesiveNds'])
+        meshData['adhesiveEls'] = np.array(meshData['adhesiveEls'])
+    except:
+        pass
+    return meshData
