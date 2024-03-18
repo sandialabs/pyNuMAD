@@ -148,7 +148,7 @@ def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
                         ref_line_direction = vectNorm([x, y, z])
 
 
-                    spanwise_direction = np.array(ref_line_direction)-dotProd(ref_line_direction,surface_normal)*np.array(surface_normal)
+                    spanwise_direction = vectNorm(np.array(ref_line_direction)-dotProd(ref_line_direction,surface_normal)*np.array(surface_normal))
 
                     perimeter_direction = vectNorm(crossProd(surface_normal, spanwise_direction))
 
