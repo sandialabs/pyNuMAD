@@ -83,17 +83,17 @@ def trsf_sixbysix(M, T):
     return res
 
 # --- Write BeamDyn file with blade reference line locations ---#
-def write_beamdyn_axis(directory, wt_name, blade,radial_stations):
+def write_beamdyn_axis(directory, wt_name, blade):
     definition = blade.definition
 
     geometry = blade.geometry
     n_pts = 50
     grid = np.linspace(0, 1, n_pts)
 
-    kp_xr=interpolator_wrap(radial_stations,definition.prebend,grid,'pchip', axis=1)
-    kp_yr=interpolator_wrap(radial_stations,definition.sweep,grid,'pchip', axis=1)
-    kp_zr=interpolator_wrap(radial_stations,geometry.ispan,grid,'pchip', axis=1)
-    twist_interp=interpolator_wrap(radial_stations,geometry.idegreestwist,grid,'pchip', axis=1)
+    kp_xr=interpolator_wrap(blade.geometry.ispan,definition.prebend,grid,'pchip', axis=1)
+    kp_yr=interpolator_wrap(blade.geometry.ispan,definition.sweep,grid,'pchip', axis=1)
+    kp_zr=interpolator_wrap(blade.geometry.ispan,geometry.ispan,grid,'pchip', axis=1)
+    twist_interp=interpolator_wrap(blade.geometry.ispan,geometry.idegreestwist,grid,'pchip', axis=1)
 
 
     data = np.vstack((kp_xr, kp_yr, kp_zr, twist_interp)).T

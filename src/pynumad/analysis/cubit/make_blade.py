@@ -6,8 +6,9 @@ import os
 import glob
 import pickle
 import time
-def write_path_abscissas_to_file(set_verts,file_name,non_dim_span=[]):
-
+def write_path_abscissas_to_file(set_verts,file_name,non_dim_span=[],directory='.'):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     file = open(file_name, 'w')
     for set_name in set_verts.keys():
         all_set_coords=[]
@@ -35,7 +36,9 @@ def write_path_abscissas_to_file(set_verts,file_name,non_dim_span=[]):
         file.write(f'{set_name} {" ".join(map(str,non_dim_path_length))}\n')
     file.close()
 
-def write_path_coords_to_file(set_verts,directory,prepend=''):
+def write_path_coords_to_file(set_verts,prepend,directory='.'):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     for set_name in set_verts.keys():
         file = open(f'{directory}/{prepend}{set_name}.coords', 'w')
         for vertex_id in set_verts[set_name]:
@@ -43,9 +46,11 @@ def write_path_coords_to_file(set_verts,directory,prepend=''):
             coords=get_nodal_coordinates(node_id)
             file.write(f'{" ".join(map(str,coords))}\n')
         file.close()
-def write_path_node_ids_to_file(set_verts,file_name):
+def write_path_node_ids_to_file(set_verts,file_name,directory='.'):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-    file = open(file_name, 'w')
+    file = open(f'{directory}/{file_name}', 'w')
     for set_name in set_verts.keys():
         node_ids=[]
         for vertex_id in set_verts[set_name]:
@@ -703,10 +708,9 @@ def cubit_make_cross_sections(
                 set_verts[f'p1']=[9650]
                 set_verts[f'p2']=[5931]
 
-                file_name=f'{directory}/beam_{str(i_station).zfill(3)}.nodes'
-                write_path_node_ids_to_file(set_verts,file_name)
-
-                #write_path_coords_to_file(set_verts,directory)
+                file_name=f'beam_{str(i_station).zfill(3)}.nodes'
+                write_path_node_ids_to_file(set_verts,file_name,directory)
+                #write_path_coords_to_file(set_verts,prepend,dir_name)
                 
                 file_name=f'{directory}/beam_{str(i_station).zfill(3)}.abscissa'
                 write_path_abscissas_to_file(set_verts,file_name)   
