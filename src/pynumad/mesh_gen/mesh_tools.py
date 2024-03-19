@@ -159,7 +159,9 @@ def mergeDuplicateNodes(meshData):
     totEls = len(allEls)
     elDim = len(allEls[0])
 
-    nodeGL = get_mesh_spatial_list(allNds)
+    avgSp = get_average_node_spacing(meshData['nodes'],meshData['elements'])
+    sp = 2*avgSp
+    nodeGL = get_mesh_spatial_list(allNds,xSpacing=sp,ySpacing=sp,zSpacing=sp)
     glDim = nodeGL.getDim()
     mag = np.linalg.norm(glDim)
     nto1_3 = np.power(len(allNds),0.3333333333)

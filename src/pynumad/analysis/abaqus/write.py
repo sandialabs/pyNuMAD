@@ -7,6 +7,105 @@ Created on Wed Jan 24 15:53:59 2024
 
 from pynumad.objects.blade import *
 
+def write_shell_general(fileName,bladeMesh):
+    outFile = open(fileName,'w')
+
+    outFile.write('*Part, name=part1\n')
+    outFile.write('*Node\n')
+
+    i = 1
+    for nd in bladeMesh['nodes']:
+        lst = [str(i),str(nd[0]),str(nd[1]),str(nd[2]),'\n']
+        ln = ', '.join(lst)
+        outFile.write(ln)
+        i = i + 1
+        
+    outFile.write('*Element, type=S4\n')
+    i = 1
+    for el in bladeMesh['elements']:
+        if(el[3] != -1):
+            el = el + 1
+            lst = [str(i),str(el[0]),str(el[1]),str(el[2]),str(el[3]),'\n']
+            ln = ', '.join(lst)
+            outFile.write(ln)
+        i = i + 1
+        
+    outFile.write('*Element, type=S3\n')
+    i = 1
+    for el in bladeMesh['elements']:
+        if(el[3] == -1):
+            el[0:3] = el[0:3] + 1
+            lst = [str(i),str(el[0]),str(el[1]),str(el[2]),'\n']
+            ln = ', '.join(lst)
+            outFile.write(ln)
+        i = i + 1
+        
+    for es in bladeMesh['sets']['element']:
+        ln = '*Elset, elset=set_' + es['name'] + '\n'
+        outFile.write(ln)
+        for el in es['labels']:
+            ln = '  ' + str(el+1) + '\n'
+            outFile.write(ln)
+            
+    for sec in bladeMesh['sections']:
+        ln = '*Orientation, name=ori_' + sec['elementSet'] + '\n'
+        outFile.write(ln)
+        dataLn = list()
+        for d in sec['xDir']:
+            dataLn.append(str(d))
+        for d in sec['xyDir']:
+            dataLn.append(str(d))
+        dataStr = ', '.join(dataLn) + '\n'
+        outFile.write(dataStr)
+        outFile.write('1, 0.\n')
+        
+    for sec in bladeMesh['sections']:
+        snm = sec['elementSet']
+        ln = '*Shell General Section, elset=set_' + snm + ', composite, orientation=ori_' + snm + ', offset=0.0, layup=lyp_' + snm + '\n'
+        outFile.write(ln)
+        for lay in sec['layup']:
+            laylst = [str(lay[1])," ",lay[0],str(lay[2])]
+            layStr = ', '.join(laylst) + '\n'
+            outFile.write(layStr)
+
+    outFile.write('*End Part\n')
+
+    outFile.write('*Assembly, name=Assembly\n')
+    outFile.write('**\n')
+    outFile.write('*Instance, name=part1Inst, part=part1\n')
+    outFile.write('*End Instance\n')
+    outFile.write('**\n')
+
+    for ns in bladeMesh['sets']['node']:
+        ln = '*Nset, nset=' + ns['name'] + ', instance=part1Inst\n'
+        outFile.write(ln)
+        for nd in ns['labels']:
+            ln = str(nd + 1) + ',\n'
+            outFile.write(ln)
+                
+    outFile.write('*End Assembly\n')
+
+    for mat in bladeMesh['materials']:
+        ln = '*Material, name=' + mat['name'] + '\n'
+        outFile.write(ln)
+        outFile.write('*Density\n')
+        ln = str(mat['density']) + ',\n'
+        outFile.write(ln)
+        outFile.write('*Elastic, type=ENGINEERING CONSTANTS\n')
+        E = mat['elastic']['E']
+        nu = mat['elastic']['nu']
+        G = mat['elastic']['G']
+        eProps = [str(E[0]),str(E[1]),str(E[2])]
+        eProps.extend([str(nu[0]),str(nu[1]),str(nu[2])])
+        eProps.extend([str(G[0]),str(G[1]),str(G[2])])
+        ln = ', '.join(eProps[0:8]) + '\n'
+        outFile.write(ln)
+        ln = eProps[8] + ',\n'
+        outFile.write(ln)
+
+    outFile.close()
+    return   
+
 def write_shell_modal_input(fileName,blade,bladeMesh,adhesiveMat,numModes):
     outFile = open(fileName,'w')
 

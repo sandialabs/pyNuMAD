@@ -109,6 +109,14 @@ def get_el_coord(elNds,ndCrd):
     elCrd = np.array([xCrd,yCrd,zCrd])
     return elCrd
 
+def get_el_centroid(elCrd):
+    elCent = np.zeros(3,dtype=float)
+    nnds = len(elCrd[0])
+    for ni in range(0,nnds):
+        elCent = elCent + elCrd[:,ni]
+    elCent = (1.0/nnds)*elCent
+    return elCent
+
 def check_jacobian(elCrd,elType):
     sPts = []
     if(elType == "brick8"):

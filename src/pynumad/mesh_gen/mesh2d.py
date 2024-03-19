@@ -144,7 +144,7 @@ class Mesh2D:
                     for ndi in range(0, nbNds):
                         vec = (1.0 / sweepElements[stg]) * (dNds[ndi] - prevDest[ndi])
                         ndDir.append(vec)
-                    ndDir = np.array([ndDir])
+                    ndDir = np.array(ndDir)
                     for i in range(0, sweepElements[stg]):
                         for ndi in range(0, nbNds):
                             self.nodes[nNds] = self.nodes[ndi] + (i + 1) * ndDir[ndi]
