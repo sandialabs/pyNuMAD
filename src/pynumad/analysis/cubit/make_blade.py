@@ -9,7 +9,7 @@ import time
 def write_path_abscissas_to_file(set_verts,file_name,non_dim_span=[],directory='.'):
     if not os.path.exists(directory):
         os.makedirs(directory)
-    file = open(file_name, 'w')
+    file = open(f'{directory}/{file_name}', 'w')
     for set_name in set_verts.keys():
         all_set_coords=[]
         

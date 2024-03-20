@@ -560,11 +560,11 @@ def write_vabs_glb_input(folder,file_name_base,u,dcm,F,M,f,m,fp,mp,fpp,mpp,fppp,
     file.close()
     return
 
-def run_vabs_recovery(file_name):
+def run_vabs_recovery(dir_name,file_name):
     import subprocess
     from pynumad.paths import SOFTWARE_PATHS
 
-    this_cmd = f'{SOFTWARE_PATHS["vabs"]} {file_name} 1'
+    this_cmd = f'{SOFTWARE_PATHS["vabs"]} {dir_name}/{file_name} 1'
     try:
         print(f'Running: {this_cmd}')
         subprocess.run(this_cmd, shell=True, check=True, capture_output=True)
