@@ -374,6 +374,9 @@ def cubit_make_cross_sections(
     definition = blade.definition
     keypoints = blade.keypoints
 
+
+
+
     if stationList is None or len(stationList) == 0:
         stationList = list(range(len(geometry.ispan)))
 
@@ -402,6 +405,36 @@ def cubit_make_cross_sections(
     blade.expand_blade_geometry_te(expandTEthicknesses)
 
     stackdb.edit_stacks_for_solid_mesh()
+
+
+    all_layer_thicknesses = [[] for _ in range(3)] #three modeled layers
+    _,n_stations = np.shape(stackdb.stacks)
+    for i_station in range(n_stations):
+        temp = stackdb.stacks[:, i_station]
+        temp = np.flip(temp)
+
+        stacks = list(stackdb.stacks[1:6, i_station]) + list(temp[1:6])
+
+        for stack in stacks:
+            for i_layer,layer_thicknesses in enumerate(all_layer_thicknesses):
+                layer_thicknesses.append(stack.layer_thicknesses()[i_layer])
+
+    if 'nel_per_core_layer' not in cs_params.keys() or cs_params['nel_per_core_layer'] < 1.0:
+        #find number of elemements through core layer:
+        nel_per_core_layer=[]
+        for i in range(len(all_layer_thicknesses[0])):
+            layer_t1=all_layer_thicknesses[0][i]
+            layer_t2=all_layer_thicknesses[1][i]
+            layer_t3=all_layer_thicknesses[2][i]
+
+            element_t1= layer_t1/cs_params['nel_per_layer']
+            element_t3= layer_t3/cs_params['nel_per_layer']
+
+            nel_per_core_layer.append(mean([layer_t2/element_t1/cs_params['element_thickness_ar'],layer_t2/element_t3/cs_params['element_thickness_ar']]))
+        
+        cs_params['nel_per_core_layer']=int(max(round(mean(nel_per_core_layer)),1))
+
+    
 
     hasWebs = []
     webNumber = 1
