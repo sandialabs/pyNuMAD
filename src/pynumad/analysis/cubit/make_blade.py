@@ -6,6 +6,7 @@ import os
 import glob
 import pickle
 import time
+import multiprocessing
 def write_path_abscissas_to_file(set_verts,file_name,non_dim_span=[],directory='.'):
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -57,6 +58,126 @@ def write_path_node_ids_to_file(set_verts,file_name,directory='.'):
             node_ids.append(get_vertex_node(vertex_id))
         file.write(f'{set_name} {" ".join(map(str,node_ids))}\n')
     file.close()
+
+def get_hex_orientations(volume_id):
+    global_el_ids_in_vol=[]
+    theta1s_in_vol=[]
+    theta2s_in_vol=[]
+    theta3s_in_vol=[]
+
+    print(f'Calculating material orientations for volume {volume_id}')
+
+    spanwise_mat_ori_curve=1
+    surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+    volume_name = cubit.get_entity_name("volume", volume_id)
+    for el_id in get_volume_hexes(volume_id):
+        coords = cubit.get_center_point("hex", el_id)
+            
+        if surf_id_for_mat_ori:
+            surface_normal = vectNorm(
+                list(
+                    sign
+                    * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
+                )
+            )
+            if 'layer6' in volume_name or 'layer7' in volume_name or 'layer8' in volume_name or 'layer9' in volume_name or  'layer10' in volume_name or 'layer11' in volume_name: #Need a better way to select the "vertical" portion of webs
+                ref_line_direction = [0,0,1]
+            else:
+                curve_location_for_tangent = cubit.curve(spanwise_mat_ori_curve).closest_point(coords)
+                x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
+                y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
+                z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
+                ref_line_direction = vectNorm([x, y, z])
+
+            #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
+            spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
+
+            perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+
+            # Recalculate to garantee orthogonal system
+            #surface_normal = np.cross(spanwise_direction, perimeter_direction)
+        else:
+            perimeter_direction = [1, 0, 0]
+            surface_normal = [0, 1, 0]
+            spanwise_direction = [0, 0, 1]
+
+        newCoordinateSystemVectors = [
+            spanwise_direction,
+            perimeter_direction,
+            surface_normal,
+        ]
+        globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+
+
+        global_id=get_global_element_id('hex',el_id)
+        
+        dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
+
+        temp1, temp2, temp3 = dcmToEulerAngles(dcm)
+
+        global_el_ids_in_vol.append(global_id)
+        theta1s_in_vol.append(-1*temp1)
+        theta2s_in_vol.append(-1*temp2)
+        theta3s_in_vol.append(-1*temp3)
+    return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
+
+def get_tet_orientations(volume_id):
+    print(f'Calculating material orientations for volume {volume_id}')
+
+    global_el_ids_in_vol=[]
+    theta1s_in_vol=[]
+    theta2s_in_vol=[]
+    theta3s_in_vol=[]
+    surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+    volume_name = cubit.get_entity_name("volume", volume_id)
+    for el_id in get_volume_tets(volume_id):
+        coords = cubit.get_center_point("tet", el_id)
+
+        if surf_id_for_mat_ori:
+            surface_normal = vectNorm(
+                list(
+                    sign
+                    * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
+                )
+            )
+            if 'layer6' in volume_name or 'layer7' in volume_name or 'layer8' in volume_name or 'layer9' in volume_name or  'layer10' in volume_name or 'layer11' in volume_name: #Need a better way to select the "vertical" portion of webs
+                ref_line_direction = [0,0,1]
+            else:
+                curve_location_for_tangent = cubit.curve(spanwise_mat_ori_curve).closest_point(coords)
+                x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
+                y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
+                z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
+                ref_line_direction = vectNorm([x, y, z])
+
+
+            spanwise_direction = vectNorm(np.array(ref_line_direction)-dotProd(ref_line_direction,surface_normal)*np.array(surface_normal))
+
+            perimeter_direction = vectNorm(crossProd(surface_normal, spanwise_direction))
+
+        else:
+            perimeter_direction = [1, 0, 0]
+            surface_normal = [0, 1, 0]
+            spanwise_direction = [0, 0, 1]
+
+        newCoordinateSystemVectors = [
+            spanwise_direction,
+            perimeter_direction,
+            surface_normal,
+        ]
+        globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+
+
+        global_id=get_global_element_id('tet',el_id)
+        
+        dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
+
+        temp1, temp2, temp3 = dcmToEulerAngles(dcm)
+
+        global_el_ids_in_vol.append(global_id)
+        theta1s_in_vol.append(-1*temp1)
+        theta2s_in_vol.append(-1*temp2)
+        theta3s_in_vol.append(-1*temp3)
+    return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
     
 def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
     # # ####################################
@@ -71,120 +192,31 @@ def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
     theta2s=[]
     theta3s=[]
 
+    t0 = time.time()
+    pool_obj = multiprocessing.Pool()
+    print(f'Calculating material orientations ...')
+
     if 'hex' in element_shape:
-        t0 = time.time()
-        for volume_id in all_volume_ids:
-            surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
-            volume_name = cubit.get_entity_name("volume", volume_id)
-            for el_id in get_volume_hexes(volume_id):
-                coords = cubit.get_center_point("hex", el_id)
-                    
-                if surf_id_for_mat_ori:
-                    surface_normal = vectNorm(
-                        list(
-                            sign
-                            * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
-                        )
-                    )
-                    if 'layer6' in volume_name or 'layer7' in volume_name or 'layer8' in volume_name or 'layer9' in volume_name or  'layer10' in volume_name or 'layer11' in volume_name: #Need a better way to select the "vertical" portion of webs
-                        ref_line_direction = [0,0,1]
-                    else:
-                        curve_location_for_tangent = cubit.curve(spanwise_mat_ori_curve).closest_point(coords)
-                        x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
-                        y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
-                        z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
-                        ref_line_direction = vectNorm([x, y, z])
-
-                    #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
-                    spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
-
-                    perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
-
-                    # Recalculate to garantee orthogonal system
-                    #surface_normal = np.cross(spanwise_direction, perimeter_direction)
-                else:
-                    perimeter_direction = [1, 0, 0]
-                    surface_normal = [0, 1, 0]
-                    spanwise_direction = [0, 0, 1]
-
-                newCoordinateSystemVectors = [
-                    spanwise_direction,
-                    perimeter_direction,
-                    surface_normal,
-                ]
-                globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-
-
-                global_id=get_global_element_id('hex',el_id)
-                
-                dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
-
-                temp1, temp2, temp3 = dcmToEulerAngles(dcm)
-
-                global_ids.append(global_id)
-                theta1s.append(-1*temp1)
-                theta2s.append(-1*temp2)
-                theta3s.append(-1*temp3)
-
-        t1 = time.time()
-        n_el=len(global_ids)
+        ans = pool_obj.map(get_hex_orientations,all_volume_ids)
     elif 'tet' in element_shape:
-        t0 = time.time()
-        for volume_id in all_volume_ids:
-            surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
-            volume_name = cubit.get_entity_name("volume", volume_id)
-            for el_id in get_volume_tets(volume_id):
-                coords = cubit.get_center_point("tet", el_id)
-
-                if surf_id_for_mat_ori:
-                    surface_normal = vectNorm(
-                        list(
-                            sign
-                            * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
-                        )
-                    )
-                    if 'layer6' in volume_name or 'layer7' in volume_name or 'layer8' in volume_name or 'layer9' in volume_name or  'layer10' in volume_name or 'layer11' in volume_name: #Need a better way to select the "vertical" portion of webs
-                        ref_line_direction = [0,0,1]
-                    else:
-                        curve_location_for_tangent = cubit.curve(spanwise_mat_ori_curve).closest_point(coords)
-                        x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
-                        y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
-                        z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
-                        ref_line_direction = vectNorm([x, y, z])
-
-
-                    spanwise_direction = vectNorm(np.array(ref_line_direction)-dotProd(ref_line_direction,surface_normal)*np.array(surface_normal))
-
-                    perimeter_direction = vectNorm(crossProd(surface_normal, spanwise_direction))
-
-                else:
-                    perimeter_direction = [1, 0, 0]
-                    surface_normal = [0, 1, 0]
-                    spanwise_direction = [0, 0, 1]
-
-                newCoordinateSystemVectors = [
-                    spanwise_direction,
-                    perimeter_direction,
-                    surface_normal,
-                ]
-                globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-
-
-                global_id=get_global_element_id('tet',el_id)
-                
-                dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
-
-                temp1, temp2, temp3 = dcmToEulerAngles(dcm)
-
-                global_ids.append(global_id)
-                theta1s.append(-1*temp1)
-                theta2s.append(-1*temp2)
-                theta3s.append(-1*temp3)
-        t1 = time.time()
-        n_el=len(global_ids)
+        ans = pool_obj.map(get_tet_orientations,all_volume_ids)
     else:
         raise NameError(f'Unknown element shape {element_shape}')
     
+    pool_obj.close()
+    t1 = time.time()
+    print(f'Total time for material orientations: {t1-t0}')
+    ans=np.array(ans)
+    global_ids=[]
+    theta1s=[]
+    theta2s=[]
+    theta3s=[]
+    for i in range(len(all_volume_ids)):
+        global_ids+=list(ans[i][0])
+        theta1s+=list(ans[i][1])
+        theta2s+=list(ans[i][2])
+        theta3s+=list(ans[i][3])
+    n_el=len(global_ids)
     return global_ids,theta1s,theta2s,theta3s,n_el
 
 def order_path_points(points, ind):
