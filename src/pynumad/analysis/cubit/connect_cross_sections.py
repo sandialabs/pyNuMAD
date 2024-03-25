@@ -298,7 +298,7 @@ def make_birds_mouth(
     for volume_id in vol_list:
         
         #Get list of curves with name layer_thickness
-        parse_string = f'with name "*layer_thickness*" in volume {volume_id}'
+        parse_string = f'with name "*thickness*" in volume {volume_id}'
         thickness_curve_ids = parse_cubit_list("curve", parse_string)
         
         #All curves in volume
@@ -324,7 +324,7 @@ def make_birds_mouth(
                         cubit.cmd(f'curve {i_curve} rename "layer_thickness"')
                 
                 #Get list of curves with name layer_thickness
-                parse_string = f'with name "*layer_thickness*" in volume {volume_id}'
+                parse_string = f'with name "*thickness*" in volume {volume_id}'
                 thickness_curve_ids = parse_cubit_list("curve", parse_string)
                 if len(thickness_curve_ids) !=4:
                     raise ValueError(
@@ -348,7 +348,7 @@ def get_approximate_thickness_direction_for_volume(volume_id):
     # Get thickness direction tangents
 
     #Get list of curves with name layer_thickness
-    parse_string = f'with name "*layer_thickness*" in volume {volume_id}'
+    parse_string = f'with name "*thickness*" in volume {volume_id}'
     thickness_curve_ids = parse_cubit_list("curve", parse_string)
 
     approximate_thickness_direction = []
@@ -407,7 +407,7 @@ def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
     volumeSurfaces = cubit.volume(volume_id).surfaces()
     for current_surface in volumeSurfaces:
 
-        parse_string = f'with name "*layer_thickness*" in surface {current_surface.id()}'
+        parse_string = f'with name "*thickness*" in surface {current_surface.id()}'
         thickness_curve_ids = parse_cubit_list("curve", parse_string)
         
         if len(thickness_curve_ids)==0:

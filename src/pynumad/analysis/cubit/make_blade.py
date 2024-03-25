@@ -715,9 +715,12 @@ def cubit_make_cross_sections(
 
 
             # Mesh the cross-section
-            cubit.cmd(
-                f'curve with name "layer_thickness*" interval {cs_params["nel_per_layer"]}'
-            )
+            cubit.cmd(f'curve with name "face_thickness*" interval {cs_params["nel_per_layer"]}')
+            cubit.cmd(f'curve with name "*face_web_thickness*" interval {cs_params["nel_per_layer"]}')
+
+            cubit.cmd(f'curve with name "core_thickness*" interval {cs_params["nel_per_core_layer"]}')
+            cubit.cmd(f'curve with name "*core_web_thickness*" interval {cs_params["nel_per_core_layer"]}')
+
             # cubit.cmd(f'imprint volume {l2s(surface_ids)}')
             cubit.cmd(f"merge volume {l2s(volume_ids)}")
             cubit.cmd(f"set default autosize on")
@@ -832,6 +835,7 @@ def cubit_make_cross_sections(
                     if "cub" in settings["export"].lower():
                         cubit.cmd(f"delete curve {spanwise_mat_ori_curve}")
                         cubit.cmd(f'save as "{path_name}-{str(i_station)}.cub" overwrite')
+                        print('')
                 elif len(settings["export"]) == 0:
                     pass
                 else:
@@ -1149,8 +1153,11 @@ def cubit_make_solid_blade(
             cubit.cmd(f"mesh surface {l2s(oml_to_mesh)} except surf {l2s(omit_surf_mesh)}")
 
 
-        cubit.cmd(f'curve with name "layer_thickness*" interval {cs_params["nel_per_layer"]}')
-        cubit.cmd(f'curve with name "*web_thickness*" interval {cs_params["nel_per_layer"]}')
+        cubit.cmd(f'curve with name "face_thickness*" interval {cs_params["nel_per_layer"]}')
+        cubit.cmd(f'curve with name "*face_web_thickness*" interval {cs_params["nel_per_layer"]}')  #none
+
+        cubit.cmd(f'curve with name "core_thickness*" interval {cs_params["nel_per_core_layer"]}')
+        cubit.cmd(f'curve with name "*core_web_thickness*" interval {cs_params["nel_per_core_layer"]}') #seems good
 
         parse_string = f"with name 'shellStation*layer0*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
         vol_to_mesh = parse_cubit_list("volume", parse_string)

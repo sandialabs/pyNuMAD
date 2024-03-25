@@ -419,9 +419,14 @@ def make_cross_section_surface(
         ply_angle,
     )
     
+    if i_modeled_layers ==1:
+        layer_name_base = 'core_thickness'
+    else:
+        layer_name_base = 'face_thickness'
 
-    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][1]} rename "layer_thickness{str(i_station).zfill(3)}_right"')
-    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][-1]} rename "layer_thickness{str(i_station).zfill(3)}_left"')
+
+    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][1]} rename "{layer_name_base}{str(i_station).zfill(3)}_right"')
+    cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["curves"][-1]} rename "{layer_name_base}{str(i_station).zfill(3)}_left"')
 
     cubit.cmd(f'curve {surface_dict[get_last_id("surface")]["verts"][-1]} rename "layer_thickness"')
     
@@ -430,7 +435,11 @@ def make_cross_section_surface(
     curve_name = cubit.get_entity_name("curve", curve_id)
 
     if 'web_thickness' in curve_name:
-        append_str='_web_thickness'
+        if 'face'in curve_name:
+            append_str='_face_web_thickness'
+        elif 'core' in curve_name:
+            append_str='_core_web_thickness'
+
     else:
         if stack_id>-1:
             append_str = '_stack'+str(stack_id).zfill(3)
@@ -666,8 +675,11 @@ def split_key_curves(key_curves, aft_web_stack, fore_web_stack, web_adhesive_wid
     cubit.cmd(f"split curve {key_curves[2]} at vertex {l2s(vertex_list)}")
     n_end = get_last_id("curve")
 
-    cubit.cmd(f'curve {n_start} to {n_start+2} rename "web_thickness"')
-    cubit.cmd(f'curve {n_end-2} to {n_end} rename "web_thickness"') 
+    cubit.cmd(f'curve {n_start} {n_start+2} rename "face_web_thickness"')
+    cubit.cmd(f'curve {n_end-2} {n_end} rename "face_web_thickness"') 
+
+    cubit.cmd(f'curve {n_start+1} rename "core_web_thickness"')
+    cubit.cmd(f'curve {n_end-1} rename "core_web_thickness"') 
 
     temp_base_curve_ids.append(n_start)
     temp_base_curve_ids.append(n_end)
@@ -2218,7 +2230,7 @@ def get_te_angle(hp_key_curve, lp_key_curve, fraction):
 
 
 def get_mean_layer_thickness_at_station(i_stations):
-        parse_string = f'with name "*layer_thickness{str(i_stations).zfill(3)}*"'
+        parse_string = f'with name "*_thickness{str(i_stations).zfill(3)}*"'
         thickness_curve_ids = parse_cubit_list("curve", parse_string)
 
         sum_length=0
