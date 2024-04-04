@@ -321,24 +321,24 @@ def extend_curve_past_curve_and_trim(
     return curve_to_extend_id
 
 
-def rename_last_surface(part_name, i_station, i_modeled_layers, material_name, part_name_id):
-    # Every cross sectional surface that is created must be followed by a call to this function
-    part_name_id += 1
+# def rename_last_surface(part_name, i_station, i_modeled_layers, material_name, part_name_id):
+#     # Every cross sectional surface that is created must be followed by a call to this function
+#     part_name_id += 1
 
 
-    surface_name = (
-        part_name
-        + "Station"
-        + str(i_station).zfill(3)
-        + "_layer"
-        + str(i_modeled_layers)
-        + "_"
-        + material_name
-        + "_surface"
-        + str(part_name_id)
-    )
-    cubit.cmd(f'surface {get_last_id("surface")} rename "{surface_name}"')
-    return part_name_id
+#     surface_name = (
+#         part_name
+#         + "Station"
+#         + str(i_station).zfill(3)
+#         + "_layer"
+#         + str(i_modeled_layers)
+#         + "_"
+#         + material_name
+#         + "_surface"
+#         + str(part_name_id)
+#     )
+#     cubit.cmd(f'surface {get_last_id("surface")} rename "{surface_name}"')
+#     return part_name_id
 
 
 def add_surface_dict_entry(

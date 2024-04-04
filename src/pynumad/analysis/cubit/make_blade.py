@@ -58,7 +58,77 @@ def write_path_node_ids_to_file(set_verts,file_name,directory='.'):
             node_ids.append(get_vertex_node(vertex_id))
         file.write(f'{set_name} {" ".join(map(str,node_ids))}\n')
     file.close()
+def write_path_node_angles_to_file(set_verts,prepend,directory='.'):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
+    for set_name in set_verts.keys():
+        file = open(f'{directory}/{prepend}{set_name}.dcm', 'w')
+        dcms=[ [] for _ in range(9) ]
+        for vertex_id in set_verts[set_name]:
+            node_id=get_vertex_node(vertex_id)
+            parse_string = f'in node {node_id}'
+            volume_id = parse_cubit_list("volume", parse_string)[0] #Just use first volume
+
+            coords = get_nodal_coordinates(node_id)
+            spanwise_mat_ori_curve=1
+            surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+            if surf_id_for_mat_ori:
+                surface_normal = vectNorm(
+                    list(
+                        sign
+                        * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
+                    )
+                )
+
+
+                ref_line_direction = [0,0,1]
+                #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
+                spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
+
+                perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+
+                # Recalculate to garantee orthogonal system
+                #surface_normal = np.cross(spanwise_direction, perimeter_direction)
+            else:
+                perimeter_direction = [1, 0, 0]
+                surface_normal = [0, 1, 0]
+                spanwise_direction = [0, 0, 1]
+
+            newCoordinateSystemVectors = [
+                spanwise_direction,
+                perimeter_direction,
+                surface_normal,
+            ]
+            globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+
+
+            global_id=get_global_element_id('hex',el_id)
+            
+            dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
+
+            dcms[0].append(dcm[0,0])
+            dcms[1].append(dcm[0,1])
+            dcms[2].append(dcm[0,2])
+            dcms[3].append(dcm[1,0])
+            dcms[4].append(dcm[1,1])
+            dcms[5].append(dcm[1,2])
+            dcms[6].append(dcm[2,0])
+            dcms[7].append(dcm[2,1])
+            dcms[8].append(dcm[2,2])
+
+
+        
+        file.write(f'R_11 {" ".join(map(str,dcms[0]))}\n')
+        file.write(f'R_12 {" ".join(map(str,dcms[1]))}\n')
+        file.write(f'R_13 {" ".join(map(str,dcms[2]))}\n')
+        file.write(f'R_21 {" ".join(map(str,dcms[3]))}\n')
+        file.write(f'R_22 {" ".join(map(str,dcms[4]))}\n')
+        file.write(f'R_23 {" ".join(map(str,dcms[5]))}\n')
+        file.write(f'R_31 {" ".join(map(str,dcms[6]))}\n')
+        file.write(f'R_32 {" ".join(map(str,dcms[7]))}\n')
+        file.write(f'R_33 {" ".join(map(str,dcms[8]))}\n')
+        file.close()
 def get_hex_orientations(volume_id):
     global_el_ids_in_vol=[]
     theta1s_in_vol=[]
