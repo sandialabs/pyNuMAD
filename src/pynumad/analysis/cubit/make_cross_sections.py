@@ -1449,16 +1449,28 @@ def create_simplist_surface_for_TE_or_LE_adhesive(
     materials_used,
     stack_id
 ):
+
     for i_curve in range(len(adhesive_curve_list[0])):
         ply_angle = (
             0  # Ply angle is always zero since adhesive is always assumed as isotropic
         )
+
+        #Make input curves tangent to oml for material orientation puposes
+        v_outer_top, v_inner_top = selCurveVerts(adhesive_curve_list[1][i_curve])
+        v_outer_bot, v_inner_bot = selCurveVerts(adhesive_curve_list[0][i_curve])
+
+        cubit.cmd(f'create curve vertex {v_inner_top} {v_inner_bot}')
+        c_top = get_last_id("curve")
+
+        cubit.cmd(f'create curve vertex {v_outer_top} {v_outer_bot}')
+        c_bot = get_last_id("curve")      
+
         part_name_id, materials_used = make_cross_section_surface(
             surface_dict,
             i_station,
             part_name,
-            adhesive_curve_list[1][i_curve],
-            adhesive_curve_list[0][i_curve],
+            c_top,
+            c_bot,
             adhesiveMatID,
             ply_angle,
             part_name_id,

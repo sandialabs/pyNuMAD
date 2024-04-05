@@ -342,60 +342,100 @@ def make_birds_mouth(
 # cubit.cmd('open "/home/ecamare/myprojects/bar/cubitDev/python/python0.cub"')
 
 
-def get_approximate_thickness_direction_for_volume(volume_id):
-    # This function is used when assigning material orientations
+# def get_approximate_thickness_direction_for_volume(volume_id):
+#     # This function is used when assigning material orientations
 
-    # Get thickness direction tangents
+#     # Get thickness direction tangents
 
-    #Get list of curves with name layer_thickness
-    parse_string = f'with name "*thickness*" in volume {volume_id}'
-    thickness_curve_ids = parse_cubit_list("curve", parse_string)
+#     #Get list of curves with name layer_thickness
+#     parse_string = f'with name "*thickness*" in volume {volume_id}'
+#     thickness_curve_ids = parse_cubit_list("curve", parse_string)
 
-    approximate_thickness_direction = []
-    for i_curve in thickness_curve_ids:
-        current_curve=cubit.curve(i_curve)
-        coords = current_curve.position_from_fraction(0.5)
-        approximate_thickness_direction.append(current_curve.tangent(coords)) 
-    approximate_thickness_direction = np.array(approximate_thickness_direction)
-    n_thickness_curves=len(thickness_curve_ids)
-    # approximate_thickness_direction = []
-    # for current_curve in cubit.volume(volume_id).curves():
-    #     curve_name = cubit.get_entity_name("curve", current_curve.id())
-    #     if "layer_thickness" in curve_name:
-    #         coords = current_curve.position_from_fraction(0.5)
-    #         approximate_thickness_direction.append(current_curve.tangent(coords))
-    # approximate_thickness_direction = np.array(approximate_thickness_direction)
-    # n_thickness_curves, _ = approximate_thickness_direction.shape
+#     approximate_thickness_direction = []
+#     for i_curve in thickness_curve_ids:
+#         current_curve=cubit.curve(i_curve)
+#         coords = current_curve.position_from_fraction(0.5)
+#         approximate_thickness_direction.append(current_curve.tangent(coords)) 
+#     approximate_thickness_direction = np.array(approximate_thickness_direction)
+#     n_thickness_curves=len(thickness_curve_ids)
+#     # approximate_thickness_direction = []
+#     # for current_curve in cubit.volume(volume_id).curves():
+#     #     curve_name = cubit.get_entity_name("curve", current_curve.id())
+#     #     if "layer_thickness" in curve_name:
+#     #         coords = current_curve.position_from_fraction(0.5)
+#     #         approximate_thickness_direction.append(current_curve.tangent(coords))
+#     # approximate_thickness_direction = np.array(approximate_thickness_direction)
+#     # n_thickness_curves, _ = approximate_thickness_direction.shape
 
-    if n_thickness_curves == 4:  # All other cases
-        return np.mean(approximate_thickness_direction, 0)
-    elif n_thickness_curves == 8:  # LE adhesive case and round TE adhesive
-        return 0
-    elif n_thickness_curves == 6:  # Web overwrap
-        # Take the mean of all curves with name 'layer_thickness'
-        mean = np.mean(approximate_thickness_direction, 0)
+#     if n_thickness_curves == 4:  # All other cases
+#         return np.mean(approximate_thickness_direction, 0)
+#     elif n_thickness_curves == 8:  # LE adhesive case and round TE adhesive
+#         return 0
+#     elif n_thickness_curves == 6:  # Web overwrap
+#         # Take the mean of all curves with name 'layer_thickness'
+#         mean = np.mean(approximate_thickness_direction, 0)
 
-        errorList = []
-        for i in range(n_thickness_curves):
-            diff = approximate_thickness_direction[i] - mean
+#         errorList = []
+#         for i in range(n_thickness_curves):
+#             diff = approximate_thickness_direction[i] - mean
 
-            errorList.append(sqrt(dotProd(diff, diff)))
-        sortIndex = np.argsort(errorList)[:4]  # Take the first four. 
-                                               # This discards the two directions 
-                                               # with the largest deviation from the
-                                               # average
+#             errorList.append(sqrt(dotProd(diff, diff)))
+#         sortIndex = np.argsort(errorList)[:4]  # Take the first four. 
+#                                                # This discards the two directions 
+#                                                # with the largest deviation from the
+#                                                # average
 
-        return np.mean(approximate_thickness_direction[sortIndex, :], 0)
+#         return np.mean(approximate_thickness_direction[sortIndex, :], 0)
+#     else:
+#         cubit.cmd(f'save as "Debug.cub" overwrite')
+#         raise ValueError(
+#             f"The number of thickness curves in volume is unexpected. Cannot assign material orientation. n_thickness_curves: {n_thickness_curves}"
+#         )
+
+#     return
+
+def get_mat_ori_surface(volume_id):
+    parse_string = f'in vol {volume_id} with name "*surface*"'
+    cs_surfaces = parse_cubit_list("surface", parse_string)
+
+    if len(cs_surfaces)==2:
+        curve_1=cubit.surface(cs_surfaces[0]).curves()[0].id()
+        curve_2=cubit.surface(cs_surfaces[1]).curves()[0].id()
+
+        thickness_curve = cubit.surface(cs_surfaces[0]).curves()[1]
+        midPoint = list(thickness_curve.position_from_fraction(0.5))
+        approximate_thickness_direction = thickness_curve.tangent(midPoint)
+
+        parse_string = f'in curve {curve_1}'
+        a_surfs = set(parse_cubit_list("surface", parse_string))
+        parse_string = f'in curve {curve_2}'
+        b_surfs = set(parse_cubit_list("surface", parse_string))
+
+        surface_ids = a_surfs.intersection(b_surfs)
+
+        if len(surface_ids) == 1: 
+            mat_ori_surface= list(surface_ids)[0]
+            coords = cubit.get_center_point("surface", mat_ori_surface)
+            surface_normal = cubit.surface(mat_ori_surface).normal_at(coords)
+
+            surface_normal=get_surface_normal(mat_ori_surface)
+            #approximate_thickness_direction = get_approximate_thickness_direction_for_volume(volume_id)
+            # if len(approximate_thickness_direction) < 3:
+            #     foo
+            if dotProd(surface_normal, approximate_thickness_direction) > 0:
+                sign = 1.0
+            else:
+                sign = -1.0             
+            return mat_ori_surface,sign
+        else:
+            cubit.cmd(f'save as "Debug-3.cub" overwrite')
+            raise ValueError(f'Unexpected intersection of a_surfs and b_surfs. Cannot assign material orientation. \n volume_id: {volume_id} \nmat_ori_surface: {mat_ori_surface} \n a_surfs {a_surfs}, b_surfs {b_surfs}')
+
+
     else:
-        cubit.cmd(f'save as "Debug.cub" overwrite')
-        raise ValueError(
-            f"The number of thickness curves in volume is unexpected. Cannot assign material orientation. n_thickness_curves: {n_thickness_curves}"
-        )
-
-    return
-
-
-def get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
+        raise ValueError('Unkown number of cross section surfaces. Cannot assign material orientation')
+    
+def old_get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
     # This function is used when assigning material orientations
     # This gets returns the surface within a volume that will be used to get surface normals.
     # The sign +-1 is also returned since some of the surfaces are oriented the wrong way

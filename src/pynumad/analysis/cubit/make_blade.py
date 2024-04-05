@@ -71,14 +71,12 @@ def write_path_node_angles_to_file(set_verts,prepend,directory='.'):
             volume_id = parse_cubit_list("volume", parse_string)[0] #Just use first volume
 
             coords = get_nodal_coordinates(node_id)
-            spanwise_mat_ori_curve=1
-            surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+
+
+            surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
             if surf_id_for_mat_ori:
                 surface_normal = vectNorm(
-                    list(
-                        sign
-                        * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
-                    )
+                    list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords)))
                 )
 
 
@@ -103,7 +101,7 @@ def write_path_node_angles_to_file(set_verts,prepend,directory='.'):
             globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
 
-            global_id=get_global_element_id('hex',el_id)
+            #global_id=get_global_element_id('hex',el_id)
             
             dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
 
@@ -136,21 +134,17 @@ def get_hex_orientations(volume_id):
     theta3s_in_vol=[]
 
 
-    spanwise_mat_ori_curve=1
-    surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
-    volume_name = cubit.get_entity_name("volume", volume_id)
-    t0 = time.time()
+
+    surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
+    #volume_name = cubit.get_entity_name("volume", volume_id)
+    #t0 = time.time()
 
     for el_id in get_volume_hexes(volume_id):
         coords = cubit.get_center_point("hex", el_id)
             
         if surf_id_for_mat_ori:
             surface_normal = vectNorm(
-                list(
-                    sign
-                    * np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))
-                )
-            )
+                list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
             # if 'layer6' in volume_name or 'layer7' in volume_name or 'layer8' in volume_name or 'layer9' in volume_name or  'layer10' in volume_name or 'layer11' in volume_name: #Need a better way to select the "vertical" portion of webs
             #     ref_line_direction = [0,0,1]
             # else:
@@ -190,9 +184,9 @@ def get_hex_orientations(volume_id):
         theta1s_in_vol.append(-1*temp1)
         theta2s_in_vol.append(-1*temp2)
         theta3s_in_vol.append(-1*temp3)
-    t1 = time.time()
-    print(f'Calculated material orientations for volume {volume_id}...')
-    print(f'             Number of elements in volume: {len(get_volume_hexes(volume_id))}. Total time: {t1-t0}. Avg. Time per element {(t1-t0)/len(get_volume_hexes(volume_id))}')
+    #t1 = time.time()
+    #print(f'Calculated material orientations for volume {volume_id}...')
+    #print(f'             Number of elements in volume: {len(get_volume_hexes(volume_id))}. Total time: {t1-t0}. Avg. Time per element {(t1-t0)/len(get_volume_hexes(volume_id))}')
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
 
@@ -203,7 +197,7 @@ def get_tet_orientations(volume_id):
     theta1s_in_vol=[]
     theta2s_in_vol=[]
     theta3s_in_vol=[]
-    surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+    surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id)
     volume_name = cubit.get_entity_name("volume", volume_id)
     for el_id in get_volume_tets(volume_id):
         coords = cubit.get_center_point("tet", el_id)
@@ -256,7 +250,7 @@ def get_tet_orientations(volume_id):
         theta3s_in_vol.append(-1*temp3)
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
     
-def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
+def assign_material_orientations(element_shape):
     # # ####################################
     # # ### Assign material orientations ###
     # # ####################################
@@ -269,13 +263,17 @@ def assign_material_orientations(spanwise_mat_ori_curve,element_shape):
     theta2s=[]
     theta3s=[]
     
-    ncpus=2
+    ncpus=1
     t0 = time.time()
     pool_obj = multiprocessing.Pool(ncpus)
     print(f'Calculating material orientations ...')
 
     if 'hex' in element_shape:
-        ans = pool_obj.map(get_hex_orientations,all_volume_ids)#,chunksize=len(all_volume_ids)/ncpus)
+        if ncpus==1:
+            for vol_id in all_volume_ids:
+                get_hex_orientations(vol_id)
+        else:
+            ans = pool_obj.map(get_hex_orientations,all_volume_ids)#,chunksize=len(all_volume_ids)/ncpus)
     elif 'tet' in element_shape:
         ans = pool_obj.map(get_tet_orientations,all_volume_ids)
     else:
@@ -314,7 +312,7 @@ def old_assign_material_orientations(spanwise_mat_ori_curve,element_shape):
         t0 = time.time()
         for volume_id in all_volume_ids:
 
-            surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+            surf_id_for_mat_ori, sign = old_get_mat_ori_surface(volume_id,get_mat_ori_surface)
             volume_name = cubit.get_entity_name("volume", volume_id)
             t0 = time.time()
             for el_id in get_volume_hexes(volume_id):
@@ -377,7 +375,7 @@ def old_assign_material_orientations(spanwise_mat_ori_curve,element_shape):
     elif 'tet' in element_shape:
         t0 = time.time()
         for volume_id in all_volume_ids:
-            surf_id_for_mat_ori, sign = get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
+            surf_id_for_mat_ori, sign = old_get_mat_ori_surface(volume_id, spanwise_mat_ori_curve)
             volume_name = cubit.get_entity_name("volume", volume_id)
             for el_id in get_volume_tets(volume_id):
                 coords = cubit.get_center_point("tet", el_id)
@@ -1134,6 +1132,7 @@ def cubit_make_solid_blade(
     ) = cubit_make_cross_sections(
         blade, wt_name, settings, cs_params, "3D", stationList
     )
+
 
     i_station_start = stationList[0]
     i_station_end = stationList[-1]
