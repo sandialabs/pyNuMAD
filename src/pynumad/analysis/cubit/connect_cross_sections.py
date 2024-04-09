@@ -395,46 +395,39 @@ def make_birds_mouth(
 #     return
 
 def get_mat_ori_surface(volume_id):
-    parse_string = f'in vol {volume_id} with name "*surface*"'
-    cs_surfaces = parse_cubit_list("surface", parse_string)
-
-    if len(cs_surfaces)==2:
-        curve_1=cubit.surface(cs_surfaces[0]).curves()[0].id()
-        curve_2=cubit.surface(cs_surfaces[1]).curves()[0].id()
-
-        thickness_curve = cubit.surface(cs_surfaces[0]).curves()[1]
-        midPoint = list(thickness_curve.position_from_fraction(0.5))
-        approximate_thickness_direction = thickness_curve.tangent(midPoint)
-
-        parse_string = f'in curve {curve_1}'
-        a_surfs = set(parse_cubit_list("surface", parse_string))
-        parse_string = f'in curve {curve_2}'
-        b_surfs = set(parse_cubit_list("surface", parse_string))
-
-        surface_ids = a_surfs.intersection(b_surfs)
-
-        if len(surface_ids) == 1: 
-            mat_ori_surface= list(surface_ids)[0]
-            coords = cubit.get_center_point("surface", mat_ori_surface)
-            surface_normal = cubit.surface(mat_ori_surface).normal_at(coords)
-
-            surface_normal=get_surface_normal(mat_ori_surface)
-            #approximate_thickness_direction = get_approximate_thickness_direction_for_volume(volume_id)
-            # if len(approximate_thickness_direction) < 3:
-            #     foo
-            if dotProd(surface_normal, approximate_thickness_direction) > 0:
-                sign = 1.0
-            else:
-                sign = -1.0             
-            return mat_ori_surface,sign
-        else:
-            cubit.cmd(f'save as "Debug-3.cub" overwrite')
-            raise ValueError(f'Unexpected intersection of a_surfs and b_surfs. Cannot assign material orientation. \n volume_id: {volume_id} \nmat_ori_surface: {mat_ori_surface} \n a_surfs {a_surfs}, b_surfs {b_surfs}')
 
 
+    parse_string = f'in vol {volume_id} with name "*topFace*"'
+    surface_ids = list(parse_cubit_list("surface", parse_string))
+
+    if len(surface_ids) > 0 and len(surface_ids)<3: 
+        mat_ori_surface = surface_ids[0]
+    elif len(surface_ids) >=3:           #Some web_thickness volumes have surfaces with topFace in the name. 
+        for surface_id in surface_ids:   # These are filtered out in this loop
+            surf_name = cubit.get_entity_name("surface", surface_id)
+            if 'thickness' not in surf_name:
+                mat_ori_surface = surface_id
+                break
     else:
-        raise ValueError('Unkown number of cross section surfaces. Cannot assign material orientation')
-    
+        cubit.cmd(f'save as "Debug.cub" overwrite')
+        raise ValueError(f'Could not find mat_ori_surface. \n volume_id: {volume_id}')
+
+    for curve in cubit.volume(volume_id).curves():
+        curve_name = cubit.get_entity_name("curve", curve.id())
+        if 'thickness' in curve_name:
+            thickness_curve = curve
+            break
+
+
+    surface_normal=get_surface_normal(mat_ori_surface)
+    midPoint = list(thickness_curve.position_from_fraction(0.5))
+
+    approximate_thickness_direction = thickness_curve.tangent(midPoint)
+    if dotProd(surface_normal, approximate_thickness_direction) > 0:
+        sign = 1.0
+    else:
+        sign = -1.0             
+    return mat_ori_surface,sign
 def old_get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
     # This function is used when assigning material orientations
     # This gets returns the surface within a volume that will be used to get surface normals.

@@ -71,37 +71,20 @@ def write_path_node_angles_to_file(set_verts,prepend,directory='.'):
             volume_id = parse_cubit_list("volume", parse_string)[0] #Just use first volume
 
             coords = get_nodal_coordinates(node_id)
-
-
             surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
-            if surf_id_for_mat_ori:
-                surface_normal = vectNorm(
-                    list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords)))
-                )
 
+            surface_normal = vectNorm(
+                list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
 
-                ref_line_direction = [0,0,1]
-                #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
-                spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
+            ref_line_direction = [0,0,1]
+            #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
+            spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
-                perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+            perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
 
-                # Recalculate to garantee orthogonal system
-                #surface_normal = np.cross(spanwise_direction, perimeter_direction)
-            else:
-                perimeter_direction = [1, 0, 0]
-                surface_normal = [0, 1, 0]
-                spanwise_direction = [0, 0, 1]
+            newCoordinateSystemVectors = [spanwise_direction,perimeter_direction,surface_normal]
 
-            newCoordinateSystemVectors = [
-                spanwise_direction,
-                perimeter_direction,
-                surface_normal,
-            ]
             globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-
-
-            #global_id=get_global_element_id('hex',el_id)
             
             dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
 
@@ -142,37 +125,18 @@ def get_hex_orientations(volume_id):
     for el_id in get_volume_hexes(volume_id):
         coords = cubit.get_center_point("hex", el_id)
             
-        if surf_id_for_mat_ori:
-            surface_normal = vectNorm(
-                list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
-            # if 'layer6' in volume_name or 'layer7' in volume_name or 'layer8' in volume_name or 'layer9' in volume_name or  'layer10' in volume_name or 'layer11' in volume_name: #Need a better way to select the "vertical" portion of webs
-            #     ref_line_direction = [0,0,1]
-            # else:
-            #     curve_location_for_tangent = cubit.curve(spanwise_mat_ori_curve).closest_point(coords)
-            #     x = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[0]
-            #     y = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[1]
-            #     z = cubit.curve(spanwise_mat_ori_curve).tangent(curve_location_for_tangent)[2]
-            #     ref_line_direction = vectNorm([x, y, z])
-            ref_line_direction = [0,0,1]
-            #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
-            spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
+        surface_normal = vectNorm(
+            list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
 
-            perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+        ref_line_direction = [0,0,1]
+        #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
+        spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
-            # Recalculate to garantee orthogonal system
-            #surface_normal = np.cross(spanwise_direction, perimeter_direction)
-        else:
-            perimeter_direction = [1, 0, 0]
-            surface_normal = [0, 1, 0]
-            spanwise_direction = [0, 0, 1]
+        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
 
-        newCoordinateSystemVectors = [
-            spanwise_direction,
-            perimeter_direction,
-            surface_normal,
-        ]
+        newCoordinateSystemVectors = [spanwise_direction,perimeter_direction,surface_normal]
+
         globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-
 
         global_id=get_global_element_id('hex',el_id)
         
@@ -184,9 +148,9 @@ def get_hex_orientations(volume_id):
         theta1s_in_vol.append(-1*temp1)
         theta2s_in_vol.append(-1*temp2)
         theta3s_in_vol.append(-1*temp3)
-    #t1 = time.time()
-    #print(f'Calculated material orientations for volume {volume_id}...')
-    #print(f'             Number of elements in volume: {len(get_volume_hexes(volume_id))}. Total time: {t1-t0}. Avg. Time per element {(t1-t0)/len(get_volume_hexes(volume_id))}')
+    # t1 = time.time()
+    # print(f'Calculated material orientations for volume {volume_id}...')
+    # print(f'             Number of elements in volume: {len(get_volume_hexes(volume_id))}. Total time: {t1-t0}. Avg. Time per element {(t1-t0)/len(get_volume_hexes(volume_id))}')
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
 
@@ -255,15 +219,16 @@ def assign_material_orientations(element_shape):
     # # ### Assign material orientations ###
     # # ####################################
     
-    parse_string = f'in volume with name "*volume*"'
+    parse_string = f'with name "*volume*"'
     all_volume_ids = parse_cubit_list("volume", parse_string)
+
 
     global_ids=[]
     theta1s=[]
     theta2s=[]
     theta3s=[]
     
-    ncpus=1
+    ncpus=2
     t0 = time.time()
     pool_obj = multiprocessing.Pool(ncpus)
     print(f'Calculating material orientations ...')
@@ -275,7 +240,7 @@ def assign_material_orientations(element_shape):
         else:
             ans = pool_obj.map(get_hex_orientations,all_volume_ids)#,chunksize=len(all_volume_ids)/ncpus)
     elif 'tet' in element_shape:
-        ans = pool_obj.map(get_tet_orientations,all_volume_ids)
+        ans = pool_obj.map(get_tet_orientations,curved_volume_ids)
     else:
         raise NameError(f'Unknown element shape {element_shape}')
     
