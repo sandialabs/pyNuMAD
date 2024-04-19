@@ -228,7 +228,7 @@ def assign_material_orientations(element_shape):
     theta2s=[]
     theta3s=[]
     
-    ncpus=2
+    ncpus=10
     t0 = time.time()
     pool_obj = multiprocessing.Pool(ncpus)
     print(f'Calculating material orientations ...')

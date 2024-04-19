@@ -415,8 +415,9 @@ def get_mat_ori_surface(volume_id):
     for curve in cubit.volume(volume_id).curves():
         curve_name = cubit.get_entity_name("curve", curve.id())
         if 'thickness' in curve_name:
-            thickness_curve = curve
-            break
+            if 'web_thickness' not in curve_name:
+                thickness_curve = curve
+                break
 
 
     surface_normal=get_surface_normal(mat_ori_surface)
