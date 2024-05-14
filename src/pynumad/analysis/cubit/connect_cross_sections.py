@@ -269,7 +269,7 @@ def make_birds_mouth(
     tangent = straight_line.tangent(midPoint)
 
     # Get the cross-section normal
-    parse_string = f'in surface with name "*webStation{str(i_station_first_web).zfill(3)}*"'
+    parse_string = f'in surface with name "*web*Station{str(i_station_first_web).zfill(3)}*"'
     surface_id = parse_cubit_list("surface", parse_string)[0]  # Pick the first surface in this list since all on same plane
     coords = cubit.get_center_point("surface", surface_id)
     surface_normal = cubit.surface(surface_id).normal_at(coords)
@@ -285,7 +285,7 @@ def make_birds_mouth(
 
     cutting_volume = get_last_id("volume")
 
-    parse_string = f'with name "*webStation*"'
+    parse_string = f'with name "*web*Station*"'
     web_volumes = parse_cubit_list("volume", parse_string)
 
     n_start = get_last_id("volume")
@@ -334,7 +334,7 @@ def make_birds_mouth(
                 raise ValueError(
                     f"Zero thickness curves found in a web volume {volume_id} near birds mounth"
                 )
-    parse_string = f'with name "*webStation*"'
+    parse_string = f'with name "*web*Station*"'
     
     return list(parse_cubit_list("volume", parse_string)) #update the web volumes
 

@@ -697,7 +697,7 @@ def cubit_make_cross_sections(
                 keep_list=[]
                 #LE
                 for i in [121,122,123]:
-                    parse_string = f'with name "shellStation*surface{i}"'
+                    parse_string = f'with name "shell*Station*surface{i}"'
                     keep_list += list(parse_cubit_list("surface", parse_string))
 
                 #Web
@@ -1032,7 +1032,7 @@ def cubit_make_solid_blade(
         omit_surf_mesh=[]
         hplp_max_stack_ct = 14 #The number of stacks in HP surface. Hard code for now.
 
-        #cubit.cmd(f'surface with name "*shellStation*layer0_bottomFace*" scheme map')
+        #cubit.cmd(f'surface with name "*shell*Station*layer0_bottomFace*" scheme map')
         cubit.cmd(f"surf with name '*Station*surface*' scheme map") #All cross sections are map
 
         ### Hoop direcrtion mesh spacing for every cross section
@@ -1083,7 +1083,7 @@ def cubit_make_solid_blade(
                         current_hoop_interval+=1
 
                 if i_stack == hplp_max_stack_ct and station_id != flatback_adhesive_station_list[-1]:
-                    parse_string = f'with name "shellStation{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}_layer0_bottomFace"' 
+                    parse_string = f'with name "shell*Station{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}_layer0_bottomFace"' 
                     omit_surf_mesh.append(parse_cubit_list("surface", parse_string)[0])
 
                 cubit.cmd(f"curve {l2s(curve_ids)} interval {current_hoop_interval}")  ### SAME FOR NOW
@@ -1137,7 +1137,7 @@ def cubit_make_solid_blade(
 
 
         #Set each surface mesh scheme
-        parse_string = f"shellStation*_stack*_layer0_bottomFace"
+        parse_string = f"shell*Station*_stack*_layer0_bottomFace"
         oml_to_mesh = parse_cubit_list("surf", parse_string)
         for surface_id in oml_to_mesh:
             curves=cubit.surface(surface_id).curves()
@@ -1168,7 +1168,7 @@ def cubit_make_solid_blade(
             # t_2=get_mean_layer_thickness_at_station(stationList[iLoop+1]) #Find mean layer thickness for station station_id+1
             # e_size_2=t_2/cs_params['nel_per_layer']*cs_params['element_ar'] #Get spanwise element size at station_id+1 cross section
 
-            parse_string = f'with name "*shellStation{str(station_id).zfill(3)}*layer0*bottomFace*"' #WOrks for TE only (use later)
+            parse_string = f'with name "shell*Station{str(station_id).zfill(3)}*layer0*bottomFace*"' #WOrks for TE only (use later)
             oml_to_mesh = parse_cubit_list("surf", parse_string)
             
             surface_id=oml_to_mesh[0]
@@ -1197,15 +1197,15 @@ def cubit_make_solid_blade(
         cubit.cmd(f'curve with name "core_thickness*" interval {cs_params["nel_per_core_layer"]}')
         cubit.cmd(f'curve with name "*core_web_thickness*" interval {cs_params["nel_per_core_layer"]}') #seems good
 
-        parse_string = f"with name 'shellStation*layer0*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
+        parse_string = f"with name 'shell*Station*layer0*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
         vol_to_mesh = parse_cubit_list("volume", parse_string)
         failed_volumes=sweep_volumes(vol_to_mesh)   
 
-        parse_string = f"with name 'shellStation*layer1*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
+        parse_string = f"with name 'shell*Station*layer1*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
         vol_to_mesh = parse_cubit_list("volume", parse_string)
         failed_volumes+=sweep_volumes(vol_to_mesh)   
 
-        parse_string = f"with name 'shellStation*layer2*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
+        parse_string = f"with name 'shell*Station*layer2*' except vol with name '*stack{str(hplp_max_stack_ct).zfill(3)}*'"
         vol_to_mesh = parse_cubit_list("volume", parse_string)
         failed_volumes+=sweep_volumes(vol_to_mesh)   
 
@@ -1220,21 +1220,21 @@ def cubit_make_solid_blade(
             e_size_1=e_size[iLoop]
             e_size_2=e_size[iLoop+1]
 
-            parse_string = f'with name "webStation{str(station_id).zfill(3)}_layer6*_topFace"' #
+            parse_string = f'with name "web*Station{str(station_id).zfill(3)}_layer6*_topFace"' #
             surf_to_mesh = parse_cubit_list("surf", parse_string)
 
             cubit.cmd(f'surface {l2s(surf_to_mesh)} scheme pave')
             cubit.cmd(f'surface {l2s(surf_to_mesh)} size {(e_size_1+e_size_2)/2}')
             cubit.cmd(f'mesh surface {l2s(surf_to_mesh)}')
 
-            parse_string = f'with name "webStation{str(station_id).zfill(3)}_layer9*_topFace"' #
+            parse_string = f'with name "web*Station{str(station_id).zfill(3)}_layer9*_topFace"' #
             surf_to_mesh = parse_cubit_list("surf", parse_string)
 
             cubit.cmd(f'surface {l2s(surf_to_mesh)} scheme pave')
             cubit.cmd(f'surface {l2s(surf_to_mesh)} size {(e_size_1+e_size_2)/2}')
             cubit.cmd(f'mesh surface {l2s(surf_to_mesh)}')
 
-        cubit.cmd(f"mesh vol with name 'webStation*'")
+        cubit.cmd(f"mesh vol with name 'web*Station*'")
 
 
 

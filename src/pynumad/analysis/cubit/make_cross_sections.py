@@ -364,7 +364,7 @@ def add_surface_dict_entry(
     surface_dict[surface_object.id()]["ply_angle"] = ply_angle
 
 
-def make_cross_section_surface(
+def make_cross_section_surface(lp_hp_side,
     surface_dict,
     i_station,
     part_name,
@@ -393,16 +393,16 @@ def make_cross_section_surface(
     part_name_id += 1
     if 'web_thickness' in curve_name:
         part_name+='_web_thickness'
-        surface_name = (
-            part_name+ "Station"+ str(i_station).zfill(3)+ "_layer"+ str(i_modeled_layers)+ "_"+ material_name+ "_surface"+ str(part_name_id))
+        surface_name = ( 
+            part_name+ lp_hp_side+"Station"+ str(i_station).zfill(3)+ "_layer"+ str(i_modeled_layers)+ "_"+ material_name+ "_surface"+ str(part_name_id))
     else:
         if stack_id>-1:
             surface_name = (
-                part_name+ "Station"+ str(i_station).zfill(3)+ '_stack'+str(stack_id).zfill(3)+"_layer"+ str(i_modeled_layers)+ "_"+ 
+                part_name+ lp_hp_side+"Station"+ str(i_station).zfill(3)+ '_stack'+str(stack_id).zfill(3)+"_layer"+ str(i_modeled_layers)+ "_"+ 
                 material_name+ "_surface"+ str(part_name_id))
         else:
             surface_name = (
-                part_name+ "Station"+ str(i_station).zfill(3)+ "_layer"+ str(i_modeled_layers)+ "_"+ material_name+ "_surface"+ str(part_name_id))
+                part_name+ lp_hp_side+"Station"+ str(i_station).zfill(3)+ "_layer"+ str(i_modeled_layers)+ "_"+ material_name+ "_surface"+ str(part_name_id))
 
     # surface_name = (
     #     part_name+ "Station"+ str(i_station).zfill(3)+ "_layer"+ str(i_modeled_layers)+ "_"+ material_name+ "_surface"+ str(part_name_id))
@@ -1195,7 +1195,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                 ply_angle = current_stack.plygroups[i_modeled_layers].angle
 
                 for i_split in range(len(current_stack_left_curves_splited)):
-                    part_name_id, materials_used = make_cross_section_surface(
+                    part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
                         surface_dict,
                         i_station,
                         part_name,
@@ -1319,7 +1319,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             # Sufaces for current_stack
             material_name = current_stack.plygroups[i_modeled_layers].materialid
             ply_angle = current_stack.plygroups[i_modeled_layers].angle
-            part_name_id, materials_used = make_cross_section_surface(
+            part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
                 surface_dict,
                 i_station,
                 part_name,
@@ -1337,7 +1337,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             # Surfaces for transition_stack
             material_name = transition_stack.plygroups[i_modeled_layers].materialid
             ply_angle = transition_stack.plygroups[i_modeled_layers].angle
-            part_name_id, materials_used = make_cross_section_surface(
+            part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
                 surface_dict,
                 i_station,
                 part_name,
@@ -1355,7 +1355,7 @@ def make_cs_perimeter_layer_areas(wt_name,
             # Surfaces for next_stack
             material_name = next_stack.plygroups[i_modeled_layers].materialid
             ply_angle = next_stack.plygroups[i_modeled_layers].angle
-            part_name_id, materials_used = make_cross_section_surface(
+            part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
                 surface_dict,
                 i_station,
                 part_name,
@@ -1402,7 +1402,7 @@ def make_cs_perimeter_layer_areas(wt_name,
 
                     material_name = next_stack.plygroups[it].materialid
                     ply_angle = next_stack.plygroups[it].angle
-                    part_name_id, materials_used = make_cross_section_surface(
+                    part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
                         surface_dict,
                         i_station,
                         part_name,
@@ -1464,8 +1464,8 @@ def create_simplist_surface_for_TE_or_LE_adhesive(
 
         cubit.cmd(f'create curve vertex {v_outer_top} {v_outer_bot}')
         c_bot = get_last_id("curve")      
-
-        part_name_id, materials_used = make_cross_section_surface(
+        lp_hp_side=''
+        part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
             surface_dict,
             i_station,
             part_name,
@@ -1520,6 +1520,7 @@ def make_cs_web_layer_areas(
     n_modeled_layers,
     materials_used,
 ):
+    
     aft_web_overwrap_thickness = (
         aft_web_stack.layer_thicknesses()[0] + aft_web_stack.layer_thicknesses()[-1]
     ) / 1000
@@ -1567,8 +1568,8 @@ def make_cs_web_layer_areas(
                     else:
                         material_name = fore_web_stack.plygroups[0].materialid
                         ply_angle = fore_web_stack.plygroups[0].angle
-
-                part_name_id, materials_used = make_cross_section_surface(
+                
+                part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
                     surface_dict,
                     i_station,
                     part_name,
@@ -1588,7 +1589,7 @@ def make_cs_web_layer_areas(
             web_interface_curves[i_curveList][i_curve] = top_curve
 
     ### Create vertical web regions
-
+    lp_hp_side=''
     # remove curves that are not going to be part of the vertical web
     for i_curveList, curveList in enumerate(web_interface_curves):
         curveList.pop(3)
@@ -1615,7 +1616,7 @@ def make_cs_web_layer_areas(
                 i_curve - int(n_base_curves_web / 2)
             ].materialid
             ply_angle = fore_web_stack.plygroups[i_curve - int(n_base_curves_web / 2)].angle
-        part_name_id, materials_used = make_cross_section_surface(
+        part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
             surface_dict,
             i_station,
             part_name,
@@ -2159,6 +2160,11 @@ def write_vabs_input(
         # Write ply angle for all but the TE adhesive
 
         for i_surface, surface_id in enumerate(surface_ids):
+            surface_name = cubit.get_entity_name("surface", surface_id)
+            if 'LP' in surface_name:
+                mat_ori_sign = -1.0
+            else:
+                mat_ori_sign = 1.0
             for iEl, element_id in enumerate(get_surface_quads(surface_id)):
                 nodesIDs = cubit.get_expanded_connectivity("face", element_id)
                 coords = []
@@ -2166,11 +2172,11 @@ def write_vabs_input(
                     coords.append(list(get_nodal_coordinates(node_id)))
                 coords = np.array(coords)
                 # #######For Plotting - find the larges element side length #######
-                # distances=[]
-                # for iNd,node_id in enumerate(nodesIDs):
-                #     for jNd,node_idj in enumerate(nodesIDs):
-                #         distances.append(norm(vectSub(coords[iNd],coords[jNd])))
-                # length=max(distances)
+                distances=[]
+                for iNd,node_id in enumerate(nodesIDs):
+                    for jNd,node_idj in enumerate(nodesIDs):
+                        distances.append(norm(vectSub(coords[iNd],coords[jNd])))
+                length=max(distances)
                 # #######For Plotting - find the larges element side length #######
                 coords = np.mean(coords, 0)
                 # coords=cubit.get_center_point(cs_params['element_shape'], element_id)
@@ -2187,28 +2193,35 @@ def write_vabs_input(
 
                 curve_id_for_mat_ori = cubit.surface(surface_id).curves()[0]
                 curve_location_for_tangent = curve_id_for_mat_ori.closest_point(coords)
-                x = curve_id_for_mat_ori.tangent(curve_location_for_tangent)[0]
-                y = curve_id_for_mat_ori.tangent(curve_location_for_tangent)[1]
-                z = curve_id_for_mat_ori.tangent(curve_location_for_tangent)[2]
+                x = mat_ori_sign*curve_id_for_mat_ori.tangent(curve_location_for_tangent)[0]
+                y = mat_ori_sign*curve_id_for_mat_ori.tangent(curve_location_for_tangent)[1]
+                z = mat_ori_sign*curve_id_for_mat_ori.tangent(curve_location_for_tangent)[2]
                 tangent_direction = vectNorm([x, y, z])  # Unit vector of tangent
+
+                # cross_prod = np.cross(coords,tangent_direction)
+
+                # if np.dot([0,0,1],cross_prod) < 0: 
+                #     tangent_direction = vectNorm([-x, -y, -z])  # Unit vector of tangent
+
                 theta1 = math.atan2(tangent_direction[1], tangent_direction[0]) * 180 / pi
+
                 f.write(f"{element_id} {i_surface+1} {theta1}\n")
                 # #######Only needed For Plotting Orientation Check#######
-                # cubit.create_vertex(coords[0],coords[1],coords[2])
-                # iVert1=get_last_id("vertex")
-                # cubit.create_vertex(coords[0]+length*tangent_direction[0],coords[1]+length*tangent_direction[1],coords[2]+length*tangent_direction[2])
-                # iVert2=get_last_id("vertex")
-                # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
-                # #######Only needed For Plotting Orientation Check#######
-                ###Normal to curve
-                # print(cs_normal)
+                cubit.create_vertex(coords[0],coords[1],coords[2])
+                iVert1=get_last_id("vertex")
+                cubit.create_vertex(coords[0]+length*tangent_direction[0],coords[1]+length*tangent_direction[1],coords[2]+length*tangent_direction[2])
+                iVert2=get_last_id("vertex")
+                cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
+                #######Only needed For Plotting Orientation Check#######
+                ##Normal to curve
+                #print(cs_normal)
                 
                 # #######Only needed For Plotting Orientation Check#######
-                # axial_direction = cs_normal  # There will be a slight error here for highly tapeded regions
-                # normal_direction = crossProd(axial_direction, tangent_direction)
-                # cubit.create_vertex(coords[0]+length*normal_direction[0],coords[1]+length*normal_direction[1],coords[2]+length*normal_direction[2])
-                # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
-                # #######Only needed For Plotting Orientation Check#######
+                axial_direction = cs_normal  # There will be a slight error here for highly tapeded regions
+                normal_direction = crossProd(axial_direction, tangent_direction)
+                cubit.create_vertex(coords[0]+length*normal_direction[0],coords[1]+length*normal_direction[1],coords[2]+length*normal_direction[2])
+                cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
+                #######Only needed For Plotting Orientation Check#######
         # Define Plies
         for i_surface, surface_id in enumerate(surface_ids):
             material_id = (
