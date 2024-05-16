@@ -1043,15 +1043,15 @@ def cubit_make_solid_blade(
         round_adhesive_station_list=[]
         for i_station, station_id in enumerate(stationList):
             i_stack=0
-            parse_string = f'with name "hoop_direction{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
-            curve_ids = parse_cubit_list("curve", parse_string)
-            if len(curve_ids)==5:
+            parse_string = f'with name "*flatTEadhesiveStation{str(station_id).zfill(3)}*surface*"'
+            surface_ids = parse_cubit_list("surface", parse_string)
+            if len(surface_ids)>0:
                 flatback_adhesive_station_list.append(station_id)
             else:
                 round_adhesive_station_list.append(station_id)
 
         e_size=[]
-
+        remove_thickness_curves=[]
         #hoop spacing for flatback_adhesive_stations, if any
         for i_station, station_id in enumerate(flatback_adhesive_station_list):
             t_1=get_mean_layer_thickness_at_station(station_id) #Find mean layer thickness for first station
@@ -1060,9 +1060,43 @@ def cubit_make_solid_blade(
             e_size.append(e_size_1)
 
             for i_stack in range(2*hplp_max_stack_ct):
-                parse_string = f'with name "hoop_direction{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
-                curve_ids = parse_cubit_list("curve", parse_string)
-                if i_stack == 12 or i_stack == 26:
+
+                if i_stack == 0 or i_stack == hplp_max_stack_ct:
+
+                    parse_string = f'with name "*shell*{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}_*surface*"' 
+                    surface_ids = parse_cubit_list("surface", parse_string)
+
+                    parse_string = f'with name "*hoop_direction*" in surface {l2s(surface_ids)}'
+                    curve_ids = parse_cubit_list("curve", parse_string)
+
+
+                    tangents = []
+                    for curve_id in curve_ids:
+                        c1=cubit.curve(curve_id)
+                        #list(c1.position_from_fraction(0.5))
+                        tangents.append(c1.tangent(list(c1.position_from_fraction(0.5))))
+
+                    mean_tangent = np.mean(tangents, 0)
+                    curve_ids = set()
+                    for surface_id in surface_ids:
+                        for curve in cubit.surface(surface_id).curves():
+                            print(np.dot(mean_tangent,curve.tangent(list(curve.position_from_fraction(0.5)))))
+                            if round(np.dot(mean_tangent,curve.tangent(list(curve.position_from_fraction(0.5)))),1)>0.925:
+                                curve_ids.add(curve.id())
+                    curve_ids=list(curve_ids)
+                    
+                    parse_string = f'with name "*thickness*" in curve {l2s(curve_ids)}'
+                    temp_ids = parse_cubit_list("curve", parse_string)
+                    remove_thickness_curves+=temp_ids
+                else:
+                    parse_string = f'with name "hoop_direction{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
+                    curve_ids = parse_cubit_list("curve", parse_string)
+
+
+                if len(curve_ids) != 4:
+                    raise ValueError('Expecting 4 curves for interval assignment.')
+
+                if i_stack == 12 or i_stack == 26:  #Transition from thick core to LE reinf. for HP (i_stack=12) and LP (i_stack=26)
                     cubit.cmd(f"curve {l2s(curve_ids)} interval {cs_params['nel_per_layer']}") 
                 else:
                     cubit.cmd(f"curve {curve_ids[0]} scheme bias fine size {e_size_1} coarse size {e_size_1} ")  ### SAME FOR NOW
@@ -1091,8 +1125,7 @@ def cubit_make_solid_blade(
                 if i_stack == 0:
                     save_interval =  current_hoop_interval #Make sure TE intervals match
                 elif i_stack == hplp_max_stack_ct:
-                    parse_string = f'with name "hoop_direction{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
-                    curve_ids = parse_cubit_list("curve", parse_string)
+
                     cubit.cmd(f"curve {l2s(curve_ids)} interval {save_interval}")  
 
 
@@ -1191,7 +1224,10 @@ def cubit_make_solid_blade(
             cubit.cmd(f"mesh surface {l2s(oml_to_mesh)} except surf {l2s(omit_surf_mesh)}")
 
 
-        cubit.cmd(f'curve with name "face_thickness*" interval {cs_params["nel_per_layer"]}')
+        parse_string = f'with name "face_thickness*"'
+        curve_ids = set(parse_cubit_list("curve", parse_string))
+        
+        cubit.cmd(f'curve {curve_ids.difference(set(remove_thickness_curves))} interval {cs_params["nel_per_layer"]}')
         cubit.cmd(f'curve with name "*face_web_thickness*" interval {cs_params["nel_per_layer"]}')  #none
 
         cubit.cmd(f'curve with name "core_thickness*" interval {cs_params["nel_per_core_layer"]}')
