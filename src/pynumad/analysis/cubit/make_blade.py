@@ -429,7 +429,7 @@ def cubit_make_cross_sections(
     cubit.init(["cubit", "-nojournal"])
 
     cubit.cmd("undo off")
-    cubit.cmd("set geometry accuracy 1e-6")
+    #cubit.cmd("set geometry accuracy 1e-6")
     # making numerus 3D volumes is very slow with autosize on
     cubit.cmd("set default autosize off")
 
@@ -968,8 +968,9 @@ def cubit_make_solid_blade(
 
     part_name = "shell"
     ordered_list = get_ordered_list(part_name)
+    spanwise_splines=[]
     if len(ordered_list) > 0:
-        shell_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
+        shell_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         shell_vol_list=[]
 
@@ -977,14 +978,14 @@ def cubit_make_solid_blade(
     ordered_list = get_ordered_list(part_name)
     ordered_list_web = ordered_list.copy()
     if ordered_list and len(ordered_list[0]) > 1:
-        web_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
+        web_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         web_vol_list=[]
 
     part_name = "roundTEadhesive"
     ordered_list = get_ordered_list(part_name)
     if ordered_list and len(ordered_list[0]) > 1:
-        roundTEadhesive_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
+        roundTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         roundTEadhesive_vol_list=[]
 
@@ -993,7 +994,7 @@ def cubit_make_solid_blade(
     ordered_list = get_ordered_list(part_name)
 
     if ordered_list and len(ordered_list[0]) > 1:
-        flatTEadhesive_vol_list = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end)
+        flatTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         flatTEadhesive_vol_list=[]
 
