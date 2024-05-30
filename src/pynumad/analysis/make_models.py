@@ -149,6 +149,7 @@ def write_sierra_sm_model(template_file,wt_name,station_list,blade,materials_use
         blockLines+=f'begin parameters for block {material.name}\n'
         blockLines+=f'    material {material.name}\n'
         blockLines+=f'    solid mechanics use model elastic_orthotropic\n'
+        blockLines+=f'    section = hex_section\n'
         blockLines+=f'end parameters for block {material.name}\n'
         blockLines+='\n\n' 
 
