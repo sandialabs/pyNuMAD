@@ -341,15 +341,7 @@ def sweep_volumes(vol_to_mesh):
 def debug():
     #cubit.cmd(f"delete curve 1")
     cubit.cmd(f'save as "Debug.cub" overwrite')
-def cubit_make_cross_sections(
-    blade,
-    wt_name,
-    settings,
-    cs_params,
-    model2Dor3D,
-    stationList=None,
-    directory=".",
-):
+def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stationList=None,directory="."):
     
     """Directs Cubit to make cross sections from blade object data.
 
@@ -410,9 +402,6 @@ def cubit_make_cross_sections(
     stackdb = blade.stackdb
     definition = blade.definition
     keypoints = blade.keypoints
-
-
-
 
     if stationList is None or len(stationList) == 0:
         stationList = list(range(len(geometry.ispan)))
@@ -492,8 +481,8 @@ def cubit_make_cross_sections(
     ).transpose()
     spanwise_mat_ori_curve = 1
 
-    if model2Dor3D.lower() == "3d":
-        write_spline_from_coordinate_points(cubit, ref_line_coords)
+    #if model2Dor3D.lower() == "3d":
+        #write_spline_from_coordinate_points(cubit, ref_line_coords)
     #else: do it in cross section loop
     
     #Get last round station index
@@ -635,7 +624,11 @@ def cubit_make_cross_sections(
                 ]
             )
         )
-        
+        if model2Dor3D.lower() == "3d":
+            make_webs = True
+        else: 
+            make_webs = hasWebs[i_station]
+
         # Only save birds_mouth_verts for the right cross-section
         if i_station == i_station_first_web:
             birds_mouth_verts = make_a_cross_section(wt_name,
@@ -643,7 +636,7 @@ def cubit_make_cross_sections(
                 i_station,
                 i_station_geometry,
                 blade,
-                hasWebs[i_station],
+                make_webs,
                 aft_web_stack,
                 fore_web_stack,
                 iLE,
@@ -661,7 +654,7 @@ def cubit_make_cross_sections(
                 i_station,
                 i_station_geometry,
                 blade,
-                hasWebs[i_station],
+                make_webs,
                 aft_web_stack,
                 fore_web_stack,
                 iLE,
@@ -900,16 +893,7 @@ def cubit_make_cross_sections(
         # Remove unnecessary files to save space
         for filePath in glob.glob(f"{path_name}-*.cub"):
             os.remove(filePath)
-    return (
-        cubit,
-        blade,
-        surface_dict,
-        birds_mouth_verts,
-        i_station_first_web,
-        i_station_last_web,
-        materials_used,
-        spanwise_mat_ori_curve,
-    )
+    return (cubit,blade,surface_dict,birds_mouth_verts,i_station_first_web,i_station_last_web,materials_used,spanwise_mat_ori_curve,hasWebs)
 
 
 def cubit_make_solid_blade(
@@ -945,18 +929,9 @@ def cubit_make_solid_blade(
     elif len(stationList) == 1:
         raise ValueError("Need more than one cross section to make a solid model")
 
-    (
-        cubit,
-        blade,
-        surface_dict,
-        birds_mouth_verts,
-        i_station_first_web,
-        i_station_last_web,
-        materials_used,
-        spanwise_mat_ori_curve,
-    ) = cubit_make_cross_sections(
-        blade, wt_name, settings, cs_params, "3D", stationList
-    )
+    (cubit,blade,surface_dict,birds_mouth_verts,i_station_first_web,
+     i_station_last_web,materials_used,spanwise_mat_ori_curve,hasWebs) = cubit_make_cross_sections(
+        blade, wt_name, settings, cs_params, "3D", stationList)
 
 
     i_station_start = stationList[0]
@@ -1015,6 +990,14 @@ def cubit_make_solid_blade(
     
     # cubit.cmd(f"merge tol 1e-3")
     cubit.cmd(f"delete surface with Is_Free")
+
+    for i_station in stationList[0:-1]: 
+    #for i_keep,keep_web in enumerate(hasWebs):
+        if not hasWebs[i_station]:
+            cubit.cmd(f"delete volume with name 'web*tation{str(i_station).zfill(3)}*'")
+
+
+
     cubit.cmd(f"merge volume all")
     
 
