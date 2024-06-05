@@ -751,6 +751,9 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
             cubit.cmd(f'curve with name "core_thickness*" interval {cs_params["nel_per_core_layer"]}')
             cubit.cmd(f'curve with name "*core_web_thickness*" interval {cs_params["nel_per_core_layer"]}')
 
+
+            cubit.cmd(f'curve with name "*hoop*" in surface with name "roundTEadhesive*" interval {cs_params["nel_per_layer"]}')
+
             # cubit.cmd(f'imprint volume {l2s(surface_ids)}')
             cubit.cmd(f"merge volume {l2s(volume_ids)}")
             cubit.cmd(f"set default autosize on")

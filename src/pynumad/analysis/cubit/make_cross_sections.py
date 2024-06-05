@@ -1454,16 +1454,20 @@ def create_simplist_surface_for_TE_or_LE_adhesive(
         ply_angle = (
             0  # Ply angle is always zero since adhesive is always assumed as isotropic
         )
+        if 'flat' in part_name:
+            c_top  = adhesive_curve_list[1][i_curve]
+            c_bot = adhesive_curve_list[0][i_curve]
+        else:
+            #Make input curves tangent to oml for material orientation puposes
+            v_outer_top, v_inner_top = selCurveVerts(adhesive_curve_list[1][i_curve])
+            v_outer_bot, v_inner_bot = selCurveVerts(adhesive_curve_list[0][i_curve])
 
-        #Make input curves tangent to oml for material orientation puposes
-        v_outer_top, v_inner_top = selCurveVerts(adhesive_curve_list[1][i_curve])
-        v_outer_bot, v_inner_bot = selCurveVerts(adhesive_curve_list[0][i_curve])
+            cubit.cmd(f'create curve vertex {v_inner_top} {v_inner_bot}')
+            c_top = get_last_id("curve")
 
-        cubit.cmd(f'create curve vertex {v_inner_top} {v_inner_bot}')
-        c_top = get_last_id("curve")
+            cubit.cmd(f'create curve vertex {v_outer_top} {v_outer_bot}')
+            c_bot = get_last_id("curve")   
 
-        cubit.cmd(f'create curve vertex {v_outer_top} {v_outer_bot}')
-        c_bot = get_last_id("curve")      
         lp_hp_side=''
         part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
             surface_dict,
@@ -2172,11 +2176,11 @@ def write_vabs_input(
                     coords.append(list(get_nodal_coordinates(node_id)))
                 coords = np.array(coords)
                 # #######For Plotting - find the larges element side length #######
-                distances=[]
-                for iNd,node_id in enumerate(nodesIDs):
-                    for jNd,node_idj in enumerate(nodesIDs):
-                        distances.append(norm(vectSub(coords[iNd],coords[jNd])))
-                length=max(distances)
+                # distances=[]
+                # for iNd,node_id in enumerate(nodesIDs):
+                #     for jNd,node_idj in enumerate(nodesIDs):
+                #         distances.append(norm(vectSub(coords[iNd],coords[jNd])))
+                # length=max(distances)
                 # #######For Plotting - find the larges element side length #######
                 coords = np.mean(coords, 0)
                 # coords=cubit.get_center_point(cs_params['element_shape'], element_id)
@@ -2206,22 +2210,22 @@ def write_vabs_input(
                 theta1 = math.atan2(tangent_direction[1], tangent_direction[0]) * 180 / pi
 
                 f.write(f"{element_id} {i_surface+1} {theta1}\n")
+                # # #######Only needed For Plotting Orientation Check#######
+                # cubit.create_vertex(coords[0],coords[1],coords[2])
+                # iVert1=get_last_id("vertex")
+                # cubit.create_vertex(coords[0]+length*tangent_direction[0],coords[1]+length*tangent_direction[1],coords[2]+length*tangent_direction[2])
+                # iVert2=get_last_id("vertex")
+                # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
                 # #######Only needed For Plotting Orientation Check#######
-                cubit.create_vertex(coords[0],coords[1],coords[2])
-                iVert1=get_last_id("vertex")
-                cubit.create_vertex(coords[0]+length*tangent_direction[0],coords[1]+length*tangent_direction[1],coords[2]+length*tangent_direction[2])
-                iVert2=get_last_id("vertex")
-                cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
-                #######Only needed For Plotting Orientation Check#######
-                ##Normal to curve
-                #print(cs_normal)
+                # ##Normal to curve
+                # #print(cs_normal)
                 
+                # # #######Only needed For Plotting Orientation Check#######
+                # axial_direction = cs_normal  # There will be a slight error here for highly tapeded regions
+                # normal_direction = crossProd(axial_direction, tangent_direction)
+                # cubit.create_vertex(coords[0]+length*normal_direction[0],coords[1]+length*normal_direction[1],coords[2]+length*normal_direction[2])
+                # cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
                 # #######Only needed For Plotting Orientation Check#######
-                axial_direction = cs_normal  # There will be a slight error here for highly tapeded regions
-                normal_direction = crossProd(axial_direction, tangent_direction)
-                cubit.create_vertex(coords[0]+length*normal_direction[0],coords[1]+length*normal_direction[1],coords[2]+length*normal_direction[2])
-                cubit.cmd(f'create curve vertex {iVert1} {iVert2}')
-                #######Only needed For Plotting Orientation Check#######
         # Define Plies
         for i_surface, surface_id in enumerate(surface_ids):
             material_id = (
