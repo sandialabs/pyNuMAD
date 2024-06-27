@@ -705,6 +705,7 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
 
             for imat, material_name in enumerate(materials_used):
                 cubit.cmd(f'block {imat+1} add surface with name "*{material_name}*"')
+                cubit.cmd(f'block {imat+1} name "{material_name}"')
 
             addColor(blade, "surface")
 
@@ -894,8 +895,8 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
         cubit.cmd(f'save as "{path_name}.cub" overwrite')
 
         # Remove unnecessary files to save space
-        for filePath in glob.glob(f"{path_name}-*.cub"):
-            os.remove(filePath)
+        # for filePath in glob.glob(f"{path_name}-*.cub"):
+        #     os.remove(filePath)
     return (cubit,blade,surface_dict,birds_mouth_verts,i_station_first_web,i_station_last_web,materials_used,spanwise_mat_ori_curve,hasWebs)
 
 
