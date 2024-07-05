@@ -216,15 +216,16 @@ def assign_material_orientations(element_shape):
     theta2s=[]
     theta3s=[]
     
-    ncpus=10
+    ncpus=1
     t0 = time.time()
     pool_obj = multiprocessing.Pool(ncpus)
     print(f'Calculating material orientations ...')
 
     if 'hex' in element_shape:
         if ncpus==1:
+            ans = []
             for vol_id in all_volume_ids:
-                get_hex_orientations(vol_id)
+                ans.append(get_hex_orientations(vol_id))
         else:
             ans = pool_obj.map(get_hex_orientations,all_volume_ids)#,chunksize=len(all_volume_ids)/ncpus)
     elif 'tet' in element_shape:

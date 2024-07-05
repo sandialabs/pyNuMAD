@@ -1215,7 +1215,7 @@ def make_cs_perimeter_layer_areas(wt_name,
                     )
                 else:
                     surf_id=get_last_id("surface")
-                    curve_id = cubit.surface(surf_id).curves()[0].id()
+                    curve_id = cubit.surface(surf_id).curves()[3].id()
                     curve_name_split = cubit.get_entity_name("curve", curve_id).split('_')
                     curve_name=curve_name_split[0]+'_'+curve_name_split[1]+'_oml'
                     cubit.cmd(f'curve {curve_id} rename "{curve_name}"')
@@ -2065,7 +2065,7 @@ def make_a_cross_section(wt_name,
 
         if not round_te_present:
             surf_id=get_last_id("surface")
-            curve_id = cubit.surface(surf_id).curves()[0].id()
+            curve_id = cubit.surface(surf_id).curves()[3].id()
             curve_name_split = cubit.get_entity_name("curve", curve_id).split('_')
             curve_name=curve_name_split[0]+'_'+curve_name_split[1]+'_oml'
             cubit.cmd(f'curve {curve_id} rename "{curve_name}"')
