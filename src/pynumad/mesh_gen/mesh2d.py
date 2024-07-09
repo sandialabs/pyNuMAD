@@ -103,9 +103,9 @@ class Mesh2D:
                 pAr = np.array(point)
                 for i in range(0, self.numNodes):
                     if sweepMethod == "toPoint":
-                        vec = pAr - nd
+                        vec = pAr - self.nodes[i]
                     else:
-                        vec = nd - pAr
+                        vec = self.nodes[i] - pAr
                     mag = np.linalg.norm(vec)
                     unitVec = (1.0 / mag) * vec
                     ndDir.append(unitVec)
@@ -929,10 +929,10 @@ class Mesh2D:
         elsCreated = True
         while elsCreated:
             # if(self.numTriEls > 0):
-            # self.plot2DMesh()
-            # cnt = input('continue?\n')
-            # if(cnt != 'y'):
-            # break
+                # self.plot2DMesh()
+                # cnt = input('continue?\n')
+                # if(cnt != 'y'):
+                    # break
             elsCreated = False
             nEd = self.numEdges
             for edi in range(0, nEd):
@@ -960,10 +960,10 @@ class Mesh2D:
                         found = self.adoptAnyNode(edi, srchPt, srchRad)
                     if not found:
                         srchPt = midPt + projLen * uNorm
-                        self.createNode(edi, srchPt)
+                        found = self.createNode(edi, srchPt)
                     if not found:
                         srchPt = midPt + 0.5 * projLen * uNorm
-                        self.createNode(edi, srchPt)
+                        found = self.createNode(edi, srchPt)
                     if found:
                         elsCreated = True
             for edi in range(0, self.numEdges):
