@@ -15,57 +15,57 @@ def write_beam_model(wt_name,station_list,settings,blade,mu,log,directory='.'):
     geometry = blade.geometry
 
 
-    # # #Run input files
+    # #Run input files
 
-    # if 'vabs' in settings['make_input_for'].lower():
+    if 'vabs' in settings['make_input_for'].lower():
 
-    #     log.info(f'\n\n\nRunning VABS homogenization.')
+        log.info(f'\n\n\nRunning VABS homogenization.')
         
-    #     fileCount=0
-    #     #First remove any lck files
-    #     pattern=directory+'/'+wt_name+'*.in'
-    #     if len(glob.glob(pattern))==0:
-    #         raise RuntimeError(f'Could not find files with pattern: {pattern}. Beam model generation failed')
-    #     MAXnLicenceTries=100
-    #     for filePath in glob.glob(directory+'/'+wt_name+'*.in'):
-    #         fileCount+=1
-    #         try:
-    #             this_cmd = SOFTWARE_PATHS['vabs']+' ' +filePath
-    #             log.info(f' running: {this_cmd}')
+        fileCount=0
+        #First remove any lck files
+        pattern=directory+'/'+wt_name+'*.in'
+        if len(glob.glob(pattern))==0:
+            raise RuntimeError(f'Could not find files with pattern: {pattern}. Beam model generation failed')
+        MAXnLicenceTries=100
+        for filePath in glob.glob(directory+'/'+wt_name+'*.in'):
+            fileCount+=1
+            try:
+                this_cmd = SOFTWARE_PATHS['vabs']+' ' +filePath
+                log.info(f' running: {this_cmd}')
 
-    #             licenseAvailable=False
-    #             nLicenceTries=0
-    #             while not licenseAvailable and nLicenceTries <=MAXnLicenceTries-1:
-    #                 subprocess.run(this_cmd, shell=True, check=True, capture_output=True)
+                licenseAvailable=False
+                nLicenceTries=0
+                while not licenseAvailable and nLicenceTries <=MAXnLicenceTries-1:
+                    subprocess.run(this_cmd, shell=True, check=True, capture_output=True)
 
-    #                 with open(filePath+'.ech', 'r') as f:
-    #                     lines = f.readlines()
-    #                 #log the last line of .ech file:
+                    with open(filePath+'.ech', 'r') as f:
+                        lines = f.readlines()
+                    #log the last line of .ech file:
                     
-    #                 if 'Congratulations! No errors' in lines[-1]:
-    #                     log.info(f'****************************\n{lines[-1]}\n******************************')
-    #                     licenseAvailable=True
-    #                     nLicenceTries=0
-    #                 elif 'license' in lines[-1].lower():
-    #                     nLicenceTries+=1
-    #                     log.info(f'****************************\nnLicenceTries: {nLicenceTries}, {lines[-1]}\n******************************')
+                    if 'Congratulations! No errors' in lines[-1]:
+                        log.info(f'****************************\n{lines[-1]}\n******************************')
+                        licenseAvailable=True
+                        nLicenceTries=0
+                    elif 'license' in lines[-1].lower():
+                        nLicenceTries+=1
+                        log.info(f'****************************\nnLicenceTries: {nLicenceTries}, {lines[-1]}\n******************************')
 
-    #                 else:
-    #                     log.error(f'****************************\n{lines[-1]}\n******************************')
-    #                     raise Exception(f'Cross-sectional homogenization for file {filePath} failed due to: \n {lines[-1]} \n Beam model creation failed.') 
-    #             if nLicenceTries ==MAXnLicenceTries:
-    #                     string=f'License failed to be obtained after {MAXnLicenceTries} tries. Beam model creation failed.'
-    #                     log.error(string)
-    #                     raise Exception(string) 
+                    else:
+                        log.error(f'****************************\n{lines[-1]}\n******************************')
+                        raise Exception(f'Cross-sectional homogenization for file {filePath} failed due to: \n {lines[-1]} \n Beam model creation failed.') 
+                if nLicenceTries ==MAXnLicenceTries:
+                        string=f'License failed to be obtained after {MAXnLicenceTries} tries. Beam model creation failed.'
+                        log.error(string)
+                        raise Exception(string) 
 
-    #         except subprocess.CalledProcessError as e:
-    #             log.error(f'Error running {this_cmd}: {e}')
+            except subprocess.CalledProcessError as e:
+                log.error(f'Error running {this_cmd}: {e}')
         
-    #     # if fileCount != nStations:
-    #     #     raise Exception('Error. Not enough VABS input files:')
+        # if fileCount != nStations:
+        #     raise Exception('Error. Not enough VABS input files:')
 
-    # elif 'anba' in settings['make_input_for'].lower():
-    #     raise ValueError('ANBA currently not supported')
+    elif 'anba' in settings['make_input_for'].lower():
+        raise ValueError('ANBA currently not supported')
 
 
 

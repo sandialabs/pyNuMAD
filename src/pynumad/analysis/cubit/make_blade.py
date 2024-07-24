@@ -110,15 +110,13 @@ def write_path_node_angles_to_file(set_verts,prepend,directory='.'):
         file.write(f'R_32 {" ".join(map(str,dcms[7]))}\n')
         file.write(f'R_33 {" ".join(map(str,dcms[8]))}\n')
         file.close()
-def get_hex_orientations(volume_id):
+def get_hex_orientations_euler(volume_id):
     global_el_ids_in_vol=[]
     theta1s_in_vol=[]
     theta2s_in_vol=[]
     theta3s_in_vol=[]
 
-    
-    spanwise_directions_in_vol = []
-    perimeter_directions_in_vol = []
+
 
     surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
     #volume_name = cubit.get_entity_name("volume", volume_id)
@@ -151,10 +149,41 @@ def get_hex_orientations(volume_id):
         theta2s_in_vol.append(-1*temp2)
         theta3s_in_vol.append(-1*temp3)
 
+
+    return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
+
+def get_hex_orientations_two_points(volume_id):
+    global_el_ids_in_vol=[]
+
+
+    
+    spanwise_directions_in_vol = []
+    perimeter_directions_in_vol = []
+
+    surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
+    #volume_name = cubit.get_entity_name("volume", volume_id)
+    #t0 = time.time()
+
+    for el_id in get_volume_hexes(volume_id):
+        coords = cubit.get_center_point("hex", el_id)
+            
+        surface_normal = vectNorm(
+            list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
+
+        ref_line_direction = [0,0,1]
+        #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
+        spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
+
+        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+
+        global_id=get_global_element_id('hex',el_id)
+        
+        global_el_ids_in_vol.append(global_id)
+
         spanwise_directions_in_vol.append(spanwise_direction)
         perimeter_directions_in_vol.append(perimeter_direction)
 
-    return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
+    return global_el_ids_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
 
 def get_tet_orientations(volume_id):
     global_el_ids_in_vol=[]
@@ -202,58 +231,68 @@ def get_tet_orientations(volume_id):
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
     
-def assign_material_orientations(element_shape):
+def assign_material_orientations(element_shape,output_format = 'euler',ncpus = 1):
     # # ####################################
     # # ### Assign material orientations ###
     # # ####################################
     
     parse_string = f'with name "*volume*"'
     all_volume_ids = parse_cubit_list("volume", parse_string)
-
-
-    global_ids=[]
-    theta1s=[]
-    theta2s=[]
-    theta3s=[]
     
-    ncpus=1
     t0 = time.time()
-    pool_obj = multiprocessing.Pool(ncpus)
     print(f'Calculating material orientations ...')
 
     if 'hex' in element_shape:
         if ncpus==1:
             ans = []
-            for vol_id in all_volume_ids:
-                ans.append(get_hex_orientations(vol_id))
+            if 'euler' in output_format:
+                for vol_id in all_volume_ids:
+                    ans.append(get_hex_orientations_euler(vol_id))
+            elif 'two_points' in output_format:
+                for vol_id in all_volume_ids:
+                    ans.append(get_hex_orientations_two_points(vol_id))
+            else:
+                raise NameError(f'Material Orientation output format: {output_format} is not supported')
         else:
-            ans = pool_obj.map(get_hex_orientations,all_volume_ids)#,chunksize=len(all_volume_ids)/ncpus)
-    elif 'tet' in element_shape:
-        ans = pool_obj.map(get_tet_orientations,curved_volume_ids)
+            pool_obj = multiprocessing.Pool(ncpus)
+            if 'euler' in output_format:
+                ans = pool_obj.map(get_hex_orientations_euler,all_volume_ids)
+            elif 'two_points' in output_format:
+                ans = pool_obj.map(get_hex_orientations_two_points,all_volume_ids)
+            else:
+                raise NameError(f'Material Orientation output format: {output_format} is not supported')
+            
+            pool_obj.close()
     else:
-        raise NameError(f'Unknown element shape {element_shape}')
-    
-    pool_obj.close()
+        raise NameError(f' element shape {element_shape} unsupported.')
     t1 = time.time()
     print(f'Total time for material orientations: {t1-t0}')
-    ans=np.array(ans)
+
+    ans=np.array(ans,dtype=object)
     global_ids=[]
-    theta1s=[]
-    theta2s=[]
-    theta3s=[]
 
-    spanwise_directions = []
-    perimiter_directions = []
-    for i in range(len(all_volume_ids)):
-        global_ids+=list(ans[i][0])
-        theta1s+=list(ans[i][1])
-        theta2s+=list(ans[i][2])
-        theta3s+=list(ans[i][3])
+    if 'euler' in output_format:
+        theta1s=[]
+        theta2s=[]
+        theta3s=[]
+        for i in range(len(all_volume_ids)):
+            global_ids+=list(ans[i][0])
+            theta1s+=list(ans[i][1])
+            theta2s+=list(ans[i][2])
+            theta3s+=list(ans[i][3])
 
-        spanwise_directions+=list(ans[i][4])
-        perimiter_directions+=list(ans[i][5])
-    n_el=len(global_ids)
-    return global_ids,theta1s,theta2s,theta3s,n_el,spanwise_directions,perimiter_directions
+        return [global_ids,theta1s,theta2s,theta3s]
+    
+    elif 'two_points' in output_format:
+        spanwise_directions = []
+        perimiter_directions = []
+
+        for i in range(len(all_volume_ids)):
+            global_ids+=list(ans[i][0])
+            spanwise_directions+=list(ans[i][1])
+            perimiter_directions+=list(ans[i][2])
+
+        return [global_ids,spanwise_directions,perimiter_directions]
 
 
 
