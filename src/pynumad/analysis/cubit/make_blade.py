@@ -1255,7 +1255,7 @@ def cubit_make_solid_blade(
         parse_string = f'with name "face_thickness*"'
         curve_ids = set(parse_cubit_list("curve", parse_string))
         
-        cubit.cmd(f'curve {curve_ids.difference(set(remove_thickness_curves))} interval {cs_params["nel_per_layer"]}')
+        cubit.cmd(f'curve {l2s(curve_ids.difference(set(remove_thickness_curves)))} interval {cs_params["nel_per_layer"]}')
         cubit.cmd(f'curve with name "*face_web_thickness*" interval {cs_params["nel_per_layer"]}')  #none
 
         cubit.cmd(f'curve with name "core_thickness*" interval {cs_params["nel_per_core_layer"]}')
