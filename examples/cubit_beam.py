@@ -17,8 +17,7 @@ def get_cs_params():
     cs_params['nel_per_layer'] = 3 
     cs_params['element_ar'] = 5
     cs_params['element_shape'] = 'quad'
-    cs_params['ref_line_type'] ='centroid' # or 'ref_axis'
-
+    cs_params['element_thickness_ar'] =5
 
     cs_params['layer_transition_angle'] = 30
     cs_params['birds_mouth_amplitude_fraction']=1.0
@@ -71,7 +70,7 @@ blade.read_yaml('example_data/'+yamlName+'.yaml')
 
 
 wt_name=yamlName
-dirName='.'
+dir_name='.'
 
 
 cs_params=get_cs_params()
@@ -80,7 +79,7 @@ settings['make_input_for']='VABSbeamdyn'  #SM, VABS, ANBA, or None
 settings['export']='cubg' #cub, g, or None
 
 
-cubit_make_cross_sections(blade,wt_name,settings,cs_params,'2D',stationList=[],directory=dirName) #Note an empty list for stationList will make all cross sections.
+cubit_make_cross_sections(blade,wt_name,settings,cs_params,'2D',stationList=[2,3],directory=dir_name) #Note an empty list for stationList will make all cross sections.
     
 #Proportional damping values for BeamDyn file.
 mu=[0.00257593, 0.0017469,  0.0017469,  0.0017469,  0.00257593, 0.0017469]
@@ -95,4 +94,4 @@ log.addHandler(fh)
 #Read in a fresh new blade
 blade=pynumad.Blade()
 blade.read_yaml('example_data/'+yamlName+'.yaml') 
-file_names=write_beam_model(wt_name,settings,blade,mu,log,directory=dirName)
+file_names=write_beam_model(wt_name,settings,blade,mu,log,directory=dir_name)
