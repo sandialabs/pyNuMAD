@@ -78,8 +78,8 @@ settings={}
 settings['make_input_for']='VABSbeamdyn'  #SM, VABS, ANBA, or None
 settings['export']='cubg' #cub, g, or None
 
-
-cubit_make_cross_sections(blade,wt_name,settings,cs_params,'2D',stationList=[2,3],directory=dir_name) #Note an empty list for stationList will make all cross sections.
+station_list = []
+cubit_make_cross_sections(blade,wt_name,settings,cs_params,'2D',stationList=station_list,directory=dir_name) #Note an empty list for stationList will make all cross sections.
     
 #Proportional damping values for BeamDyn file.
 mu=[0.00257593, 0.0017469,  0.0017469,  0.0017469,  0.00257593, 0.0017469]
@@ -94,4 +94,4 @@ log.addHandler(fh)
 #Read in a fresh new blade
 blade=pynumad.Blade()
 blade.read_yaml('example_data/'+yamlName+'.yaml') 
-file_names=write_beam_model(wt_name,settings,blade,mu,log,directory=dir_name)
+file_names=write_beam_model(wt_name,station_list,settings,blade,mu,log,directory=dir_name)
