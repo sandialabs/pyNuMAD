@@ -48,11 +48,18 @@ Begin Sierra Job
 
 BLADE_MATERIALS
 
+  begin solid section hex_section
+       formulation = mean_quadrature 
+       strain incrementation = midpoint_increment
+       #formulation = selective_deviatoric
+       #strain incrementation = strongly_objective
+  end solid section hex_section
+
 ##  Database
   begin finite element model adagio_model
     database name = IN_MESH
     database type = exodusII
-    decomposition method = rcb
+    #decomposition method = rcb
 
 BLADE_BLOCKS
     
@@ -63,7 +70,7 @@ BLADE_BLOCKS
         begin time stepping block p1
           start time = 0
           begin parameters for adagio region adagio
-            time increment = {tf/10}
+            time increment = {tf/150}
           end parameters for adagio region adagio
         end time stepping block p1
         termination time = {tf}
@@ -71,54 +78,47 @@ BLADE_BLOCKS
 
 ###REGION
     begin adagio region adagio
-
-      begin user variable node_forces_var 
-        type = node vector
-      end
+      #begin user variable node_forces_var 
+      #  type = node vector
+      #end
 
       use finite element model adagio_model
-      #begin heartbeat out
-      #  labels = off
-      #  legend = on
-      #  timestamp format ''
-      #  stream name = sAvg_eAvg_BVP_1.txt
-      #  precision = 6
-      #  at step 0 increment = 1
-      #  variable = global stress_avg
-      #  variable = global strain_avg
-      #end heartbeat out
 
- ### Results section.
-      begin user output
-        compute global stress_avg as average of element stress
-        compute global strain_avg as average of element green_lagrange_strain
-      end user output
+       ### Results section.
+
 
       begin results output results
        database name = OUT_MESH
        database type = exodusii
 	   
-        at step 0 increment = 1
+        start time = {tf}
 
         # Elastic Orthotropic outputs
-         element variables = cauchy_stress
-         element variables = green_lagrange_strain
+         #element variables = unrotated_stress
+         #element variables = green_lagrange_strain
          element variables = material_direction_1
          element variables = material_direction_2
          element variables = material_direction_3
+         element variables = mat_cauchy_stress_xx
+         element variables = mat_cauchy_stress_yy
+         element variables = mat_cauchy_stress_zz
+         element variables = mat_cauchy_stress_yz
+         element variables = mat_cauchy_stress_zx
+         element variables = mat_cauchy_stress_xy
 
-         nodal variables = force_external
+
+         #nodal variables = force_external
          nodal variables = reaction
          nodal variables = displacement
       end results output results
       
 # #### initial conditions (material directors)
-      begin initial condition
-        include all blocks
-        Initialize Variable Name = node_forces_var
-        Variable Type = node
-        Read variable = node_forces
-      end
+      #begin initial condition
+      #  include all blocks
+      #  Initialize Variable Name = node_forces_var
+      #  Variable Type = node
+      #  Read variable = node_forces
+      #end
 
       Begin Initial Condition
         Include all blocks
@@ -165,30 +165,21 @@ BLADE_BLOCKS
       
        ################ Kinematic Boundary Conditions ##########
        begin fixed displacement
-          node set = station000
+          node set = ROOT_STATION_ns
           component = x y z
        end
-
-      begin prescribed force
-         sideset = oml 
-         function = apply_force_x
-         component = x
-      end prescribed force
-
-      begin prescribed force
-         sideset = oml 
-         function = apply_force_y
-         component = y
-      end prescribed force
-
-      begin prescribed force
-         sideset = oml 
-         function = apply_force_z
-         component = z
-      end prescribed force
-
-
-
+      begin traction
+         sideset = oml_ss 
+         direction = y
+         function = ramp
+         scale factor = 1500
+      end traction
+      begin traction
+         sideset = oml_ss 
+         direction = x
+         function = ramp
+         scale factor = -750
+      end traction
         ### ------------------###
         ### Solver definition ###
         ### ------------------###
@@ -197,20 +188,33 @@ BLADE_BLOCKS
          type = secant
       end
       begin cg
-         target relative residual = 1.0e-3
-         target residual = 1.0e-4
+         target relative residual = 2.0e-5
+         acceptable relative residual = 4.0e-5
+         target residual = 1.0e-7
+         acceptable residual = 2.0e-7
          maximum iterations       = 3000
          iteration print          = 100
-             begin full tangent preconditioner
-                linear solver = FETI
-             end
+         reference = belytschko 
+         preconditioner = probe
+
+        begin full tangent preconditioner
+          linear solver = gdsw
+          Minimum Smoothing Iterations = 15
+          adaptive strategy = update
+        end
       end
     end
-
+      begin adaptive time stepping
+          cutback factor = 0.5
+          growth factor = 1.0
+          maximum failure cutbacks = 10
+          target iterations = 3000
+          iteration window = 200
+      end adaptive time stepping
     end adagio region adagio
   end adagio procedure Apst_Procedure
 
-  begin feti equation solver feti
+  begin gdsw equation solver gdsw
   end
 
 end Sierra Job

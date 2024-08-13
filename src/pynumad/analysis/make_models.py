@@ -118,7 +118,7 @@ def write_sierra_sm_model(template_file,wt_name,station_list,blade,materials_use
     
     materials = blade.definition.materials
 
-    adagioFileName=f'{directory}/sm_{wt_name}.i'
+    sierra_file_name=f'{directory}/sm_{wt_name}.i'
 
     materialLines=f''
     blockLines=f''
@@ -174,7 +174,7 @@ def write_sierra_sm_model(template_file,wt_name,station_list,blade,materials_use
         user_output_lines+=f'    extrapolate element variable mat_log_strain_xy to nodal variable e_12_{material.name}\n'
         user_output_lines+=f'end user output\n'
 
-    copy_and_replace(template_file, adagioFileName,
+    copy_and_replace(template_file, sierra_file_name,
         {
             'ROOT_STATION': 'station'+str(station_list[0]).zfill(3),
             'BLADE_MATERIALS': materialLines,
@@ -195,8 +195,7 @@ def write_sierra_sd_model(template_file,wt_name,station_list,blade,materials_use
         
     materials = blade.definition.materials
 
-    template_file=template_path+'sd.i.template'
-    adagioFileName=f'{directory}/sd_{wt_name}.i'
+    sierra_file_name=f'{directory}/sd_{wt_name}.i'
 
     materialLines=f''
     blockLines=f''
@@ -226,7 +225,7 @@ def write_sierra_sd_model(template_file,wt_name,station_list,blade,materials_use
         blockLines+=f'end \n'
         blockLines+='\n\n' 
 
-    copy_and_replace(template_file, adagioFileName,
+    copy_and_replace(template_file, sierra_file_name,
         {
             'BLADE_MATERIALS': materialLines,
             'IN_MESH':wt_name+'.g',

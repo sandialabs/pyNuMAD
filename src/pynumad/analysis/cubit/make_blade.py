@@ -231,7 +231,25 @@ def get_tet_orientations(volume_id):
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
     
-def assign_material_orientations(element_shape,output_format = 'euler',ncpus = 1):
+def assign_material_orientations(orientation_data):
+    #Apply Material Orientation
+    global_ids=orientation_data[0]
+    n_el = len(global_ids)
+    theta1s=orientation_data[1]
+    theta2s=orientation_data[2]
+    theta3s=orientation_data[3]
+
+    cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
+    cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
+    cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
+
+    cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
+    cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
+    cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
+
+    return
+
+def compute_material_orientations(element_shape,output_format = 'euler',ncpus = 1):
     # # ####################################
     # # ### Assign material orientations ###
     # # ####################################
@@ -240,7 +258,7 @@ def assign_material_orientations(element_shape,output_format = 'euler',ncpus = 1
     all_volume_ids = parse_cubit_list("volume", parse_string)
     
     t0 = time.time()
-    print(f'Calculating material orientations ...')
+    print(f'Calculating material orientations with {ncpus} CPU(s)...')
 
     if 'hex' in element_shape:
         if ncpus==1:
@@ -776,7 +794,7 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
             if definition.sweep[i_station] != 0:
                 raise ValueError("Presweep is untested for cross-sectional meshing")
 
-            if 'centroid' in cs_params['ref_line_type'].lower():
+            if 'ref_line_type' in cs_params and 'centroid' in cs_params['ref_line_type'].lower():
                 centroidal_vert_id, centroidal_ref_line_coords=get_locus_of_cross_sectional_centroids([i_station])
                 cubit.cmd(f"move surface {l2s(volume_ids)} x {-1*centroidal_ref_line_coords[0][0]} include_merged")
                 cubit.cmd(f"move surface {l2s(volume_ids)} y {-1*centroidal_ref_line_coords[0][1]} include_merged")
@@ -1319,7 +1337,21 @@ def cubit_make_solid_blade(
             un_meshed_vol_names.append(cubit.get_entity_name("volume", volume_id))
         raise ValueError(f'There are {len(un_meshed_vol_ids)} unmeshed volumes. The following volumes failed to mesh: {un_meshed_vol_names}\n\nVolume IDs: {un_meshed_vol_ids}')
 
-            
+    ## Remove materials that were used in one cross section but not the other
+    material_not_used = []
+    for imat, material_name in enumerate(materials_used):
+        parse_string = f'with name "*_{material_name}_*'
+        vol_ids=parse_cubit_list("volume", parse_string)
+
+        if not vol_ids:
+            material_not_used.append(material_name)
+
+    materials_used = list(materials_used)
+    for material_name in material_not_used:
+        materials_used.remove(material_name)
+
+
+
     # Blocks
     for imat, material_name in enumerate(materials_used):
         cubit.cmd(f'block {imat+1} add volume with name "*_{material_name}_*"')
