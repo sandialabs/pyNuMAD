@@ -14,9 +14,10 @@ from pynumad.analysis.make_models import write_sierra_sd_model
 
 def get_cs_params():
     cs_params = {}
-    cs_params['nel_per_layer'] = 3 
+    cs_params['nel_per_layer'] = 1 
     cs_params['element_ar'] = 5
-    cs_params['element_shape'] = 'quad'
+    cs_params['element_shape'] = 'hex'
+    cs_params['element_thickness_ar'] =5
 
 
     cs_params['layer_transition_angle'] = 30
@@ -67,8 +68,6 @@ yamlName='myBlade_Modified'
 blade.read_yaml('example_data/'+yamlName+'.yaml') 
 
 
-
-
 wt_name=yamlName
 dirName='.'
 
@@ -78,9 +77,25 @@ settings={}
 settings['make_input_for']='SmSd'  #SM, VABS, ANBA, or None
 settings['export']='cubg' #cub, g, or None
 
-materials_used=cubit_make_solid_blade(blade, wt_name, settings, cs_params, stationList=[2,3])
 
+#Make Cubit Geometry
+station_list = [2,3]
+materials_used=cubit_make_solid_blade(blade, wt_name, settings, cs_params, stationList=station_list)
+
+#Compute material orientation
+orientation_data=compute_material_orientations(cs_params['element_shape'],ncpus = 1)
+
+#assign material orientation in Cubit
+assign_material_orientations(orientation_data)
+
+#Export mesh in Genisis format 
+cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
+
+
+#Write Sierra input file
 from pynumad.paths import SOFTWARE_PATHS
 template_path=SOFTWARE_PATHS['pynumad']+'src/data/templates/'
-write_sierra_sm_model(template_path+'sm.i.template',wt_name,blade,materials_used,'.') 
-write_sierra_sd_model(template_path+'sd.i.template',wt_name,blade,materials_used,'.') 
+
+write_sierra_sm_model(template_path+'sm.i.template',wt_name,station_list,blade,materials_used,'.') 
+
+write_sierra_sd_model(template_path+'sd.i.template',wt_name,station_list,blade,materials_used,'.') 
