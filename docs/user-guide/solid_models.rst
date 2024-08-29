@@ -15,37 +15,52 @@ Continuous meshes in Sierra
 
 #. The first step is to make a Genesis mesh file and the associated files with
    :py:func:`~pynumad.analysis.cubit.make_blade.cubit_make_solid_blade`. This 
-   will create the following files
+   will create the following file
 
-      * euler. Binary file with euler angles for material orientations
-      * mat_ori.py
       * {wt_name}.g. Genesis mesh file. 
 
-#. Make the Sierra input files with :py:func:`~pynumad.analysis.make_models.write_sierra_model`. 
+#. The next step is to Compute material orientation with 
+   :py:func:`~pynumad.analysis.cubit.make_blade.compute_material_orientations`
 
-   This creates the following files:
+#. Next, the orientation data needs to be assigned with 
+   :py:func:`~pynumad.analysis.cubit.make_blade.assign_material_orientations`
 
-      * sm.i and/or sd.i: Sierra SM or SD input file
+#. Finally, the mesh needs to be exported in Genisis format
+   .. code-block:: python
+      cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
+
+
+#. Make the Sierra SM input files with :py:func:`~pynumad.analysis.make_models.write_sierra_sm_model`. 
+
+   This creates the following file:
+
+      * sm.i : Sierra SM input file
 
     Be sure to have ran the following import statement
 
     .. code-block:: python
 
-       from pynumad.analysis.make_models import write_sierra_model
+       from pynumad.analysis.make_models import write_sierra_sm_model
 
 
+#. AND/OR Make the Sierra SD input files with :py:func:`~pynumad.analysis.make_models.write_sierra_sd_model`. 
 
-#. Apply the spatially varying material orientations to the Genisis mesh. This requires SEACAS 
-   to be installed. One HPWS, you can issue `module load seacas`. Then run mat_ori.py from 
-   a terminal. 
+   This creates the following files:
 
-   .. Note:: 
-      Reliance on SEACAS for placing the material orientations in the Genesis file is
-      a temporary solution until this capability is added to Cubit.
+      * sd.i: Sierra SD input file
+
+    Be sure to have ran the following import statement
+
+    .. code-block:: python
+
+       from pynumad.analysis.make_models import write_sierra_sd_model
+
 
 #. Finally run Sierra SM with: launch -n 10 adagio -i sm.i, where n is the 
    number of CPUs.
 
+#. AND/OR run Sierra SD with: launch -n 10 salinas -i sd.i, where n is the 
+   number of CPUs.
 
 An example called `cubit_solid.py` exists in the examples folder.
 

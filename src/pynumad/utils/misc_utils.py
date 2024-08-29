@@ -15,18 +15,18 @@ def setup_logging(file_name):
     log.addHandler(fh)
     return log
 
-def full_keys_from_substrings(key_list, subtring_list):
+def full_keys_from_substrings(key_list, subtring_list,ignore_case=True):
     """
     Example Usage:
     subString = ['B1N3TDx']
-    res=getFullKeyFromSubString(df.keys(),subString)
+    res=full_keys_from_substrings(df.keys(),subString)
 
     output:
     ['B1N3TDxr_[m]']
 
     Example Usage:
     subString = ['B2','TDx']
-    res=getFullKeyFromSubString(df.keys(),subString)
+    res=full_keys_from_substrings(df.keys(),subString)
 
     output:
     ['B2N1TDxr_[m]', 'B2N2TDxr_[m]', 'B2N3TDxr_[m]', 'B2N4TDxr_[m]', 'B2N5TDxr_[m]', 'B2N6TDxr_[m]', 'B2N7TDxr_[m]', 'B2N8TDxr_[m]', 'B2N9TDxr_[m]', 'B2TipTDxr_[m]']
@@ -34,9 +34,15 @@ def full_keys_from_substrings(key_list, subtring_list):
 
     """
     matched_keys = []
-    for key in key_list:
-        if all(substring in key.lower() for substring in subtring_list):
-            matched_keys.append(key)
+    if ignore_case:
+        
+        for key in key_list:
+            if all(substring.lower() in key.lower() for substring in subtring_list):
+                matched_keys.append(key)
+    else:
+        for key in key_list:
+            if all(substring in key for substring in subtring_list):
+                matched_keys.append(key) 
     return matched_keys
 
 
