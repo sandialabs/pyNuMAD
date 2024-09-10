@@ -185,6 +185,42 @@ def get_hex_orientations_two_points(volume_id):
 
     return global_el_ids_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
 
+def get_hex_orientations_vectors(volume_id):
+    global_el_ids_in_vol=[]
+
+
+    
+    spanwise_directions_in_vol = []
+    perimeter_directions_in_vol = []
+    surface_normal_directions_in_vol = []
+
+    surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
+    #volume_name = cubit.get_entity_name("volume", volume_id)
+    #t0 = time.time()
+
+    for el_id in get_volume_hexes(volume_id):
+        coords = cubit.get_center_point("hex", el_id)
+            
+        surface_normal = vectNorm(
+            list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
+
+        ref_line_direction = [0,0,1]
+        #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
+        spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
+
+        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+
+        global_id=get_global_element_id('hex',el_id)
+        
+        global_el_ids_in_vol.append(global_id)
+
+        
+        spanwise_directions_in_vol.append(spanwise_direction)
+        perimeter_directions_in_vol.append(perimeter_direction)
+        surface_normal_directions_in_vol.append(surface_normal)
+
+    return global_el_ids_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol,surface_normal_directions_in_vol
+
 def get_tet_orientations(volume_id):
     global_el_ids_in_vol=[]
     theta1s_in_vol=[]
@@ -231,21 +267,40 @@ def get_tet_orientations(volume_id):
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
     
-def assign_material_orientations(orientation_data):
+def assign_material_orientations(orientation_data,output_format = 'euler'):
     #Apply Material Orientation
     global_ids=orientation_data[0]
     n_el = len(global_ids)
-    theta1s=orientation_data[1]
-    theta2s=orientation_data[2]
-    theta3s=orientation_data[3]
 
-    cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
-    cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
-    cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
+    if output_format =='euler':
+        theta1s=orientation_data[1]
+        theta2s=orientation_data[2]
+        theta3s=orientation_data[3]
 
-    cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
-    cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
-    cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
+        cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
+        cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
+        cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
+
+        cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
+        cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
+        cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
+    elif output_format =='vectors':
+
+        one_axis=np.array(orientation_data[1])
+        two_axis=np.array(orientation_data[2])
+        three_axis=np.array(orientation_data[3])
+
+        cubit.set_element_variable(global_ids, 'matCoord_1_x', one_axis[:,0])
+        cubit.set_element_variable(global_ids, 'matCoord_1_y', one_axis[:,1])
+        cubit.set_element_variable(global_ids, 'matCoord_1_z', one_axis[:,2])
+
+        cubit.set_element_variable(global_ids, 'matCoord_2_x', two_axis[:,0])
+        cubit.set_element_variable(global_ids, 'matCoord_2_y', two_axis[:,1])
+        cubit.set_element_variable(global_ids, 'matCoord_2_z', two_axis[:,2])
+
+        cubit.set_element_variable(global_ids, 'matCoord_3_x', three_axis[:,0])
+        cubit.set_element_variable(global_ids, 'matCoord_3_y', three_axis[:,1])
+        cubit.set_element_variable(global_ids, 'matCoord_3_z', three_axis[:,2])
 
     return
 
@@ -269,6 +324,9 @@ def compute_material_orientations(element_shape,output_format = 'euler',ncpus = 
             elif 'two_points' in output_format:
                 for vol_id in all_volume_ids:
                     ans.append(get_hex_orientations_two_points(vol_id))
+            elif 'vectors' in output_format:
+                for vol_id in all_volume_ids:
+                    ans.append(get_hex_orientations_vectors(vol_id))
             else:
                 raise NameError(f'Material Orientation output format: {output_format} is not supported')
         else:
@@ -277,6 +335,8 @@ def compute_material_orientations(element_shape,output_format = 'euler',ncpus = 
                 ans = pool_obj.map(get_hex_orientations_euler,all_volume_ids)
             elif 'two_points' in output_format:
                 ans = pool_obj.map(get_hex_orientations_two_points,all_volume_ids)
+            elif 'vectors' in output_format:
+                ans = pool_obj.map(get_hex_orientations_vectors,all_volume_ids)
             else:
                 raise NameError(f'Material Orientation output format: {output_format} is not supported')
             
@@ -312,6 +372,19 @@ def compute_material_orientations(element_shape,output_format = 'euler',ncpus = 
 
         return [global_ids,spanwise_directions,perimiter_directions]
 
+
+    elif 'vectors' in output_format:
+        spanwise_directions = []
+        perimiter_directions = []
+        normal_directions = []
+
+        for i in range(len(all_volume_ids)):
+            global_ids+=list(ans[i][0])
+            spanwise_directions+=list(ans[i][1])
+            perimiter_directions+=list(ans[i][2])
+            normal_directions+=list(ans[i][3])
+
+        return [global_ids,spanwise_directions,perimiter_directions,normal_directions]
 
 
 def order_path_points(points, ind):
@@ -1373,9 +1446,9 @@ def cubit_make_solid_blade(
         cubit.cmd(f"nodeset {nodeset_id} add surface {l2s(surface_ids)} ")
         cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}_ns"')
 
-        sideset_id=cubit.get_next_sideset_id()
-        cubit.cmd(f"sideset {sideset_id} add surface {l2s(surface_ids)} ")
-        cubit.cmd(f'sideset {sideset_id} name "{node_set_name}_ss"')
+        # sideset_id=cubit.get_next_sideset_id()
+        # cubit.cmd(f"sideset {sideset_id} add surface {l2s(surface_ids)} ")
+        # cubit.cmd(f'sideset {sideset_id} name "{node_set_name}_ss"')
 
 
     # Outer mold-line sideset
