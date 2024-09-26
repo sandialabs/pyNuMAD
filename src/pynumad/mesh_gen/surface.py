@@ -74,10 +74,11 @@ class Surface:
             setList = list()
             eli = 0
             for el in msh["elements"]:
+                newEl = -1*np.ones(4,dtype=int)
                 for i in range(0, 4):
                     if el[i] != -1:
-                        el[i] = el[i] + numNds
-                allEls.append(el)
+                        newEl[i] = el[i] + numNds
+                allEls.append(newEl)
                 setList.append((eli + numEls))
                 eli = eli + 1
             thisSet = dict()

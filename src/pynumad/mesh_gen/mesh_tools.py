@@ -4,6 +4,56 @@ from pynumad.mesh_gen.spatial_grid_list2d import *
 from pynumad.mesh_gen.spatial_grid_list3d import *
 from pynumad.mesh_gen.element_utils import *
 
+def rotate_vector(vec,axis,angle):
+    if(angle < 0.0000000001):
+        return vec.copy()
+    else:
+        axAr = np.array(axis)
+        mag = np.linalg.norm(axis)
+        unitAxis = (1.0/mag)*axAr
+        alp1 = np.zeros((3,3),dtype=float)
+        alp1[0] = unitAxis
+        i1 = 0
+        if(abs(unitAxis[1]) < abs(unitAxis[0])):
+            i1 = 1
+        if(abs(unitAxis[2]) < abs(unitAxis[i1])):
+            i1 = 2
+        alp1[1,i1] = np.sqrt(1.0 - alp1[0,i1]*alp1[0,i1])
+        for i2 in range(0,3):
+            if(i2 != i1):
+                alp1[1,i2] = -alp1[0,i1]*alp1[0,i2]/alp1[1,i1]
+        alp1[2] = cross_prod(alp1[0], alp1[1])
+        theta = angle*np.pi/180.0
+        cs = np.cos(theta)
+        sn = np.sin(theta)
+        alp2 = np.array([[1.0,0.0,0.0],
+                         [0.0,cs,-sn],
+                         [0.0,sn,cs]])
+        rV = np.matmul(alp1,vec)
+        rV = np.matmul(alp2,rV)
+        rV = np.matmul(rV,alp1)
+        return rV
+
+def translate_mesh(meshData,tVec):
+    tAr = np.array(tVec)
+    nLen = len(meshData['nodes'])
+    newNds = np.zeros((nLen,3),dtype=float)
+    for i, nd in enumerate(meshData['nodes']):
+        newNds[i] = nd + tAr
+    meshData['nodes'] = newNds
+    return meshData
+
+def rotate_mesh(meshData,pt,axis,angle):
+    ptAr = np.array(pt)
+    nLen = len(meshData['nodes'])
+    newNds = np.zeros((nLen,3),dtype=float)
+    for i, nd in enumerate(meshData['nodes']):
+        tCrd = nd - ptAr
+        rCrd = rotate_vector(tCrd,axis,angle)
+        newNds[i] = ptAr + rCrd
+    meshData['nodes'] = newNds
+    return meshData
+
 def get_direction_cosines(xDir,xyDir):
     mag = np.linalg.norm(xDir)
     a1 = (1.0/mag)*xDir
@@ -152,18 +202,25 @@ def get_mesh_spatial_list(nodes,xSpacing=0,ySpacing=0,zSpacing=0):
     return meshGL
 
 ## - Convert list of mesh objects into a single merged mesh, returning sets representing the elements/nodes from the original meshes
-def mergeDuplicateNodes(meshData):
+def mergeDuplicateNodes(meshData,tolerance=None):
     allNds = meshData['nodes']
     allEls = meshData['elements']
     totNds = len(allNds)
     totEls = len(allEls)
     elDim = len(allEls[0])
 
-    nodeGL = get_mesh_spatial_list(allNds)
-    glDim = nodeGL.getDim()
-    mag = np.linalg.norm(glDim)
-    nto1_3 = np.power(len(allNds),0.3333333333)
-    tol = 1.0e-6*mag/nto1_3
+    avgSp = get_average_node_spacing(meshData['nodes'],meshData['elements'])
+    sp = 2*avgSp
+    nodeGL = get_mesh_spatial_list(allNds,xSpacing=sp,ySpacing=sp,zSpacing=sp)
+    if(tolerance == None):
+        tol = 1.0e-4*avgSp
+    else:
+        tol = tolerance
+    
+    # glDim = nodeGL.getDim()
+    # mag = np.linalg.norm(glDim)
+    # nto1_3 = np.power(len(allNds),0.3333333333)
+    # tol = 1.0e-6*mag/nto1_3
 
     i = 0
     for nd in allNds:
@@ -201,6 +258,95 @@ def mergeDuplicateNodes(meshData):
     meshData["nodes"] = nodesFinal
     meshData["elements"] = allEls
 
+    return meshData
+    
+def merge_meshes(mData1,mData2,tolerance=None):
+    mergedData = dict()
+    nds1 = mData1['nodes']
+    nLen1 = len(nds1)
+    nds2 = mData2['nodes']
+    nLen2 = len(nds2)
+    totNds = nLen1 + nLen2
+    mrgNds = np.zeros((totNds,3),dtype=float)
+    mrgNds[0:nLen1] = nds1
+    mrgNds[nLen1:totNds] = nds2
+    els1 = mData1['elements']
+    eLen1 = len(els1)
+    els2 = mData2['elements']
+    eLen2 = len(els2)
+    totEls = eLen1 + eLen2
+    eCols = len(els1[0])
+    mrgEls = -1*np.ones((totEls,eCols),dtype=int)
+    mrgEls[0:eLen1] = els1
+    for i, el in enumerate(els2,start=eLen1):
+        addVec = np.zeros(eCols,dtype=int)
+        for j, nd in enumerate(el):
+            if(nd > -1):
+                addVec[j] = nLen1
+        mrgEls[i] = el + addVec
+    mergedData['nodes'] = mrgNds
+    mergedData['elements'] = mrgEls
+    mergedData['sets'] = dict()
+    mergedData['sets']['node'] = list()
+    mergedData['sets']['element'] = list()
+    try:
+        mergedData['sets']['node'].extend(mData1['sets']['node'])
+    except:
+        pass
+    try:
+        mergedData['sets']['element'].extend(mData1['sets']['element'])
+    except:
+        pass
+    try:
+        for ns in mData2['sets']['node']:
+            newSet = dict()
+            newSet['name'] = ns['name']
+            labs = list()
+            for nd in ns['labels']:
+                labs.append(nd+nLen1)
+            newSet['labels'] = labs
+            mergedData['sets']['node'].append(newSet)
+    except:
+        pass
+    try:
+        for es in mData2['sets']['element']:
+            newSet = dict()
+            newSet['name'] = es['name']
+            labs = list()
+            for el in es['labels']:
+                labs.append(el+eLen1)
+            newSet['labels'] = labs
+            mergedData['sets']['element'].append(newSet)
+    except:
+        pass
+    return mergeDuplicateNodes(mergedData,tolerance)
+
+def add_node_set(meshData,newSet):
+    try:
+        meshData['sets']['node'].append(newSet)
+    except:
+        nSets = list()
+        nSets.append(newSet)
+        try:
+            meshData['sets']['node'] = nSets
+        except:
+            sets = dict()
+            sets['node'] = nSets
+            meshData['sets'] = sets
+    return meshData
+
+def add_element_set(meshData,newSet):
+    try:
+        meshData['sets']['element'].append(newSet)
+    except:
+        elSets = list()
+        elSets.append(newSet)
+        try:
+            meshData['sets']['element'] = elSets
+        except:
+            sets = dict()
+            sets['element'] = elSets
+            meshData['sets'] = sets
     return meshData
 
 def get_matching_node_sets(meshData):
@@ -264,6 +410,18 @@ def get_extruded_sets(meshData,numLayers):
         
     return extSets
 
+def get_element_set_union(meshData,setList,newSetName):
+    un = set()
+    for es in meshData['sets']['element']:
+        if(es['name'] in setList):
+            thisSet = set(es['labels'])
+            un = un.union(thisSet)
+    newSet = dict()
+    newSet['name'] = newSetName
+    newSet['labels'] = list(un)
+    meshData['sets']['element'].append(newSet)
+    return meshData
+
 def make3D(meshData):
     numNodes = len(meshData["nodes"])
     nodes3D = np.zeros((numNodes, 3))
@@ -273,23 +431,68 @@ def make3D(meshData):
     dataOut["elements"] = meshData["elements"]
     return dataOut
 
-def tie_2_meshes_constraints(tiedMesh,tgtMesh,maxDist):
+def get_surface_nodes(meshData,elSet,newSetName,normDir,normTol=5.0):
+    nds = meshData['nodes']
+    els = meshData['elements']
+    mag = np.linalg.norm(normDir)
+    unitNorm = (1.0/mag)*normDir
+    cosTol = np.cos(normTol*np.pi/180.0)
+    faceDic = dict()
+    for es in meshData['sets']['element']:
+        if(es['name'] == elSet):
+            for ei in es['labels']:
+                fcStr, globFc = get_sorted_face_strings(els[ei])
+                for fi, fk in enumerate(fcStr):
+                    try:
+                        curr = faceDic[fk]
+                        faceDic[fk] = None
+                    except:
+                        faceDic[fk] = globFc[fi]
+    surfSet = set()
+    for fk in faceDic:
+        glob = faceDic[fk]
+        if(glob is not None):
+            gLen = len(glob)
+            if(gLen == 3):
+                v1 = nds[glob[1]] - nds[glob[0]]
+                v2 = nds[glob[2]] - nds[glob[1]]
+            elif(gLen == 4):
+                v1 = nds[glob[2]] - nds[glob[0]]
+                v2 = nds[glob[3]] - nds[glob[1]]
+            cp = cross_prod(v1,v2)
+            mag = np.linalg.norm(cp)
+            fcNrm = (1.0/mag)*cp
+            dp = np.dot(fcNrm,unitNorm)
+            if(dp >= cosTol):
+                for nd in glob:
+                    surfSet.add(nd)
+    newSet = dict()
+    newSet['name'] = newSetName
+    newSet['labels'] = list(surfSet)
+    return add_node_set(meshData,newSet)
+
+def tie_2_meshes_constraints(tiedMesh,tiedSetName,tgtMesh,tgtSetName,maxDist):
     tiedNds = tiedMesh['nodes']
     tgtNds = tgtMesh['nodes']
     tgtEls = tgtMesh['elements']
+    for ns in tiedMesh['sets']['node']:
+        if(ns['name'] == tiedSetName):
+            tiedSet = ns['labels']
+    for es in tgtMesh['sets']['element']:
+        if(es['name'] == tgtSetName):
+            tgtSet = es['labels']
     radius = get_average_node_spacing(tgtNds,tgtEls)
     elGL = get_mesh_spatial_list(tgtNds,radius,radius,radius)
     if(radius < maxDist):
         radius = maxDist
-    ei = 0
-    for el in tgtEls:
+    for ei in tgtSet:
+        el = tgtEls[ei]
         fstNd = tgtNds[el[0]]
         elGL.addEntry(ei,fstNd)
-        ei = ei + 1
-    ni = 0
     solidStr = 'tet4 wedge6 brick8'
     constraints = list()
-    for nd in tiedNds:
+    for ni in tiedSet:
+        nd = tiedNds[ni]
         nearEls = elGL.findInRadius(nd,radius)
         minDist = 1.0e+100
         minPO = dict()
@@ -357,7 +560,6 @@ def tie_2_meshes_constraints(tiedMesh,tgtMesh,maxDist):
             newConst['terms'] = terms
             newConst['rhs'] = 0.0
             constraints.append(newConst)
-        ni = ni + 1
     return constraints
 
 def tie_2_sets_constraints(mesh,tiedSetName,tgtSetName,maxDist):
@@ -467,6 +669,18 @@ def tie_2_sets_constraints(mesh,tiedSetName,tgtSetName,maxDist):
             constraints.append(newConst)
     
     return constraints
+
+def plotNodes(meshData):
+    xLst = meshData['nodes'][:,0]
+    yLst = meshData['nodes'][:,1]
+    try:
+        zLst = meshData['nodes'][:,2]
+    except:
+        zLst = np.zeros(len(xLst),dtype=float)
+    
+    fig = go.Figure(data=[go.Scatter3d(x=xLst,y=yLst,z=zLst,mode='markers')])
+    
+    fig.show()
 
 def plotShellMesh(meshData):
     xLst = meshData["nodes"][:, 0]

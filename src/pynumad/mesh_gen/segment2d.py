@@ -97,11 +97,18 @@ class Segment2D:
                     theta[i] = np.arctan(yRel / xRel)
                 else:
                     theta[i] = np.arctan(yRel / xRel) + np.pi
-            if theta[1] > theta[0] and theta[1] < theta[2]:
-                thetaNds = np.linspace(theta[0], theta[2], nNds)
-            else:
-                t0adj = theta[0] + 2.0 * np.pi
-                thetaNds = np.linspace(t0adj, theta[2], nNds)
+            pi2 = 2.0*np.pi
+            t1Rng = [theta[0]-pi2,theta[0],theta[0]+pi2]
+            t2Rng = [theta[1]-pi2,theta[1],theta[1]+pi2]
+            t3Rng = [theta[2]-pi2,theta[2],theta[2]+pi2]
+            for t1 in t1Rng:
+                for t2 in t2Rng:
+                    for t3 in t3Rng:
+                        prod = (t2-t1)*(t3-t2)
+                        arc = abs(t3-t1)
+                        if(prod > 0.0 and arc <= pi2):
+                            theta = [t1,t2,t3]
+            thetaNds = np.linspace(theta[0],theta[2],nNds)
             nodes = np.zeros((nNds, 2))
             for thi in range(0, nNds):
                 nodes[thi, 0] = rad * np.cos(thetaNds[thi]) + center[0]
