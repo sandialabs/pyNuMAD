@@ -275,60 +275,62 @@ def write_shell_modal_input(fileName,blade,bladeMesh,adhesiveMat,numModes):
 
     outFile.write('*End Part\n')
 
-    outFile.write('*Part, name=Adhesive\n')
-    outFile.write('*Node\n')
-
-    i = 1
-    for nd in bladeMesh['adhesiveNds']:
-        lst = [str(i),str(nd[0]),str(nd[1]),str(nd[2]),'\n']
-        ln = ', '.join(lst)
-        outFile.write(ln)
-        i = i + 1
-        
-    outFile.write('*Element, type=C3D8\n')
-    i = 1
-    for el in bladeMesh['adhesiveEls']:
-        if(el[7] != -1):
-            el = el + 1
-            lst = [str(i),str(el[0]),str(el[1]),str(el[2]),str(el[3]),str(el[4]),str(el[5]),str(el[6]),str(el[7]),'\n']
+    if('adhesiveNds' in bladeMesh):
+        outFile.write('*Part, name=Adhesive\n')
+        outFile.write('*Node\n')
+    
+        i = 1
+        for nd in bladeMesh['adhesiveNds']:
+            lst = [str(i),str(nd[0]),str(nd[1]),str(nd[2]),'\n']
             ln = ', '.join(lst)
             outFile.write(ln)
-        i = i + 1
-        
-    outFile.write('*Element, type=C3D6\n')
-    i = 1
-    for el in bladeMesh['adhesiveEls']:
-        if(el[7] == -1):
-            el[0:6] = el[0:6] + 1
-            lst = [str(i),str(el[0]),str(el[1]),str(el[2]),str(el[3]),str(el[4]),str(el[5]),'\n']
-            ln = ', '.join(lst)
-            outFile.write(ln)
-        i = i + 1
-
-    es = bladeMesh['adhesiveElSet']
-    ln = '*Elset, elset=' + es['name'] + '\n'
-    outFile.write(ln)
-    for el in es['labels']:
-        ln = '  ' + str(el+1) + '\n'
+            i = i + 1
+            
+        outFile.write('*Element, type=C3D8\n')
+        i = 1
+        for el in bladeMesh['adhesiveEls']:
+            if(el[7] != -1):
+                el = el + 1
+                lst = [str(i),str(el[0]),str(el[1]),str(el[2]),str(el[3]),str(el[4]),str(el[5]),str(el[6]),str(el[7]),'\n']
+                ln = ', '.join(lst)
+                outFile.write(ln)
+            i = i + 1
+            
+        outFile.write('*Element, type=C3D6\n')
+        i = 1
+        for el in bladeMesh['adhesiveEls']:
+            if(el[7] == -1):
+                el[0:6] = el[0:6] + 1
+                lst = [str(i),str(el[0]),str(el[1]),str(el[2]),str(el[3]),str(el[4]),str(el[5]),'\n']
+                ln = ', '.join(lst)
+                outFile.write(ln)
+            i = i + 1
+    
+        es = bladeMesh['adhesiveElSet']
+        ln = '*Elset, elset=' + es['name'] + '\n'
         outFile.write(ln)
-        
-    outFile.write('*Orientation, name=global\n')
-    outFile.write('1., 0., 0., 0., 1., 0.\n')
-    outFile.write('1, 0.\n')
-
-    ln = '*Solid Section, elset=' + es['name'] + ', material=' + adhesiveMat + ', orientation=global\n'
-    outFile.write(ln)
-    outFile.write(', \n')
-
-    outFile.write('*End Part\n')
+        for el in es['labels']:
+            ln = '  ' + str(el+1) + '\n'
+            outFile.write(ln)
+            
+        outFile.write('*Orientation, name=global\n')
+        outFile.write('1., 0., 0., 0., 1., 0.\n')
+        outFile.write('1, 0.\n')
+    
+        ln = '*Solid Section, elset=' + es['name'] + ', material=' + adhesiveMat + ', orientation=global\n'
+        outFile.write(ln)
+        outFile.write(', \n')
+    
+        outFile.write('*End Part\n')
 
     outFile.write('*Assembly, name=Assembly\n')
     outFile.write('**\n')
     outFile.write('*Instance, name=BladeInst, part=Blade\n')
     outFile.write('*End Instance\n')
-    outFile.write('*Instance, name=AdhesiveInst, part=Adhesive\n')
-    outFile.write('*End Instance\n')
-    outFile.write('**\n')
+    if('adhesiveNds' in bladeMesh):
+        outFile.write('*Instance, name=AdhesiveInst, part=Adhesive\n')
+        outFile.write('*End Instance\n')
+        outFile.write('**\n')
 
     for ns in bladeMesh['sets']['node']:
         ln = '*Nset, nset=' + ns['name'] + ', instance=BladeInst\n'
@@ -345,54 +347,55 @@ def write_shell_modal_input(fileName,blade,bladeMesh,adhesiveMat,numModes):
     ln = '1, ' + str(len(bladeMesh['elements'])) + ', 1\n'
     outFile.write(ln)
 
-    outFile.write('*Nset, nset=allAdhesiveNds, instance=AdhesiveInst, generate\n')
-    ln = '1, ' + str(len(bladeMesh['adhesiveNds'])) + ', 1\n'
-    outFile.write(ln)
-
-    outFile.write('*Elset, elset=allAdhesiveEls, instance=AdhesiveInst, generate\n')
-    ln = '1, ' + str(len(bladeMesh['adhesiveEls'])) + ', 1\n'
-    outFile.write(ln)
-
-    tiedAdNds = set()
-    tgtBlNds = set()
-
-    constraints = bladeMesh['constraints']
-    for c in constraints:
-        terms = c['terms']
-        for t in terms:
-            lab = t['node'] + 1
-            if(t['nodeSet'] == 'tiedMesh'):
-                tiedAdNds.add(lab)
-            elif(t['nodeSet'] == 'targetMesh'):
-                tgtBlNds.add(lab)
-                
-    for nd in tiedAdNds:
-        ndstr = str(nd)
-        ln = '*Nset, nset=a' + ndstr + ', instance=AdhesiveInst\n'
+    if('adhesiveNds' in bladeMesh):
+        outFile.write('*Nset, nset=allAdhesiveNds, instance=AdhesiveInst, generate\n')
+        ln = '1, ' + str(len(bladeMesh['adhesiveNds'])) + ', 1\n'
         outFile.write(ln)
-        ln = ndstr + ',\n'
+    
+        outFile.write('*Elset, elset=allAdhesiveEls, instance=AdhesiveInst, generate\n')
+        ln = '1, ' + str(len(bladeMesh['adhesiveEls'])) + ', 1\n'
         outFile.write(ln)
-        
-    for nd in tgtBlNds:
-        ndstr = str(nd)
-        ln = '*Nset, nset=b' + ndstr + ', instance=BladeInst\n'
-        outFile.write(ln)
-        ln = ndstr + ',\n'
-        outFile.write(ln)
-
-    for c in constraints:
-        numTerms = str(len(c['terms'])) + '\n'
-        for i in range(1,4):
-            outFile.write('*Equation\n')
-            outFile.write(numTerms)
-            for t in c['terms']:
+    
+        tiedAdNds = set()
+        tgtBlNds = set()
+    
+        constraints = bladeMesh['constraints']
+        for c in constraints:
+            terms = c['terms']
+            for t in terms:
                 lab = t['node'] + 1
                 if(t['nodeSet'] == 'tiedMesh'):
-                    ns = 'a' + str(lab)
-                else:
-                    ns = 'b' + str(lab)
-                ln = ', '.join([ns,str(i),str(t['coef'])]) + '\n'
-                outFile.write(ln)
+                    tiedAdNds.add(lab)
+                elif(t['nodeSet'] == 'targetMesh'):
+                    tgtBlNds.add(lab)
+                    
+        for nd in tiedAdNds:
+            ndstr = str(nd)
+            ln = '*Nset, nset=a' + ndstr + ', instance=AdhesiveInst\n'
+            outFile.write(ln)
+            ln = ndstr + ',\n'
+            outFile.write(ln)
+            
+        for nd in tgtBlNds:
+            ndstr = str(nd)
+            ln = '*Nset, nset=b' + ndstr + ', instance=BladeInst\n'
+            outFile.write(ln)
+            ln = ndstr + ',\n'
+            outFile.write(ln)
+    
+        for c in constraints:
+            numTerms = str(len(c['terms'])) + '\n'
+            for i in range(1,4):
+                outFile.write('*Equation\n')
+                outFile.write(numTerms)
+                for t in c['terms']:
+                    lab = t['node'] + 1
+                    if(t['nodeSet'] == 'tiedMesh'):
+                        ns = 'a' + str(lab)
+                    else:
+                        ns = 'b' + str(lab)
+                    ln = ', '.join([ns,str(i),str(t['coef'])]) + '\n'
+                    outFile.write(ln)
                 
     outFile.write('*End Assembly\n')
 

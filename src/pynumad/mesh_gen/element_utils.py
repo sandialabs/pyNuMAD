@@ -97,6 +97,58 @@ def get_el_basis(elType,sVec):
     
     return nOut
 
+def get_element_faces(elType):
+    if(elType == 'tet4'):
+        faces = [[0,2,1],
+                 [0,1,3],
+                 [1,2,3],
+                 [0,3,2]]
+    elif(elType == 'wedge6'):
+        faces = [[0,2,1],
+                 [3,4,5],
+                 [0,1,4,3],
+                 [1,2,5,4],
+                 [0,3,5,2]]
+    elif(elType == 'brick8'):
+        faces = [[3,2,1,0],
+                 [4,5,6,7],
+                 [0,1,5,4],
+                 [1,2,6,5],
+                 [2,3,7,6],
+                 [3,0,4,7]]
+    elif(elType == 'shell3'):
+        faces = [[0,1,2],
+                  [0,2,1]]
+    elif(elType == 'shell4'):
+        faces = [[0,1,2,3],
+                 [0,3,2,1]]
+    return faces
+
+def get_sorted_face_strings(elNds):
+    eLen = len(elNds)
+    if(eLen == 8):
+        if(elNds[4] == -1):
+            faces = get_element_faces('tet4')
+        elif(elNds[6] == -1):
+            faces = get_element_faces('wedge6')
+        else:
+            faces = get_element_faces('brick8')
+    elif(eLen == 4):
+        if(elNds[3] == -1):
+            faces = get_element_faces('shell3')
+        else:
+            faces = get_element_faces('shell4')
+    fcStr = list()
+    globFc = list()
+    for fc in faces:
+        glob = list()
+        for nd in fc:
+            glob.append(elNds[nd])
+        globFc.append(glob)
+        srted = np.sort(glob)
+        fcStr.append(str(srted))
+    return fcStr, globFc
+
 def get_el_coord(elNds,ndCrd):
     xCrd = []
     yCrd = []
@@ -183,14 +235,6 @@ def get_volume(elCrd,elType):
             det = np.linalg.det(jac)
             eVol = eVol + det*wt[i]
     return eVol
-
-def get_el_centroid(elCrd):
-    elCent = np.zeros(3,dtype=float)
-    nnds = len(elCrd[0])
-    for ni in range(0,nnds):
-        elCent = elCent + elCrd[:,ni]
-    elCent = (1.0/nnds)*elCent
-    return elCent
 
 def cross_prod(v1,v2):
     cp = np.zeros(3,dtype=float)

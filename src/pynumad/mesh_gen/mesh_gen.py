@@ -201,6 +201,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
     
     ## --------------------------TEMP
     ## secNel = [1,3,15,5,8,1,1,13,5,12,3,1]
+    ## secNel = [1,4,10,10,8,2,2,8,10,10,4,1]
     ## --------------------------END TEMP
     
     bladeSurf = Surface()
@@ -331,7 +332,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
             
             nEl3 = int(np.ceil(mag/elementSize))
             ##
-            #nEl3 = secNel[j]
+            ## nEl3 = secNel[j]
             ##
             
             vec = shellKp[0, :] - shellKp[3, :]
@@ -451,7 +452,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
             
             nEl1 = int(np.ceil(mag/elementSize))
             ##
-            ##nEl1 = 11
+            ## nEl1 = 8
             ##
             
             vec = shellKp[2, :] - shellKp[1, :]
@@ -462,7 +463,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
             
             nEl3 = int(np.ceil(mag/elementSize))
             ##
-            #nEl3 = 11
+            ## nEl3 = 8
             ##
             
             vec = shellKp[0, :] - shellKp[3, :]
@@ -546,7 +547,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
             
             nEl1 = int(np.ceil(mag/elementSize))
             ##
-            ## nEl1 = 11
+            ## nEl1 = 8
             ##
             
             vec = shellKp[2, :] - shellKp[1, :]
@@ -557,7 +558,7 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
             
             nEl3 = int(np.ceil(mag/elementSize))
             ##
-            ## nEl3 = 11
+            ## nEl3 = 8
             ##
             
             vec = shellKp[0, :] - shellKp[3, :]
@@ -735,13 +736,31 @@ def shell_mesh_general(blade, forSolid, includeAdhesive, elementSize):
         shellData["adhesiveNds"] = adMeshData["nodes"]
         adEls = len(adMeshData["elements"])
         adhesSet = dict()
-        adhesSet["name"] = "ahesiveElements"
+        adhesSet["name"] = "adhesiveElements"
         labList = list(range(0, adEls))
         adhesSet["labels"] = labList
+        adMeshData["sets"] = {"element": [adhesSet], "node": []}
         shellData["adhesiveElSet"] = adhesSet
         
         print('getting constraints')
-        constraints = tie_2_meshes_constraints(adMeshData,shellData,0.015*elementSize)
+        nDir = np.array([0.0,1.0,0.0])
+        adMeshData = get_surface_nodes(adMeshData,"adhesiveElements","LP_AdNodes",nDir,normTol=45.0)
+        nDir = np.array([0.0,-1.0,0.0])
+        adMeshData = get_surface_nodes(adMeshData,"adhesiveElements","HP_AdNodes",nDir,normTol=45.0)
+        lpEls = list()
+        hpEls = list()
+        for es in shellData["sets"]["element"]:
+            if("LP_TE_REINF" in es["name"]):
+                lpEls.extend(es["labels"])
+            elif("HP_TE_REINF" in es["name"]):
+                hpEls.extend(es["labels"])
+        lpSet = {"name": "LP_TE_REINF", "labels": lpEls}
+        shellData = add_element_set(shellData,lpSet)
+        hpSet = {"name": "HP_TE_REINF", "labels": hpEls}
+        shellData = add_element_set(shellData,hpSet)
+        constraints = tie_2_meshes_constraints(adMeshData,"LP_AdNodes",shellData,"LP_TE_REINF",0.5*elementSize)
+        hpConst = tie_2_meshes_constraints(adMeshData, "HP_AdNodes", shellData, "HP_TE_REINF", 0.5*elementSize)
+        constraints.extend(hpConst)
         shellData["constraints"] = constraints
         
     matList = list()

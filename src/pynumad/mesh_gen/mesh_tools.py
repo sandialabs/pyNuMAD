@@ -213,7 +213,7 @@ def mergeDuplicateNodes(meshData,tolerance=None):
     sp = 2*avgSp
     nodeGL = get_mesh_spatial_list(allNds,xSpacing=sp,ySpacing=sp,zSpacing=sp)
     if(tolerance == None):
-        tol = 1.0e-2*avgSp
+        tol = 1.0e-4*avgSp
     else:
         tol = tolerance
     
@@ -321,6 +321,34 @@ def merge_meshes(mData1,mData2,tolerance=None):
         pass
     return mergeDuplicateNodes(mergedData,tolerance)
 
+def add_node_set(meshData,newSet):
+    try:
+        meshData['sets']['node'].append(newSet)
+    except:
+        nSets = list()
+        nSets.append(newSet)
+        try:
+            meshData['sets']['node'] = nSets
+        except:
+            sets = dict()
+            sets['node'] = nSets
+            meshData['sets'] = sets
+    return meshData
+
+def add_element_set(meshData,newSet):
+    try:
+        meshData['sets']['element'].append(newSet)
+    except:
+        elSets = list()
+        elSets.append(newSet)
+        try:
+            meshData['sets']['element'] = elSets
+        except:
+            sets = dict()
+            sets['element'] = elSets
+            meshData['sets'] = sets
+    return meshData
+
 def get_matching_node_sets(meshData):
     elements = meshData['elements']
     elSets = meshData['sets']['element']
@@ -403,23 +431,68 @@ def make3D(meshData):
     dataOut["elements"] = meshData["elements"]
     return dataOut
 
-def tie_2_meshes_constraints(tiedMesh,tgtMesh,maxDist):
+def get_surface_nodes(meshData,elSet,newSetName,normDir,normTol=5.0):
+    nds = meshData['nodes']
+    els = meshData['elements']
+    mag = np.linalg.norm(normDir)
+    unitNorm = (1.0/mag)*normDir
+    cosTol = np.cos(normTol*np.pi/180.0)
+    faceDic = dict()
+    for es in meshData['sets']['element']:
+        if(es['name'] == elSet):
+            for ei in es['labels']:
+                fcStr, globFc = get_sorted_face_strings(els[ei])
+                for fi, fk in enumerate(fcStr):
+                    try:
+                        curr = faceDic[fk]
+                        faceDic[fk] = None
+                    except:
+                        faceDic[fk] = globFc[fi]
+    surfSet = set()
+    for fk in faceDic:
+        glob = faceDic[fk]
+        if(glob is not None):
+            gLen = len(glob)
+            if(gLen == 3):
+                v1 = nds[glob[1]] - nds[glob[0]]
+                v2 = nds[glob[2]] - nds[glob[1]]
+            elif(gLen == 4):
+                v1 = nds[glob[2]] - nds[glob[0]]
+                v2 = nds[glob[3]] - nds[glob[1]]
+            cp = cross_prod(v1,v2)
+            mag = np.linalg.norm(cp)
+            fcNrm = (1.0/mag)*cp
+            dp = np.dot(fcNrm,unitNorm)
+            if(dp >= cosTol):
+                for nd in glob:
+                    surfSet.add(nd)
+    newSet = dict()
+    newSet['name'] = newSetName
+    newSet['labels'] = list(surfSet)
+    return add_node_set(meshData,newSet)
+
+def tie_2_meshes_constraints(tiedMesh,tiedSetName,tgtMesh,tgtSetName,maxDist):
     tiedNds = tiedMesh['nodes']
     tgtNds = tgtMesh['nodes']
     tgtEls = tgtMesh['elements']
+    for ns in tiedMesh['sets']['node']:
+        if(ns['name'] == tiedSetName):
+            tiedSet = ns['labels']
+    for es in tgtMesh['sets']['element']:
+        if(es['name'] == tgtSetName):
+            tgtSet = es['labels']
     radius = get_average_node_spacing(tgtNds,tgtEls)
     elGL = get_mesh_spatial_list(tgtNds,radius,radius,radius)
     if(radius < maxDist):
         radius = maxDist
-    ei = 0
-    for el in tgtEls:
+    for ei in tgtSet:
+        el = tgtEls[ei]
         fstNd = tgtNds[el[0]]
         elGL.addEntry(ei,fstNd)
-        ei = ei + 1
-    ni = 0
     solidStr = 'tet4 wedge6 brick8'
     constraints = list()
-    for nd in tiedNds:
+    for ni in tiedSet:
+        nd = tiedNds[ni]
         nearEls = elGL.findInRadius(nd,radius)
         minDist = 1.0e+100
         minPO = dict()
@@ -487,7 +560,6 @@ def tie_2_meshes_constraints(tiedMesh,tgtMesh,maxDist):
             newConst['terms'] = terms
             newConst['rhs'] = 0.0
             constraints.append(newConst)
-        ni = ni + 1
     return constraints
 
 def tie_2_sets_constraints(mesh,tiedSetName,tgtSetName,maxDist):
