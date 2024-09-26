@@ -49,7 +49,3 @@ mesh_to_yaml(bladeMesh,meshYaml)
 
 numModes = 3
 write_shell_modal_input(abqFileName, blade, bladeMesh, adhesiveMat, numModes)
-
-## Write analysis script for execution in Abaqus
-
-write_damping_script(abqScriptName,abqFileName,dampFileName)
