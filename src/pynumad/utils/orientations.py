@@ -21,6 +21,13 @@ def getDCM(globalAxisBasisVectors,newCoordinateSystemVectors):
     
 
 def dcmToEulerAngles(dcm):
+
+    '''
+    Formulas from:
+    Euler Angle Formulas
+    David Eberly, Geometric Tools, Redmond WA 98052
+    https://www.geometrictools.com/
+    '''
     #RzRyRx
     if round(dcm[2,0],3)<1:   
         if round(dcm[2,0],3)>-1:
