@@ -123,7 +123,7 @@ def _add_stations(
     R = L + hub_outer_shape_bem["diameter"] / 2
     L = R - hub_outer_shape_bem["diameter"] / 2
     definition.span = np.multiply(
-        np.transpose(blade_outer_shape_bem["chord"]["grid"]), L
+        np.transpose(blade_outer_shape_bem["reference_axis"]['z']['grid']), L
     )
     definition.ispan = definition.span
 
@@ -526,7 +526,7 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
 def update_internal_structure(blade_internal_structure, blade_outer_shape_bem):
     bladeParts = ["layers", "webs"]
     # Make sure each definition.ispan has layer thicknesses and widths
-    fullSpanGrid = np.array(blade_outer_shape_bem["chord"]["grid"])
+    fullSpanGrid = np.array(blade_outer_shape_bem["reference_axis"]['z']['grid'])
     nStations = len(fullSpanGrid)
     keysToModify = {
         "offset_y_pa",
