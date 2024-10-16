@@ -49,8 +49,8 @@ def mesh_to_yaml(meshData, file_name):
                 laystr = str(lay)
                 newLayup.append(laystr)
             newSec["layup"] = newLayup
-            newSec["xDir"] = str(sec["xDir"])
-            newSec["xyDir"] = str(sec["xyDir"])
+            newSec["xDir"] = str(list(sec["xDir"]))
+            newSec["xyDir"] = str(list(sec["xyDir"]))
         else:
             newSec["material"] = sec["material"]
         sections.append(newSec)
@@ -94,25 +94,19 @@ def mesh_to_yaml(meshData, file_name):
     except:
         pass
     
-
-    outStream = open("temp.yaml", "w")
-    yaml.dump(mDataOut, stream=outStream, sort_keys=False)
+    try:
+        mDataOut["materials"] = meshData["materials"]
+    except:
+        pass
+    
+    fileStr = yaml.dump(mDataOut,sort_keys=False)
+    
+    fileStr = fileStr.replace("'","")
+    fileStr = fileStr.replace('"','')
+    
+    outStream = open(file_name,'w')
+    outStream.write(fileStr)
     outStream.close()
-
-    inFile = open("temp.yaml", "r")
-    outFile = open(file_name, "w")
-
-    fLine = inFile.readline()
-    while fLine != "":
-        newSt = fLine.replace("'", "")
-        newSt = newSt.replace('"', "")
-        outFile.write(newSt)
-        fLine = inFile.readline()
-
-    inFile.close()
-    outFile.close()
-
-    os.remove("temp.yaml")
     
 def yaml_to_mesh(fileName):
     inFile = open(fileName,'r')
