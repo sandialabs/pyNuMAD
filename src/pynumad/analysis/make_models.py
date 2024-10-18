@@ -7,6 +7,7 @@ from pynumad.utils.misc_utils import copy_and_replace
 from pynumad.paths import SOFTWARE_PATHS
 import os
 
+
 def write_beam_model(wt_name,station_list,settings,blade,mu,log,directory='.'):
     import pynumad.analysis.beam_utils as beam_utils
 
