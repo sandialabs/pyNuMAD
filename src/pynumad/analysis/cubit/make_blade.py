@@ -685,9 +685,10 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
             athickness=cs_params["te_adhesive_thickness"][last_10deg_station+1+i_length]
             print(f'i {last_10deg_station+1+i_length},excess_length {excess_length*1000}, athickness{athickness*1000}')
             if (excess_length-athickness)/excess_length > 0.025:
-                last_flat_station=last_flat_station+1+i_length
+                last_flat_station+=1
             else:
                 break
+        last_flat_station+=1
 
 ########################
 
