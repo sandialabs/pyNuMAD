@@ -46,6 +46,22 @@ def full_keys_from_substrings(key_list, subtring_list,ignore_case=True):
     return matched_keys
 
 
+def find_frist_fully_populated_row(matrix):
+    n_rows,_ = np.shape(matrix)
+    for i_row in range(n_rows):
+        n_zeros = len(np.where(matrix[i_row,:] == 0)[0])
+        if n_zeros == 0:
+            break
+    if i_row == n_rows:
+        raise ValueError('Was not able to sort matrix. All rows had at least one zero.')
+    return i_row
+def sort_based_on_root_values(matrix):
+   
+    i_index = find_frist_fully_populated_row(matrix)
+    values = matrix[i_index,:]
+    i_sorted = sorted(range(len(values)), key=lambda i: values[i])
+    return matrix[:,i_sorted],i_sorted
+
 # SED-like substitution
 def copy_and_replace(fin, fout, replacements):
     inf = open(fin, "r")

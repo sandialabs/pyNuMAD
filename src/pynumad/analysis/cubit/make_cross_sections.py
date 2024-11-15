@@ -879,9 +879,7 @@ def make_cs_perimeter_layer_areas(wt_name,
         bottom_left_vertex_curve_left, bottom_right_vertex_curve_left = selCurveVerts(
             left_bottom_curve
         )
-        bottom_left_vertex_curve_right, bottom_right_vertex_curve_right = selCurveVerts(
-            right_bottom_curve
-        )
+        bottom_left_vertex_curve_right, bottom_right_vertex_curve_right = selCurveVerts(right_bottom_curve)
 
         # This if statement prepares all layer curves such that they taper at the TE
         if i_perimeter == 0:

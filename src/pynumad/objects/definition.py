@@ -77,6 +77,9 @@ class Definition:
         self.sweep: ndarray = None
         self.teband: float = None
         self.leband: float = None
+        self.n_webs: float = None
+        self.key_arcs: ndarray = None
+        
 
         # init properties
         self._natural_offset: int = 1

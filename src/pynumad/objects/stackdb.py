@@ -50,6 +50,16 @@ class StackDatabase:
             "LP_TE_REINF",
             "LP_TE_FLAT",
         ]
+    
+        if n_webs > 2:
+            temp_segment_labels = segment_labels.copy()
+            ct = 0
+            for i_segment,segment_label in enumerate(temp_segment_labels):
+                prepend = segment_label.split('_')[0]
+                if 'TE_PANEL' in segment_label:
+                    for i in range(n_webs-2):
+                        segment_labels.insert(i_segment+1+ct, f'{prepend}_TE_PANEL')
+                        ct+=1
 
         # initialize stack array
         self.stacks = np.empty(shape=(n_segments, n_stations), dtype=object)
