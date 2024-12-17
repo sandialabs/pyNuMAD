@@ -565,12 +565,13 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
 
 
     all_layer_thicknesses = [[] for _ in range(3)] #three modeled layers
-    _,n_stations = np.shape(stackdb.stacks)
+    n_areas,n_stations = np.shape(stackdb.stacks)
     for i_station in range(n_stations):
         temp = stackdb.stacks[:, i_station]
-        temp = np.flip(temp)
+        # temp = np.flip(temp)
 
-        stacks = list(stackdb.stacks[1:6, i_station]) + list(temp[1:6])
+        # stacks = list(stackdb.stacks[1:int(n_areas/2), i_station]) + list(temp[1:int(n_areas/2)])
+        stacks = list(temp[1:int(n_areas/2)]) + list(temp[-2:int(n_areas/2)-1:-1])
 
         for stack in stacks:
             for i_layer,layer_thicknesses in enumerate(all_layer_thicknesses):
@@ -593,16 +594,20 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
 
     
 
-    hasWebs = []
-    webNumber = 1
-    for i_station in range(len(stackdb.swstacks[webNumber])):
-        if not len(stackdb.swstacks[webNumber][i_station].plygroups) == 0:
-            hasWebs.append(True)
-        else:
-            hasWebs.append(False)
+    has_webs = []
+    n_webs, n_stations = np.shape(stackdb.swstacks)
+    for i_station in range(n_stations-1):
+        temp=[]
+        for i_web in range(n_webs):
+            if not len(stackdb.swstacks[i_web][i_station].plygroups) == 0:
+                temp.append(True)
+            else:
+                temp.append(False)
+        has_webs.append(temp)
 
     # WARNING - Last station never has webs. Fix later
-    hasWebs.append(False)
+    has_webs.append([False for x in range(n_webs)])
+    has_webs=np.array(has_webs)
     # WARNING - Last station never has webs. Fix later
 
     # Create Referece line as a spline
@@ -723,29 +728,22 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
         
         #is_flatback=is_station_flatback[i_station_geometry]
 
+        web_stacks = []
+        for i_web in range(n_webs-1,-1,-1): #stackdb.swstacks is arranged from LE to TE. Need TE to LE order
 
-        i_station_first_web = np.argwhere(hasWebs)[0][0]
-        i_station_last_web = np.argwhere(hasWebs)[-1][0]
+            i_station_first_web = np.argwhere(has_webs[:,i_web])[0][0]
+            i_station_last_web = np.argwhere(has_webs[:,i_web])[-1][0]
 
-        if hasWebs[i_station] == True:
-            webNumber = 1
-            aft_web_stack = stackdb.swstacks[webNumber][i_station]
-            webNumber = 0
-            fore_web_stack = stackdb.swstacks[webNumber][i_station]
-        else:
-            if i_station < i_station_first_web:
-                iWebStation = i_station_first_web
+            if has_webs[i_station,i_web] == True:
 
-            #         elif i_station_last_web == len(blade.ispan) - 1-1:
+                web_stacks.append(stackdb.swstacks[i_web,i_station])
             else:
-                iWebStation = i_station_last_web
-            #         else:
-            #             raise Exception('assuming web ends at last station for now. ')
+                if i_station < i_station_first_web:
+                    iWebStation = i_station_first_web
+                else:
+                    iWebStation = i_station_last_web
 
-            webNumber = 1
-            aft_web_stack = stackdb.swstacks[webNumber][iWebStation]
-            webNumber = 0
-            fore_web_stack = stackdb.swstacks[webNumber][iWebStation]
+                web_stacks.append(stackdb.swstacks[i_web,iWebStation])
 
         cs_normal = get_cs_normal_vector(
             np.array(
@@ -757,9 +755,9 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
             )
         )
         if model2Dor3D.lower() == "3d":
-            make_webs = True
+            make_webs = [True for x in range(n_webs)]
         else: 
-            make_webs = hasWebs[i_station]
+            make_webs = np.flip(has_webs[i_station,:]) #Order from TE web to LE Web
 
         if 'precomp' in settings['make_input_for']:
             make_a_precomp_cross_section(wt_name,
@@ -774,8 +772,7 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
                     i_station_geometry,
                     blade,
                     make_webs,
-                    aft_web_stack,
-                    fore_web_stack,
+                    web_stacks,
                     iLE,
                     cs_params,
                     geometry_scaling,
@@ -792,8 +789,7 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
                     i_station_geometry,
                     blade,
                     make_webs,
-                    aft_web_stack,
-                    fore_web_stack,
+                    web_stacks,
                     iLE,
                     cs_params,
                     geometry_scaling,
@@ -1034,7 +1030,7 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
         # Remove unnecessary files to save space
         # for filePath in glob.glob(f"{path_name}-*.cub"):
         #     os.remove(filePath)
-    return (cubit,blade,surface_dict,birds_mouth_verts,i_station_first_web,i_station_last_web,materials_used,spanwise_mat_ori_curve,hasWebs)
+    return (cubit,blade,surface_dict,birds_mouth_verts,i_station_first_web,i_station_last_web,materials_used,spanwise_mat_ori_curve,has_webs)
 
 
 def cubit_make_solid_blade(
@@ -1071,7 +1067,7 @@ def cubit_make_solid_blade(
         raise ValueError("Need more than one cross section to make a solid model")
 
     (cubit,blade,surface_dict,birds_mouth_verts,i_station_first_web,
-     i_station_last_web,materials_used,spanwise_mat_ori_curve,hasWebs) = cubit_make_cross_sections(
+     i_station_last_web,materials_used,spanwise_mat_ori_curve,has_webs) = cubit_make_cross_sections(
         blade, wt_name, settings, cs_params, "3D", stationList)
 
 
@@ -1090,13 +1086,15 @@ def cubit_make_solid_blade(
     else:
         shell_vol_list=[]
 
-    part_name = "web"
-    ordered_list = get_ordered_list(part_name)
-    ordered_list_web = ordered_list.copy()
-    if ordered_list and len(ordered_list[0]) > 1:
-        web_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
-    else:
-        web_vol_list=[]
+    n_webs=len(blade.stackdb.swstacks)
+    for i_web in range(n_webs):
+        part_name = f'web{i_web}'
+        ordered_list = get_ordered_list(part_name)
+        ordered_list_web = ordered_list.copy()
+        if ordered_list and len(ordered_list[0]) > 1:
+            web_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
+        else:
+            web_vol_list=[]
 
     part_name = "roundTEadhesive"
     ordered_list = get_ordered_list(part_name)
@@ -1133,9 +1131,10 @@ def cubit_make_solid_blade(
     cubit.cmd(f"delete surface with Is_Free")
 
     for i_station in stationList[0:-1]: 
-    #for i_keep,keep_web in enumerate(hasWebs):
-        if not hasWebs[i_station]:
-            cubit.cmd(f"delete volume with name 'web*tation{str(i_station).zfill(3)}*'")
+        temp = np.flip(has_webs[i_station])
+        for i_web in range(n_webs):
+            if not temp[i_web]:
+                cubit.cmd(f"delete volume with name 'web{i_web}*tation{str(i_station).zfill(3)}*'")
 
 
 
@@ -1155,7 +1154,7 @@ def cubit_make_solid_blade(
     elif float(cs_params['element_ar']) != 0.0:
         cubit.cmd("set default autosize on")
         omit_surf_mesh=[]
-        hplp_max_stack_ct = 14 #The number of stacks in HP surface. Hard code for now.
+        hplp_max_stack_ct = 14 + (n_webs - 2)#The number of stacks in HP surface. Hard code for now.
 
         #cubit.cmd(f'surface with name "*shell*Station*layer0_bottomFace*" scheme map')
         cubit.cmd(f"surf with name '*Station*surface*' scheme map") #All cross sections are map
@@ -1269,7 +1268,7 @@ def cubit_make_solid_blade(
 
                 parse_string = f'with name "hoop_direction{str(station_id).zfill(3)}_stack{str(i_stack).zfill(3)}*"' 
                 curve_ids = parse_cubit_list("curve", parse_string)
-                if i_stack == 12 or i_stack == 26:
+                if i_stack == 12+(n_webs-2) or i_stack == 26+2*(n_webs-2):
                     cubit.cmd(f"curve {l2s(curve_ids)} interval {cs_params['nel_per_layer']}") 
                 else:
                     cubit.cmd(f"curve {curve_ids[0]} scheme bias fine size {e_size_1} coarse size {e_size_1} ")  ### SAME FOR NOW
