@@ -1085,19 +1085,12 @@ def make_cs_perimeter_layer_areas(wt_name,
                 last_layer_offset, curve_start_or_end, lp_hp_dict["flatback_curve_id"]
             )
 
-            if (
-                is_flatback
-                and abs(
-                    min(current_stack.layer_thicknesses())
-                    - max(current_stack.layer_thicknesses())
-                )
-                > 0.0001
-            ):
+            if (is_flatback and abs(min(current_stack.layer_thicknesses())
+                    - max(current_stack.layer_thicknesses()))> 0.0001):
                 layer_offset_dist = current_stack_layer_thicknesses[-1]
                 curve_start_or_end = "end"
                 last_layer_offset = get_adjustment_curve(
-                    curve_ids, layer_offset_dist, curve_start_or_end, end_layer_taper_curve
-                )
+                    curve_ids, layer_offset_dist, curve_start_or_end, end_layer_taper_curve)
 
 
             # cubit.cmd(f'split curve {first_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
@@ -1125,14 +1118,29 @@ def make_cs_perimeter_layer_areas(wt_name,
             for vertex_id in lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]:
                 temp_list_left=[]
                 temp_list_right=[]
+                break_flag = False
                 for curve_id in current_stack_right_curves:
+                    cubit.cmd(f'curve {curve_id} copy')
                     n_start = get_last_id("curve")
-                    cubit.cmd(f'split curve {curve_id} at vertex {vertex_id}')
+                    cubit.cmd(f'split curve {n_start} at vertex {vertex_id}')
                     n_end = get_last_id("curve")
                     if n_end -  n_start< 2:
-                        print('')
+                        break_flag = True
+                        break
+
                     temp_list_left.append(get_last_id("curve") - 1)
                     temp_list_right.append(get_last_id("curve"))
+
+                if break_flag:
+                    temp_list_left=[]
+                    temp_list_right=[]
+                    for curve_id in current_stack_right_curves:
+                        cubit.cmd(f'curve {curve_id} copy')
+                        cubit.cmd(f'split curve {get_last_id("curve")} distance {cs_params["te_adhesive_width"][i_station]} from start')
+                        temp_list_left.append(get_last_id("curve") - 1)
+                        temp_list_right.append(get_last_id("curve"))
+
+
                 current_stack_right_curves=temp_list_right
                 current_stack_left_curves_splited.append(temp_list_left)
             #current_stack_left_curves_splited.append(temp_list_right)

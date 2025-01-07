@@ -694,7 +694,8 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
             else:
                 break
         last_flat_station+=1
-
+    cubit.cmd(f'delete curve all')
+    cubit.cmd(f'delete vertex all')
 ########################
 
 
