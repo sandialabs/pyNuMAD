@@ -358,8 +358,11 @@ def get_bd_source_radial_stations(bd_sum_file_name):
 
     with open(bd_sum_file_name) as blade_yaml:
         data = yaml.load(blade_yaml,Loader=yaml.FullLoader)
-    node_location=list(np.array(data['Init_Nodes_E1'])[:,2]/np.array(data['Init_Nodes_E1'])[-1,2])
-    return node_location
+    if 'trap' in data['Quadrature_method'].lower():
+        return None #The the source locations are target locations
+    else:
+        node_location=list(np.array(data['Init_Nodes_E1'])[:,2]/np.array(data['Init_Nodes_E1'])[-1,2])
+        return node_location
 
 # def get_bd_source_radial_stations(qp_location,blade_length,nqp): #Adds root and top to qp data
 
