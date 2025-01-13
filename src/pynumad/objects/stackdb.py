@@ -34,7 +34,7 @@ class StackDatabase:
     def generate(self, keypoints: KeyPoints, bom: BillOfMaterials):
         # build the material stack for each area
         n_segments = keypoints.key_areas.shape[0]
-        n_stations = keypoints.key_areas.shape[1]
+        n_stations = keypoints.key_areas.shape[1] +1
         n_webs = len(keypoints.web_points)
         segment_labels = [
             "HP_TE_FLAT",
@@ -84,14 +84,14 @@ class StackDatabase:
             cur_ply.thickness = bom["hp"][k].thickness
             cur_ply.angle = 0  # TODO, set to 0 for now, bom['lp'](k, );
             cur_ply.nPlies = 1  # default to 1, modified in addply() if necessary
-
             # ... and add the ply to every area that is part of the region
             ind = bom.indices["hp"][k]
             for k_seg in range(ind[2], ind[3]):
                 for k_stat in range(ind[0], ind[1]):
                     # deepcopy is important to keep make ply object unique in each stack
                     self.stacks[k_seg, k_stat].addply(deepcopy(cur_ply))  
-
+                if ind[1] == keypoints.key_areas.shape[1]:
+                    self.stacks[k_seg, ind[1]].addply(deepcopy(cur_ply))  
         for k in range(len(bom["lp"])):
             # for each row in the BOM, get the ply definition ...
             cur_ply = Ply()
@@ -106,7 +106,8 @@ class StackDatabase:
             for k_seg in range(ind[2], ind[3]):
                 for k_stat in range(ind[0], ind[1]):
                     self.stacks[k_seg, k_stat].addply(deepcopy(cur_ply))
-
+                if ind[1] == keypoints.key_areas.shape[1]:
+                    self.stacks[k_seg, ind[1]].addply(deepcopy(cur_ply))  
         self.swstacks = np.empty(shape=(n_webs, n_stations), dtype=object)
         for k_web in range(n_webs):
             for k_stat in range(n_stations):
