@@ -1136,9 +1136,17 @@ def make_cs_perimeter_layer_areas(wt_name,
                     temp_list_right=[]
                     for curve_id in current_stack_right_curves:
                         cubit.cmd(f'curve {curve_id} copy')
-                        cubit.cmd(f'split curve {get_last_id("curve")} distance {cs_params["te_adhesive_width"][i_station]} from start')
-                        temp_list_left.append(get_last_id("curve") - 1)
-                        temp_list_right.append(get_last_id("curve"))
+                        curve_id = get_last_id("curve")
+                        if cs_params["te_adhesive_width"][i_station] < cubit.curve(get_last_id("curve")).length():
+                            cubit.cmd(f'split curve {curve_id} distance {cs_params["te_adhesive_width"][i_station]} from start')
+                            temp_list_left.append(get_last_id("curve") - 1)
+                            temp_list_right.append(get_last_id("curve"))
+                        else:
+                            #TE adhesive width is too wide at station {i_station}. Making sure adhesive width fits in width of the reinf.
+                            cubit.cmd(f'split curve {curve_id} fraction 0.1 from end')
+                            temp_list_left.append(get_last_id("curve") - 1)
+                            temp_list_right.append(get_last_id("curve"))
+                            # raise ValueError(f'TE adhesive width is too wide at station {i_station}. Widen TE reif. or make adhesive width more narrow. ')
 
 
                 current_stack_right_curves=temp_list_right
@@ -2027,7 +2035,6 @@ def make_a_precomp_cross_section(wt_name,
 def make_a_cross_section(wt_name,
     surface_dict,
     i_station,
-    i_station_geometry,
     blade,
     has_webs,
     web_stacks,
@@ -2043,7 +2050,7 @@ def make_a_cross_section(wt_name,
     geometry = blade.geometry
     stackdb = blade.stackdb
     keypoints = blade.keypoints
-    
+
     if i_station > last_round_station:
         is_flatback=True
     else:
@@ -2055,7 +2062,7 @@ def make_a_cross_section(wt_name,
     part_name_id = 0
 
     #### Step one create outer mold line
-    xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
+    xyz = get_blade_geometry_for_station(blade, i_station) * geometry_scaling
 
     # Start indexing from 1 (not 0) to ignore first point: because first point is not on the LP or HP surface but rather is the midpoint at the TE
     splinePoints = xyz[1:iLE, :]
@@ -2078,7 +2085,7 @@ def make_a_cross_section(wt_name,
     #### Extend flatback ###
     curve_start_or_end = "start"
     extension_length = (
-        100 * geometry.ichord[i_station_geometry] * cubit.curve(flatback_curve_id).length()
+        100 * geometry.ichord[i_station] * cubit.curve(flatback_curve_id).length()
     )
     flatback_curve_id = extend_curve_at_vertex_to_length(
         flatback_curve_id, extension_length, curve_start_or_end
@@ -2094,7 +2101,7 @@ def make_a_cross_section(wt_name,
         # Crate camber line
         offset_distance = 0
         npts = 100
-        spacing = geometry.ichord[i_station_geometry] * 0.5 / npts
+        spacing = geometry.ichord[i_station] * 0.5 / npts
 
         cubit.cmd(f"curve {flatback_curve_id} copy")
         flatback_offset_curve_id = get_last_id("curve")
@@ -2152,7 +2159,7 @@ def make_a_cross_section(wt_name,
     #     # cubit.cmd(f'save as "Debug.cub" overwrite')
     #     # foo
     else:
-        xyz = get_mid_line(blade, iLE, i_station_geometry, geometry_scaling)
+        xyz = get_mid_line(blade, iLE, i_station, geometry_scaling)
         npts, _ = xyz.shape
         npts = round(
             npts * 0.75
@@ -2174,7 +2181,7 @@ def make_a_cross_section(wt_name,
         #### Extend flatback ###
         curve_start_or_end = "start"
         extension_length = (
-            100 * geometry.ichord[i_station_geometry] * cubit.curve(flatback_curve_id).length()
+            100 * geometry.ichord[i_station] * cubit.curve(flatback_curve_id).length()
         )
         cubit.cmd(f"curve {flatback_curve_id} copy")
         curve_id = extend_curve_at_vertex_to_length(
@@ -2221,7 +2228,7 @@ def make_a_cross_section(wt_name,
         cs_normal,
     )
 
-    key_points = keypoints.key_points[1:int(n_areas/2), :, i_station_geometry]
+    key_points = keypoints.key_points[1:int(n_areas/2), :, i_station]
     key_curves = split_curve_at_coordinte_points(key_points, hp_key_curve)
     web_adhesive_width = cs_params["web_adhesive_width"][i_station]
     (
@@ -2230,8 +2237,8 @@ def make_a_cross_section(wt_name,
         lp_hp_dict["sparcap_base_curve"][0]
     ) = split_key_curves(key_curves, web_stacks, web_adhesive_width)
 
-    # temp = np.flip(keypoints.key_points[:, :, i_station_geometry], 0)
-    key_points = keypoints.key_points[-2:int(n_areas/2)-2:-1, :, i_station_geometry]
+    # temp = np.flip(keypoints.key_points[:, :, i_station], 0)
+    key_points = keypoints.key_points[-2:int(n_areas/2)-2:-1, :, i_station]
     key_curves = split_curve_at_coordinte_points(key_points, lp_key_curve)
     (
         lp_hp_dict["base_curve_ids"][1],

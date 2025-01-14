@@ -640,8 +640,8 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
     #### Step one create outer mold line
     excess_lengths=[]
     te_angles=[]
-    for i_station_geometry in range(len(blade.geometry.ispan)-1): #-1 b/c fewer stacks than stations
-        xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
+    for i_station in range(len(blade.geometry.ispan)): 
+        xyz = get_blade_geometry_for_station(blade, i_station) * geometry_scaling
         
         npts=5
         # Start indexing from 1 (not 0) to ignore first point: because first point is not on the LP or HP surface but rather is the midpoint at the TE
@@ -660,9 +660,9 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
 
         flatback_length=np.linalg.norm(second_point - first_point)
 
-        athickness=cs_params["te_adhesive_thickness"][i_station_geometry]
-        stack_thicknesses_hp=sum(stackdb.stacks[1, i_station_geometry].layer_thicknesses())/1000
-        stack_thicknesses_lp=sum(stackdb.stacks[-2, i_station_geometry].layer_thicknesses())/1000
+        athickness=cs_params["te_adhesive_thickness"][i_station]
+        stack_thicknesses_hp=sum(stackdb.stacks[1, i_station].layer_thicknesses())/1000
+        stack_thicknesses_lp=sum(stackdb.stacks[-2, i_station].layer_thicknesses())/1000
 
         excess_lengths.append(flatback_length-(stack_thicknesses_lp+stack_thicknesses_hp+athickness))
 
@@ -712,22 +712,9 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
 
     for i_station in stationList:
         if model2Dor3D.lower() == "2d":
-            cubit.cmd(
-                "reset "
-            )  # This is needed to restart node numbering for VABS. VABS neeeds every element and node starting from 1 to nelem/nnode should be present
+            cubit.cmd("reset ")  # This is needed to restart node numbering for VABS. 
+                                 # VABS neeeds every element and node starting from 1 to nelem/nnode should be present
         write_spline_from_coordinate_points(cubit, ref_line_coords)
-        i_station_geometry = i_station
-        if i_station == len(geometry.ispan) - 1:  # Only do this for the last station
-            blade.add_interpolated_station(geometry.ispan[-1] * 0.999)
-            stackdb.edit_stacks_for_solid_mesh()
-            expandTEthicknesses.append(expandTEthicknesses[-1])
-            blade.expand_blade_geometry_te(expandTEthicknesses)
-
-            # adjustLastStackAfterNewTipStation(i_station)
-
-            i_station_geometry = i_station + 1
-        
-        #is_flatback=is_station_flatback[i_station_geometry]
 
         web_stacks = []
         for i_web in range(n_webs-1,-1,-1): #stackdb.swstacks is arranged from LE to TE. Need TE to LE order
@@ -749,9 +736,9 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
         cs_normal = get_cs_normal_vector(
             np.array(
                 [
-                    keypoints.key_points[2, :, i_station_geometry],
-                    keypoints.key_points[3, :, i_station_geometry],
-                    keypoints.key_points[7, :, i_station_geometry],
+                    keypoints.key_points[2, :, i_station],
+                    keypoints.key_points[3, :, i_station],
+                    keypoints.key_points[7, :, i_station],
                 ]
             )
         )
@@ -770,7 +757,6 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
                 birds_mouth_verts = make_a_cross_section(wt_name,
                     surface_dict,
                     i_station,
-                    i_station_geometry,
                     blade,
                     make_webs,
                     web_stacks,
@@ -787,7 +773,6 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
                 make_a_cross_section(wt_name,
                     surface_dict,
                     i_station,
-                    i_station_geometry,
                     blade,
                     make_webs,
                     web_stacks,
@@ -1086,7 +1071,6 @@ def cubit_make_solid_blade(
         shell_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         shell_vol_list=[]
-
     n_webs=len(blade.stackdb.swstacks)
     for i_web in range(n_webs):
         part_name = f'web{i_web}'
@@ -1133,10 +1117,16 @@ def cubit_make_solid_blade(
 
     for i_station in stationList[0:-1]: 
         temp = np.flip(has_webs[i_station])
+
         for i_web in range(n_webs):
             if not temp[i_web]:
                 cubit.cmd(f"delete volume with name 'web{i_web}*tation{str(i_station).zfill(3)}*'")
-
+     #If the last cross section does not have webs, delete last volumes
+    temp = np.flip(has_webs[-1])
+    i_station = stationList[-2]
+    for i_web in range(n_webs):
+        if not temp[i_web]:
+            cubit.cmd(f"delete volume with name 'web{i_web}*tation{str(i_station).zfill(3)}*'")  
 
 
     cubit.cmd(f"merge volume all")
