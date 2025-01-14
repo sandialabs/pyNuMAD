@@ -626,74 +626,95 @@ def split_curve_at_coordinte_points(coordinates_to_split_curve, curve_idToSplit)
     return key_curves
 
 
-def split_key_curves(key_curves, aft_web_stack, fore_web_stack, web_adhesive_width):
+def split_key_curves(key_curves, web_stacks, web_adhesive_width):
     ###Do not split TE reinf
     temp_base_curve_ids = [key_curves[0]]
 
     ###split TE panel in half
-    cubit.cmd(f"split curve {key_curves[1]} fraction 0.5")
+    if len(web_stacks) == 2:
+        cubit.cmd(f"split curve {key_curves[1]} fraction 0.5")
+        temp_base_curve_ids.append(get_last_id("curve") - 1)
+        temp_base_curve_ids.append(get_last_id("curve"))
+    else:
+        temp_base_curve_ids.append(key_curves[1])
 
-    temp_base_curve_ids.append(get_last_id("curve") - 1)
-    temp_base_curve_ids.append(get_last_id("curve"))
-
-    ###Partition sparcap curve
-    vertex_list = []
-    web_layer_thickness = 0
-    n_start = get_last_id("vertex") + 1
-    for iLayer in reversed(range(len(aft_web_stack.plygroups))):
-        web_layer_thickness += (
-            aft_web_stack.plygroups[iLayer].thickness
-            * aft_web_stack.plygroups[iLayer].nPlies
-            / 1000
-        )
+    ###Partition curves with webs for all but the fore web
+    overwrap_base_curves=[]
+    for i_web,web_stack in enumerate(web_stacks[:-1]):
+        vertex_list = []
+        web_layer_thickness = 0
+        n_start = get_last_id("vertex") + 1
+        for i_layer in reversed(range(len(web_stack.plygroups))):
+            web_layer_thickness += (
+                web_stack.plygroups[i_layer].thickness* web_stack.plygroups[i_layer].nPlies/ 1000)
+            cubit.cmd(
+                f"create vertex on curve {key_curves[i_web+2]}  distance {web_layer_thickness} from start")
         cubit.cmd(
-            f"create vertex on curve {key_curves[2]}  distance {web_layer_thickness} from start"
-        )
-    cubit.cmd(
-        f"create vertex on curve {key_curves[2]}  distance {web_layer_thickness+web_adhesive_width} from start"
-    )
+            f"create vertex on curve {key_curves[i_web+2]}  distance {web_layer_thickness+web_adhesive_width} from start")
+        
+        n_end = get_last_id("vertex")
+
+        vertex_list += list(range(n_start, n_end + 1))
+
+        n_start = get_last_id("curve") + 1
+        cubit.cmd(f"split curve {key_curves[i_web+2]} at vertex {l2s(vertex_list)}")
+        n_end = get_last_id("curve")
+
+        cubit.cmd(f'curve {n_start} {n_start+2} rename "face_web_thickness"')
+        # cubit.cmd(f'curve {n_end-2} {n_end} rename "face_web_thickness"') 
+
+        cubit.cmd(f'curve {n_start+1} rename "core_web_thickness"')
+        # cubit.cmd(f'curve {n_end-1} rename "core_web_thickness"') 
+
+        # overwrap_base_curves += list(range(n_start + 1, n_end))
+        # temp_base_curve_ids.append(n_start)
+        if i_web < len(web_stacks) -2: #Webs that sit on panels
+            overwrap_base_curves += list(range(n_start, n_end))
+            temp_base_curve_ids.append(n_end)
+        else:
+            overwrap_base_curves += list(range(n_start + 1, n_end))
+            temp_base_curve_ids.append(n_start)
+            key_curves[i_web+2]=n_end #aft panel sitting on sparcap
+
 
     # get total foreweb thickness
+    vertex_list = []
+    fore_web_stack = web_stacks[-1]
     web_layer_thickness = sum(fore_web_stack.layer_thicknesses()) / 1000
+    n_start = get_last_id("vertex") + 1
     cubit.cmd(
-        f"create vertex on curve {key_curves[2]}  distance {web_layer_thickness+web_adhesive_width} from end"
-    )
+        f"create vertex on curve {key_curves[i_web+2]}  distance {web_layer_thickness+web_adhesive_width} from end")
     for iLayer in reversed(range(len(fore_web_stack.plygroups))):
         cubit.cmd(
-            f"create vertex on curve {key_curves[2]}  distance {web_layer_thickness} from end"
-        )
+            f"create vertex on curve {key_curves[i_web+2]}  distance {web_layer_thickness} from end")
         web_layer_thickness -= (
-            fore_web_stack.plygroups[iLayer].thickness
-            * fore_web_stack.plygroups[iLayer].nPlies
-            / 1000
-        )
-
+            fore_web_stack.plygroups[iLayer].thickness* fore_web_stack.plygroups[iLayer].nPlies/ 1000)
     n_end = get_last_id("vertex")
     vertex_list += list(range(n_start, n_end + 1))
 
     n_start = get_last_id("curve") + 1
-    cubit.cmd(f"split curve {key_curves[2]} at vertex {l2s(vertex_list)}")
+    cubit.cmd(f"split curve {key_curves[i_web+2]} at vertex {l2s(vertex_list)}")
     n_end = get_last_id("curve")
 
-    cubit.cmd(f'curve {n_start} {n_start+2} rename "face_web_thickness"')
+    # cubit.cmd(f'curve {n_start} {n_start+2} rename "face_web_thickness"')
     cubit.cmd(f'curve {n_end-2} {n_end} rename "face_web_thickness"') 
 
-    cubit.cmd(f'curve {n_start+1} rename "core_web_thickness"')
+    # cubit.cmd(f'curve {n_start+1} rename "core_web_thickness"')
     cubit.cmd(f'curve {n_end-1} rename "core_web_thickness"') 
 
-    temp_base_curve_ids.append(n_start)
+    sparcap_base_curve = n_start
     temp_base_curve_ids.append(n_end)
-    spar_cap_base_curves = list(range(n_start + 1, n_end))
+    overwrap_base_curves += list(range(n_start + 1, n_end))
 
     ###split LE panel in half
-    cubit.cmd(f"split curve {key_curves[3]} fraction 0.5")
+    cubit.cmd(f"split curve {key_curves[-2]} fraction 0.5")
     temp_base_curve_ids.append(get_last_id("curve") - 1)
     temp_base_curve_ids.append(get_last_id("curve"))
 
     ###Do not split LE reinf
     temp_base_curve_ids.append(key_curves[-1])
 
-    return temp_base_curve_ids, spar_cap_base_curves
+    return temp_base_curve_ids, overwrap_base_curves,sparcap_base_curve
 
 
 def get_mid_line(blade, iLE, i_station, geometry_scaling):
@@ -751,6 +772,7 @@ def make_cs_perimeter_layer_areas(wt_name,
     i_station,
     station_stacks,
     cs_params,
+    has_webs,
     thickness_scaling,
     lp_hp_side,
     last_round_station,
@@ -783,13 +805,18 @@ def make_cs_perimeter_layer_areas(wt_name,
     )
 
     base_curve_index_ct = 0
-    station_stacks.shape
-    nStationLayups = len(station_stacks)
-    station_stacks.shape
+    n_perimeter_layups = int(len(lp_hp_dict["base_curve_ids"][0])/2)
 
-    last_perimeter = nStationLayups - 2
+    last_perimeter = n_perimeter_layups - 1
 
-    for i_perimeter in range(nStationLayups - 1):  # Skip the last stack since the current and the next stack are generated at the same time.
+    if len(station_stacks) > 5:
+        if len(station_stacks) ==6:
+            station_stacks=list(station_stacks)
+            station_stacks.pop(2) #Remove reduntant panel stack. 
+        else:
+            raise ValueError('More than three webs is unsupported.')
+        
+    for i_perimeter in range(n_perimeter_layups):  # Skip the last stack since the current and the next stack are generated at the same time.
         with open(f"{wt_name}.log", "a") as logFile:
             logFile.write(f"\tlp_hp_side {lp_hp_side}, i_perimeter={i_perimeter}\n")
 
@@ -800,13 +827,12 @@ def make_cs_perimeter_layer_areas(wt_name,
         next_stack_layer_thicknesses = np.array(next_stack.layer_thicknesses()) / 1000
 
         cubit.cmd(
-            f'curve {lp_hp_dict["base_curve_ids"][lp_hp_side_index][base_curve_index_ct]} copy'
-        )
+            f'curve {lp_hp_dict["base_curve_ids"][lp_hp_side_index][base_curve_index_ct]} copy')
         current_base_curve_id = get_last_id("curve")
         base_curve_index_ct += 1
         cubit.cmd(
-            f'curve {lp_hp_dict["base_curve_ids"][lp_hp_side_index][base_curve_index_ct]} copy'
-        )
+            f'curve {lp_hp_dict["base_curve_ids"][lp_hp_side_index][base_curve_index_ct]} copy')
+        
         next_base_curve_id = get_last_id("curve")
         base_curve_index_ct += 1
 
@@ -876,12 +902,8 @@ def make_cs_perimeter_layer_areas(wt_name,
         else:
             raise ValueError(f"i_perimeter {i_perimeter} not recognized")
 
-        bottom_left_vertex_curve_left, bottom_right_vertex_curve_left = selCurveVerts(
-            left_bottom_curve
-        )
-        bottom_left_vertex_curve_right, bottom_right_vertex_curve_right = selCurveVerts(
-            right_bottom_curve
-        )
+        bottom_left_vertex_curve_left, bottom_right_vertex_curve_left = selCurveVerts(left_bottom_curve)
+        bottom_left_vertex_curve_right, bottom_right_vertex_curve_right = selCurveVerts(right_bottom_curve)
 
         # This if statement prepares all layer curves such that they taper at the TE
         if i_perimeter == 0:
@@ -1063,19 +1085,12 @@ def make_cs_perimeter_layer_areas(wt_name,
                 last_layer_offset, curve_start_or_end, lp_hp_dict["flatback_curve_id"]
             )
 
-            if (
-                is_flatback
-                and abs(
-                    min(current_stack.layer_thicknesses())
-                    - max(current_stack.layer_thicknesses())
-                )
-                > 0.0001
-            ):
+            if (is_flatback and abs(min(current_stack.layer_thicknesses())
+                    - max(current_stack.layer_thicknesses()))> 0.0001):
                 layer_offset_dist = current_stack_layer_thicknesses[-1]
                 curve_start_or_end = "end"
                 last_layer_offset = get_adjustment_curve(
-                    curve_ids, layer_offset_dist, curve_start_or_end, end_layer_taper_curve
-                )
+                    curve_ids, layer_offset_dist, curve_start_or_end, end_layer_taper_curve)
 
 
             # cubit.cmd(f'split curve {first_layer_offset} at vertex {lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]}')
@@ -1103,14 +1118,37 @@ def make_cs_perimeter_layer_areas(wt_name,
             for vertex_id in lp_hp_dict["perimeter_verts_for_te_adhesive"][lp_hp_side]:
                 temp_list_left=[]
                 temp_list_right=[]
+                break_flag = False
                 for curve_id in current_stack_right_curves:
+                    cubit.cmd(f'curve {curve_id} copy')
                     n_start = get_last_id("curve")
-                    cubit.cmd(f'split curve {curve_id} at vertex {vertex_id}')
+                    cubit.cmd(f'split curve {n_start} at vertex {vertex_id}')
                     n_end = get_last_id("curve")
                     if n_end -  n_start< 2:
-                        print('')
+                        break_flag = True
+                        break
+
                     temp_list_left.append(get_last_id("curve") - 1)
                     temp_list_right.append(get_last_id("curve"))
+
+                if break_flag:
+                    temp_list_left=[]
+                    temp_list_right=[]
+                    for curve_id in current_stack_right_curves:
+                        cubit.cmd(f'curve {curve_id} copy')
+                        curve_id = get_last_id("curve")
+                        if cs_params["te_adhesive_width"][i_station] < cubit.curve(get_last_id("curve")).length():
+                            cubit.cmd(f'split curve {curve_id} distance {cs_params["te_adhesive_width"][i_station]} from start')
+                            temp_list_left.append(get_last_id("curve") - 1)
+                            temp_list_right.append(get_last_id("curve"))
+                        else:
+                            #TE adhesive width is too wide at station {i_station}. Making sure adhesive width fits in width of the reinf.
+                            cubit.cmd(f'split curve {curve_id} fraction 0.1 from end')
+                            temp_list_left.append(get_last_id("curve") - 1)
+                            temp_list_right.append(get_last_id("curve"))
+                            # raise ValueError(f'TE adhesive width is too wide at station {i_station}. Widen TE reif. or make adhesive width more narrow. ')
+
+
                 current_stack_right_curves=temp_list_right
                 current_stack_left_curves_splited.append(temp_list_left)
             #current_stack_left_curves_splited.append(temp_list_right)
@@ -1382,52 +1420,47 @@ def make_cs_perimeter_layer_areas(wt_name,
             bottom_left_vertex_curve_right = top_left_vertex_curve_right
             bottom_right_vertex_curve_right = top_right_vertex_curve_right
 
-        # Build spar caps
-        if i_perimeter == 1:
-            lp_hp_dict["web_interface_curves"][lp_hp_side_index] = [right_top_curve]
-            temp_ct=0
-            for ic, current_curveID in enumerate(
-                lp_hp_dict["spar_cap_base_curves"][lp_hp_side_index]
-            ):
-                bottom_curve = current_curveID
-                offSetSign = get_curve_offset_direction(
-                    bottom_curve, lp_hp_side, cs_normal
-                )
-                temp_ct+=1
-                for it, thickness in enumerate(next_stack_layer_thicknesses):
-                    cubit.cmd(
-                        f"create curve offset curve {bottom_curve} distance {offSetSign*thickness} extended"
-                    )
-                    top_curve = get_last_id("curve")
-
-                    material_name = next_stack.plygroups[it].materialid
-                    ply_angle = next_stack.plygroups[it].angle
-                    part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
-                        surface_dict,
-                        i_station,
-                        part_name,
-                        top_curve,
-                        bottom_curve,
-                        material_name,
-                        ply_angle,
-                        part_name_id,
-                        it,
-                        materials_used,
-                        stack_ct+temp_ct
-                    )
-                    next_stack_surface_list.append(get_last_id("surface"))
-
-                    if it == 2 and ic != 3:
-                        lp_hp_dict["web_interface_curves"][lp_hp_side_index].append(
-                            top_curve
-                        )
-                    bottom_curve = top_curve
-                    
-            stack_ct+=1
-        elif i_perimeter == 2:
-            lp_hp_dict["web_interface_curves"][lp_hp_side_index].append(leftTopCurve)
-
         stack_ct+=3
+        # Build spar caps
+        if i_perimeter==0 and len(lp_hp_dict["overwrap_base_curves"][lp_hp_side_index])==10: #Build web base on TE panel
+            stack_ct+=1
+            curve_ids = lp_hp_dict["overwrap_base_curves"][lp_hp_side_index][:4]
+            top_curves, part_name_id = make_stack_of_surfaces_from_curve_list(curve_ids,next_stack,lp_hp_side,cs_normal,surface_dict,i_station,part_name,stack_ct,part_name_id,lp_hp_dict,materials_used)
+            i_web = 0
+            if has_webs[i_web]:
+                lp_hp_dict["web_interface_curves"][lp_hp_side][i_web]+=top_curves
+            
+        if i_perimeter==1:
+
+            i_web =-2
+            #Build web base on aft sparcap edge   
+            lp_hp_dict["web_interface_curves"][lp_hp_side][i_web].append(right_top_curve)
+            curve_ids = lp_hp_dict["overwrap_base_curves"][lp_hp_side_index][-6:-3]
+            top_curves, part_name_id = make_stack_of_surfaces_from_curve_list(curve_ids,next_stack,lp_hp_side,cs_normal,surface_dict,i_station,part_name,stack_ct,part_name_id,lp_hp_dict,materials_used)
+            
+            if has_webs[i_web]:
+                lp_hp_dict["web_interface_curves"][lp_hp_side][i_web]+=top_curves
+            stack_ct+=1
+
+            #Build center region of sparcap  
+            curve_ids = [lp_hp_dict["sparcap_base_curve"][lp_hp_side_index]]
+            top_curves, part_name_id = make_stack_of_surfaces_from_curve_list(curve_ids,next_stack,lp_hp_side,cs_normal,surface_dict,i_station,part_name,stack_ct,part_name_id,lp_hp_dict,materials_used)
+            stack_ct+=1
+
+            #Build web base on fore sparcap edge  
+            i_web =-1
+            curve_ids = lp_hp_dict["overwrap_base_curves"][lp_hp_side_index][-3:]
+            top_curves, part_name_id = make_stack_of_surfaces_from_curve_list(curve_ids,next_stack,lp_hp_side,cs_normal,surface_dict,i_station,part_name,stack_ct,part_name_id,lp_hp_dict,materials_used)
+            if has_webs[i_web]:
+                top_curves.reverse()
+                lp_hp_dict["web_interface_curves"][lp_hp_side][i_web]+=top_curves
+            stack_ct-=1
+
+        elif i_perimeter == 2:
+            i_web =-1
+            lp_hp_dict["web_interface_curves"][lp_hp_side][i_web].insert(0,leftTopCurve)
+
+        
     return part_name_id, lp_hp_dict, stack_ct
 
 
@@ -1437,7 +1470,39 @@ def make_cs_perimeter_layer_areas(wt_name,
 ####################################################
 ####################################################
 
+def make_stack_of_surfaces_from_curve_list(curve_ids,stack_data,lp_hp_side,cs_normal,surface_dict,i_station,part_name,stack_ct,part_name_id,lp_hp_dict,materials_used):
 
+    top_curves=[]
+    layer_thicknesses = np.array(stack_data.layer_thicknesses()) / 1000
+    # temp_ct=0
+    for ic, current_curveID in enumerate(curve_ids):
+        bottom_curve = current_curveID
+        offSetSign = get_curve_offset_direction(bottom_curve, lp_hp_side, cs_normal)
+        # temp_ct+=1
+        for it, thickness in enumerate(layer_thicknesses):
+            cubit.cmd(
+                f"create curve offset curve {bottom_curve} distance {offSetSign*thickness} extended")
+            top_curve = get_last_id("curve")
+
+            material_name = stack_data.plygroups[it].materialid
+            ply_angle = stack_data.plygroups[it].angle
+            part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
+                surface_dict,
+                i_station,
+                part_name,
+                top_curve,
+                bottom_curve,
+                material_name,
+                ply_angle,
+                part_name_id,
+                it,
+                materials_used,
+                stack_ct)
+            
+            bottom_curve = top_curve
+
+        top_curves.append(top_curve)
+    return top_curves,part_name_id
 def create_simplist_surface_for_TE_or_LE_adhesive(
     i_station,
     surface_dict,
@@ -1512,53 +1577,37 @@ def print_sine_curve_between_two_verts(vBot, vTop, amplitude, direction):
     return get_last_id("curve"),vertex_list
 
 
-def make_cs_web_layer_areas(
+def make_cs_web_layer_areas(part_name,
     surface_dict,
     i_station,
-    aft_web_stack,
-    fore_web_stack,
+    web_stack,
     web_interface_curves,
     cs_params,
     part_name_id,
     cs_normal,
     n_modeled_layers,
-    materials_used,
-):
+    materials_used):
     
-    aft_web_overwrap_thickness = (
-        aft_web_stack.layer_thicknesses()[0] + aft_web_stack.layer_thicknesses()[-1]
-    ) / 1000
-    fore_web_overwrap_thickness = (
-        fore_web_stack.layer_thicknesses()[0] + fore_web_stack.layer_thicknesses()[-1]
-    ) / 1000
-    part_name = "web"
+    overwrap_thickness = (
+        web_stack.layer_thicknesses()[0] + web_stack.layer_thicknesses()[-1]) / 1000
+
+    lp_hp_side_dict = {0:'HP',1:'LP'}
     ### First create the first two layers. The first layer is the adhesive. The second layer is the web overwrap layer
     for i_curveList, curveList in enumerate(web_interface_curves):
         n_base_curves_web = len(curveList)
-        if i_curveList == 0:
-            lp_hp_side = "HP"
-        else:
-            lp_hp_side = "LP"
-        for i_curve, bottom_curve in enumerate(curveList):
-            offSetSign = get_curve_offset_direction(
-                bottom_curve, lp_hp_side, cs_normal
-            )
+        lp_hp_side = lp_hp_side_dict[i_curveList]
 
-            if i_curve < n_base_curves_web / 2:
-                layer_thicknesses = [
-                    cs_params["web_aft_adhesive_thickness"][i_station],
-                    aft_web_overwrap_thickness,
-                ]
-            else:
-                layer_thicknesses = [
-                    cs_params["web_fore_adhesive_thickness"][i_station],
-                    fore_web_overwrap_thickness,
-                ]
+        for i_curve, bottom_curve in enumerate(curveList):
+            
+            offSetSign = get_curve_offset_direction(bottom_curve, lp_hp_side, cs_normal)
+
+            layer_thicknesses = [
+                cs_params["web_adhesive_thickness"][i_station],overwrap_thickness]
 
             for it, thickness in enumerate(layer_thicknesses):
                 cubit.cmd(
-                    f"create curve offset curve {bottom_curve} distance {offSetSign*thickness} extended"
-                )
+                    f"create curve offset curve {bottom_curve} distance {offSetSign*thickness} extended")
+                
                 top_curve = get_last_id("curve")
 
                 if it == 0:
@@ -1566,12 +1615,9 @@ def make_cs_web_layer_areas(
                     ply_angle = 0
 
                 else:
-                    if i_curve < n_base_curves_web / 2:
-                        material_name = aft_web_stack.plygroups[0].materialid
-                        ply_angle = aft_web_stack.plygroups[0].angle
-                    else:
-                        material_name = fore_web_stack.plygroups[0].materialid
-                        ply_angle = fore_web_stack.plygroups[0].angle
+                    material_name = web_stack.plygroups[0].materialid
+                    ply_angle = web_stack.plygroups[0].angle
+
                 
                 part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
                     surface_dict,
@@ -1584,8 +1630,7 @@ def make_cs_web_layer_areas(
                     part_name_id,
                     n_modeled_layers + it,
                     materials_used,
-                    -1
-                )
+                    -1)
 
                 bottom_curve = top_curve
 
@@ -1594,32 +1639,21 @@ def make_cs_web_layer_areas(
 
     ### Create vertical web regions
     lp_hp_side=''
-    # remove curves that are not going to be part of the vertical web
-    for i_curveList, curveList in enumerate(web_interface_curves):
-        curveList.pop(3)
-        curveList.pop(3)
 
     n_base_curves_web = len(web_interface_curves[0])
-    for i_curve in range(n_base_curves_web):
+    for i_curve in range(n_base_curves_web-1): #Minus 1 since the overwrap is not part of vertical web
         vHP, _ = selCurveVerts(web_interface_curves[0][i_curve])
         vLP, _ = selCurveVerts(web_interface_curves[1][i_curve])
         top_curve,_ = print_sine_curve_between_two_verts(
-            vHP, vLP, cs_params["max_web_imperfection_distance"][i_station], "x"
-        )
+            vHP, vLP, cs_params["max_web_imperfection_distance"][i_station], "x")
         _, vHP = selCurveVerts(web_interface_curves[0][i_curve])
         _, vLP = selCurveVerts(web_interface_curves[1][i_curve])
         bottom_curve,_ = print_sine_curve_between_two_verts(
-            vHP, vLP, cs_params["max_web_imperfection_distance"][i_station], "x"
-        )
+            vHP, vLP, cs_params["max_web_imperfection_distance"][i_station], "x")
 
-        if i_curve < n_base_curves_web / 2:
-            material_name = aft_web_stack.plygroups[i_curve].materialid
-            ply_angle = aft_web_stack.plygroups[i_curve].angle
-        else:
-            material_name = fore_web_stack.plygroups[
-                i_curve - int(n_base_curves_web / 2)
-            ].materialid
-            ply_angle = fore_web_stack.plygroups[i_curve - int(n_base_curves_web / 2)].angle
+        material_name = web_stack.plygroups[i_curve].materialid
+        ply_angle = web_stack.plygroups[i_curve].angle
+
         part_name_id, materials_used = make_cross_section_surface(lp_hp_side,
             surface_dict,
             i_station,
@@ -1631,22 +1665,22 @@ def make_cs_web_layer_areas(
             part_name_id,
             n_modeled_layers + it + 2 + i_curve,
             materials_used,
-            -1
-        )
+            -1)
+        
         surf_id = get_last_id("surface")
         surf_name = cubit.get_entity_name("surface", surf_id).split('_')
         surf_name.insert(-1,'vertical')
         surf_name = '_'.join(surf_name)
         cubit.cmd(f'surface {surf_id} rename "{surf_name}"')
+        
     return part_name_id, (vHP, vLP)
 
-
-def make_a_cross_section(wt_name,
+def make_a_precomp_cross_section(wt_name,
     surface_dict,
     i_station,
     i_station_geometry,
     blade,
-    hasWebs,
+    has_webs,
     aft_web_stack,
     fore_web_stack,
     iLE,
@@ -1661,7 +1695,362 @@ def make_a_cross_section(wt_name,
     geometry = blade.geometry
     stackdb = blade.stackdb
     keypoints = blade.keypoints
+    definition = blade.definition
+
+    if i_station > last_round_station:
+        is_flatback=True
+    else:
+        is_flatback=False
+
+    with open(f"{wt_name}.log", "a") as logFile:
+        logFile.write(f"Working on Station: {i_station}\n")
+
+    part_name_id = 0
+
+
+    #### Step one create outer mold line
+    xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
+    xyz[:,0] = xyz[:,0]/blade.geometry.ichord[i_station_geometry]
+    xyz[:,1] = xyz[:,1]/blade.geometry.ichord[i_station_geometry]
+
+    # Start indexing from 1 (not 0) to ignore first point: because first point is not on the LP or HP surface but rather is the midpoint at the TE
+    #xyz = np.flip(xyz, 0)
+    xyz[:, 0]=-1*xyz[:, 0]
+    spline_points = xyz[iLE:len(xyz)-1, :]
+
+    write_spline_from_coordinate_points(cubit, spline_points)
+    lp_key_curve = get_last_id("curve")
+    LE_vert, v2 = selCurveVerts(lp_key_curve)
+
+    xyz = np.flip(xyz, 0)
+    spline_points = np.flip(xyz[iLE-1:len(xyz)-1, :],0)
+    write_spline_from_coordinate_points(cubit, spline_points)
+    hp_key_curve = get_last_id("curve")
+    v3, v4 = selCurveVerts(hp_key_curve)
+
+
+    # Undo initial twist
+    cubit.cmd(f"rotate curve {lp_key_curve} {hp_key_curve} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged ")
+    x_move,y_move,_=cubit.vertex(LE_vert).coordinates()
+    cubit.cmd(f"move curve {lp_key_curve} {hp_key_curve} x {-x_move} y {-y_move} include_merged")
+
+    #Check of HP LE is less than 0
     
+    x,_,_=cubit.vertex(v4).coordinates()
+    if x <= 0.0:
+        cubit.cmd(f"move curve {hp_key_curve} x {-x+0.0001} y {-y_move} include_merged")
+
+
+    cubit.cmd(f"delete vertex with is_free")
+    n_start = get_last_id("vertex")+1
+    cubit.cmd(f"create vertex on curve {lp_key_curve} segment 50")
+    n_end = get_last_id("vertex")
+
+    lp_vert_ids = [LE_vert]+list(range(n_start, n_end + 1))+[v2]
+
+    n_start = get_last_id("vertex")+1
+    cubit.cmd(f"create vertex on curve {hp_key_curve} segment 50")
+    n_end = get_last_id("vertex")
+
+    hp_vert_ids = [v3]+list(range(n_start, n_end + 1))+[v4]
+    
+    vert_ids=lp_vert_ids+hp_vert_ids
+    cubit.cmd(f'save as "Debug.cub" overwrite') 
+    # n_start = get_last_id("vertex")+1
+
+    # LE_vert = n_start
+
+    # for coords in spline_points:
+    #     create_vertex(coords[0], coords[1], coords[2])
+    # flatback_vTop = get_last_id("vertex")
+    # flatback_vBot = flatback_vTop+1
+
+
+
+    # for coords in spline_points:
+    #     create_vertex(coords[0], coords[1], coords[2])
+
+    # n_end = get_last_id("vertex")
+    # vert_ids = list(range(n_start, n_end + 1))
+
+    # # Undo initial twist
+    # cubit.cmd(f"rotate vertex {l2s(vert_ids)} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged ")
+
+    # # Move LE to origin
+    # x_move,y_move,_=cubit.vertex(LE_vert).coordinates()
+    # cubit.cmd(f"move vertex {l2s(vert_ids)} x {-x_move} y {-y_move} include_merged")
+
+    # #### Step one create outer mold line
+    # xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
+    # xyz[:,0] = xyz[:,0]/blade.geometry.ichord[i_station_geometry]
+    # xyz[:,1] = xyz[:,1]/blade.geometry.ichord[i_station_geometry]
+
+    # # Start indexing from 1 (not 0) to ignore first point: because first point is not on the LP or HP surface but rather is the midpoint at the TE
+    # #xyz = np.flip(xyz, 0)
+    # xyz[:, 0]=-1*xyz[:, 0]
+    # spline_points = xyz[iLE:len(xyz)-1, :]
+
+    # n_start = get_last_id("vertex")+1
+
+    # LE_vert = n_start
+
+    # for coords in spline_points:
+    #     create_vertex(coords[0], coords[1], coords[2])
+    # flatback_vTop = get_last_id("vertex")
+    # flatback_vBot = flatback_vTop+1
+
+    # xyz = np.flip(xyz, 0)
+    # spline_points = np.flip(xyz[iLE-1:len(xyz)-1, :],0)
+
+    # for coords in spline_points:
+    #     create_vertex(coords[0], coords[1], coords[2])
+
+    # n_end = get_last_id("vertex")
+    # vert_ids = list(range(n_start, n_end + 1))
+
+    # # Undo initial twist
+    # cubit.cmd(f"rotate vertex {l2s(vert_ids)} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged ")
+
+    # # Move LE to origin
+    # x_move,y_move,_=cubit.vertex(LE_vert).coordinates()
+    # cubit.cmd(f"move vertex {l2s(vert_ids)} x {-x_move} y {-y_move} include_merged")
+
+
+    ### Write Shape File
+    directory='.'
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    file = open(f'{directory}/shape_{i_station}.inp', 'w')
+    file.write(f'{len(vert_ids)}                     N_af_nodes :no of airfoil nodes, counted clockwise starting\n')
+    file.write(f'                      with leading edge (see users" manual, fig xx)\n\n')
+    file.write(f' Xnode      Ynode   !! chord-normalized coordinated of the airfoil nodes\n')
+
+    for vertex in vert_ids:
+        x,y,_=cubit.vertex(vertex).coordinates()
+        file.write(f'{min(x,1.00)} {y}\n')
+    file.close()
+
+
+
+    flatbackCurve = cubit.create_curve(cubit.vertex(v2), cubit.vertex(v3))
+    flatback_curve_id = flatbackCurve.id()
+
+    ## Create chord line
+    cubit.cmd(f'create vertex on curve {flatback_curve_id} fraction 0.5 from start')
+    chord_line = cubit.create_curve(cubit.vertex(LE_vert), cubit.vertex(get_last_id('vertex')))
+    chord_line_id = chord_line.id()
+
+    #HP Side
+    key_points = keypoints.key_points[1:5, :, i_station_geometry]
+    key_points[:, 0]=-1*key_points[:, 0]
+    key_points[:,:2] = key_points[:,:2]/blade.geometry.ichord[i_station_geometry]
+    key_points=np.flip(key_points,0)
+
+    n_start = get_last_id("vertex")+1
+    for coords in key_points:
+        create_vertex(coords[0], coords[1], coords[2])
+    n_end = get_last_id("vertex")
+    vert_ids = list(range(n_start, n_end + 1))
+
+    # Undo initial twist
+    cubit.cmd(f"rotate vertex {l2s(vert_ids)} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged " )
+    cubit.cmd(f"move vertex {l2s(vert_ids)} x {-x_move} y {-y_move} include_merged")
+
+
+    hp_sector_boundaries = [0.0]
+    for vertex in vert_ids:
+        x,_,_=cubit.vertex(vertex).coordinates()
+        hp_sector_boundaries.append(x)
+    hp_sector_boundaries.append(1.0)
+    
+    ## LP Side
+    temp = np.flip(keypoints.key_points[:, :, i_station_geometry], 0)
+
+    key_points =temp[1:5, :]
+    key_points[:, 0]=-1*key_points[:, 0]
+    key_points[:,:2] = key_points[:,:2]/geometry.ichord[i_station_geometry]
+    key_points=np.flip(key_points,0)
+
+    n_start = get_last_id("vertex")+1
+    for coords in key_points:
+        create_vertex(coords[0], coords[1], coords[2])
+    n_end = get_last_id("vertex")
+    vert_ids = list(range(n_start, n_end + 1))
+
+    # Undo initial twist
+    cubit.cmd(f"rotate vertex {l2s(vert_ids)} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged " )
+    cubit.cmd(f"move vertex {l2s(vert_ids)} x {-x_move} y {-y_move} include_merged")
+
+
+    lp_sector_boundaries = [0.0]
+    for vertex in vert_ids:
+        x,_,_=cubit.vertex(vertex).coordinates()
+        lp_sector_boundaries.append(x)
+    lp_sector_boundaries.append(1.0)
+
+    
+
+
+    file = open(f'{directory}/layup_{i_station}.inp', 'w')
+    file.write(f'Composite laminae lay-up inside the blade section\n\n')
+
+    N_scts=len(lp_sector_boundaries)-1
+    file.write(f'*************************** TOP SURFACE ****************************\n')
+    file.write(f'{N_scts}                N_scts(1):  no of sectors on top surface\n\n')
+    file.write(f'normalized chord location of  nodes defining airfoil sectors boundaries (xsec_node)\n')
+    file.write('   '.join(str(e) for e in lp_sector_boundaries)+'\n')
+    #file.write('')
+
+    blade_material_names = list(blade.definition.materials.keys())
+
+    temp = stackdb.stacks[:, i_station]
+    temp = np.flip(temp)
+
+    #TOP SURFACE IS     temp = stackdb.stacks[:, i_station] temp = np.flip(temp)
+    #BOTTOM SURFACE IS: stackdb.stacks[1:6, i_station]
+    for i_stack,stack in enumerate(np.flip(temp[1:6])):
+        file.write(f'...........................................................................\n')
+        file.write(f'Sect_num    no of laminae (N_laminas)\n')
+        file.write(f'{i_stack+1}             {len(stack.plygroups)}\n\n')
+
+        file.write(f'lamina    num of  thickness   fibers_direction  composite_material ID\n')
+        file.write(f'number    plies   of ply (m)       (deg)               (-)\n')
+        file.write(f'lam_num  N_plies    Tply         Tht_lam            Mat_id\n')
+             
+
+        for i_ply,ply in enumerate(stack.plygroups):
+            material_name =ply.materialid
+            mat_id = blade_material_names.index(material_name)+1
+            file.write(f'{i_ply+1}          {1}       {ply.thickness*ply.nPlies/1000.0}            {ply.angle}             {mat_id} ({ply.materialid})\n')
+
+    N_scts=len(lp_sector_boundaries)-1
+    file.write(f'\n\n*************************** BOTTOM SURFACE ****************************\n')
+    file.write(f'{N_scts}                N_scts(1):  no of sectors on top surface\n\n')
+    file.write(f'normalized chord location of  nodes defining airfoil sectors boundaries (xsec_node)\n')
+    file.write('   '.join(str(e) for e in hp_sector_boundaries)+'\n')        
+    
+    # stackdb.stacks[1:6, i_station]
+    # temp = stackdb.stacks[:, i_station]
+    # temp = np.flip(temp)
+    for i_stack,stack in enumerate(np.flip(stackdb.stacks[1:6, i_station])):
+        file.write(f'...........................................................................\n')
+        file.write(f'Sect_num    no of laminae (N_laminas)\n')
+        file.write(f'{i_stack+1}             {len(stack.plygroups)}\n\n')
+
+        file.write(f'lamina    num of  thickness   fibers_direction  composite_material ID\n')
+        file.write(f'number    plies   of ply (m)       (deg)               (-)\n')
+        file.write(f'lam_num  N_plies    Tply         Tht_lam            Mat_id\n')
+
+        for i_ply,ply in enumerate(stack.plygroups):
+            material_name =ply.materialid
+            mat_id = blade_material_names.index(material_name)+1
+            file.write(f'{i_ply+1}          {1}       {ply.thickness*ply.nPlies/1000}            {ply.angle}             {mat_id} ({ply.materialid})\n')
+
+
+    if has_webs:
+        file.write(f'\n\n**********************************************************************\n')
+        file.write(f'Laminae schedule for webs (input required only if webs exist at this section):\n')
+        n_webs=len(stackdb.swstacks)
+        #Foreweb
+        for web_number in range(n_webs):
+            web_stack = stackdb.swstacks[web_number][i_station]
+            file.write(f'\nweb_num    no of laminae (N_weblams)\n')
+            file.write(f'{web_number+1}             {len(web_stack.plygroups)}\n\n')
+
+            file.write(f'lamina    num of  thickness   fibers_direction  composite_material ID\n')
+            file.write(f'number    plies   of ply (m)       (deg)               (-)\n')
+            file.write(f'wlam_num N_Plies   w_tply       Tht_Wlam            Wmat_Id\n')
+
+            for i_ply,ply in enumerate(web_stack.plygroups):
+                material_name =ply.materialid
+                mat_id = blade_material_names.index(material_name)+1
+                file.write(f'{i_ply+1}          {1}       {ply.thickness*ply.nPlies/1000}            {ply.angle}             {mat_id} ({ply.materialid})\n')
+
+
+    file.close()
+
+    #### Materials #####
+    from decimal import Decimal 
+    file = open(f'{directory}/materials.inp', 'w')
+
+    file.write(f'\nMat_Id     E1           E2          G12       Nu12     Density      Mat_Name\n')
+    file.write(f' (-)      (Pa)         (Pa)        (Pa)       (-)      (Kg/m^3)       (-)\n')
+
+    for i_mat,material_name in enumerate(blade_material_names):
+        E1=blade.definition.materials[material_name].ex
+        E2=blade.definition.materials[material_name].ey
+        G12=blade.definition.materials[material_name].gxy
+        nu12=blade.definition.materials[material_name].prxy
+        rho=blade.definition.materials[material_name].density
+        file.write(f'{i_mat+1}   {Decimal(str(E1)):10.6E}   {Decimal(str(E2)):10.6E}   {Decimal(str(G12)):10.6E}   {Decimal(str(nu12)):10.6E}    {Decimal(str(rho)):10.6E}    ({material_name})\n')
+
+    file.close()
+
+    file = open(f'{directory}/input_{i_station}.pci', 'w')
+
+    file.write(f'*****************  main input file for PreComp *****************************\n')
+    file.write(f'Sample Composite Blade Section Properties\n')
+    file.write(f'\n')
+    file.write(f'General information -----------------------------------------------\n')
+    file.write(f'1                Bl_length   : blade length (m)\n')
+    file.write(f'2                N_sections  : no of blade sections (-)\n')
+    file.write(f'{len(blade_material_names)}                N_materials : no of materials listed in the materials table (material.inp)\n')
+    file.write(f'3                Out_format  : output file   (1: general format, 2: BModes-format, 3: both)\n')
+    file.write(f'f                TabDelim     (true: tab-delimited table; false: space-delimited table)\n')
+    file.write(f'\n')
+    file.write(f'Blade-sections-specific data --------------------------------------\n')
+    file.write(f'Sec span     l.e.     chord   aerodynamic   af_shape    int str layup\n')
+    file.write(f'location   position   length    twist         file          file\n')
+    file.write(f'Span_loc    Le_loc    Chord    Tw_aero   Af_shape_file  Int_str_file\n')
+    file.write(f'  (-)        (-)       (m)    (degrees)       (-)           (-)\n\n')
+
+    file.write(f'0.00     {-1*x_move}   {geometry.ichord[i_station_geometry]}   {geometry.idegreestwist[i_station_geometry]}      shape_{i_station}.inp     layup_{i_station}.inp\n')
+    file.write(f'1.00     {-1*x_move}   {geometry.ichord[i_station_geometry]}   {geometry.idegreestwist[i_station_geometry]}      shape_{i_station}.inp     layup_{i_station}.inp\n')
+
+    if has_webs:
+        n_webs =2 
+    else:
+        n_webs = 0
+    file.write(f'\nWebs (spars) data  --------------------------------------------------\n\n')
+    file.write(f'{n_webs}               Nweb        : number of webs (-)  ! enter 0 if the blade has no webs\n')
+    file.write(f'1                Ib_sp_stn   : blade station number where inner-most end of webs is located (-)\n')
+    file.write(f'2                Ob_sp_stn   : blade station number where outer-most end of webs is located (-)\n\n')
+
+
+    file.write(f'Web_num   Inb_end_ch_loc   Oub_end_ch_loc (fraction of chord length)\n')
+    if has_webs:
+        i_loc = 2
+        web_loc= mean([lp_sector_boundaries[i_loc],hp_sector_boundaries[i_loc]])
+        file.write(f'1.0000        {web_loc}        {web_loc}\n')
+
+        i_loc = 3
+        web_loc= mean([lp_sector_boundaries[i_loc],hp_sector_boundaries[i_loc]])
+        file.write(f'2.0000        {web_loc}        {web_loc}\n')
+        file.write(f'\n')
+
+    file.close()
+
+def make_a_cross_section(wt_name,
+    surface_dict,
+    i_station,
+    blade,
+    has_webs,
+    web_stacks,
+    iLE,
+    cs_params,
+    geometry_scaling,
+    thickness_scaling,
+    last_round_station,
+    last_flat_station,
+    materials_used,
+    cs_normal,
+):
+    geometry = blade.geometry
+    stackdb = blade.stackdb
+    keypoints = blade.keypoints
+
     if i_station > last_round_station:
         is_flatback=True
     else:
@@ -1673,7 +2062,7 @@ def make_a_cross_section(wt_name,
     part_name_id = 0
 
     #### Step one create outer mold line
-    xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
+    xyz = get_blade_geometry_for_station(blade, i_station) * geometry_scaling
 
     # Start indexing from 1 (not 0) to ignore first point: because first point is not on the LP or HP surface but rather is the midpoint at the TE
     splinePoints = xyz[1:iLE, :]
@@ -1690,15 +2079,13 @@ def make_a_cross_section(wt_name,
     flatback_vTop, _ = selCurveVerts(lp_key_curve)
 
     
-    flatbackCurve = cubit.create_curve(
-        cubit.vertex(flatback_vBot), cubit.vertex(flatback_vTop)
-    )
+    flatbackCurve = cubit.create_curve(cubit.vertex(flatback_vBot), cubit.vertex(flatback_vTop))
     flatback_curve_id = flatbackCurve.id()
 
     #### Extend flatback ###
     curve_start_or_end = "start"
     extension_length = (
-        100 * geometry.ichord[i_station_geometry] * cubit.curve(flatback_curve_id).length()
+        100 * geometry.ichord[i_station] * cubit.curve(flatback_curve_id).length()
     )
     flatback_curve_id = extend_curve_at_vertex_to_length(
         flatback_curve_id, extension_length, curve_start_or_end
@@ -1714,7 +2101,7 @@ def make_a_cross_section(wt_name,
         # Crate camber line
         offset_distance = 0
         npts = 100
-        spacing = geometry.ichord[i_station_geometry] * 0.5 / npts
+        spacing = geometry.ichord[i_station] * 0.5 / npts
 
         cubit.cmd(f"curve {flatback_curve_id} copy")
         flatback_offset_curve_id = get_last_id("curve")
@@ -1772,7 +2159,7 @@ def make_a_cross_section(wt_name,
     #     # cubit.cmd(f'save as "Debug.cub" overwrite')
     #     # foo
     else:
-        xyz = get_mid_line(blade, iLE, i_station_geometry, geometry_scaling)
+        xyz = get_mid_line(blade, iLE, i_station, geometry_scaling)
         npts, _ = xyz.shape
         npts = round(
             npts * 0.75
@@ -1794,7 +2181,7 @@ def make_a_cross_section(wt_name,
         #### Extend flatback ###
         curve_start_or_end = "start"
         extension_length = (
-            100 * geometry.ichord[i_station_geometry] * cubit.curve(flatback_curve_id).length()
+            100 * geometry.ichord[i_station] * cubit.curve(flatback_curve_id).length()
         )
         cubit.cmd(f"curve {flatback_curve_id} copy")
         curve_id = extend_curve_at_vertex_to_length(
@@ -1813,20 +2200,19 @@ def make_a_cross_section(wt_name,
         flatback_curve_id = get_last_id("curve")
 
         
-    n_stacks = len(stackdb.stacks)
+    n_areas = len(stackdb.stacks)
 
     le_hp_stack_thickness = (
-        sum(stackdb.stacks[int(n_stacks / 2.0) - 1, i_station].layer_thicknesses()) / 1000
-    )
+        sum(stackdb.stacks[int(n_areas / 2.0) - 1, i_station].layer_thicknesses()) / 1000)
     le_lp_stack_thickness = (
-        sum(stackdb.stacks[int(n_stacks / 2.0), i_station].layer_thicknesses()) / 1000
-    )
+        sum(stackdb.stacks[int(n_areas / 2.0), i_station].layer_thicknesses()) / 1000)
 
     # Define variables with HP side in index 0, LP side in index 1
-
+    n_webs = len(web_stacks)
     lp_hp_dict = {}
-    lp_hp_dict["spar_cap_base_curves"] = [[], []]
-    lp_hp_dict["web_interface_curves"] = [[], []]
+    lp_hp_dict["overwrap_base_curves"] = [[], []]
+    lp_hp_dict["sparcap_base_curve"] = [[], []]
+    lp_hp_dict["web_interface_curves"] = {'LP':[[] for x in range(n_webs)],'HP':[[] for x in range(n_webs)]}
     lp_hp_dict["base_curve_ids"] = [[], []]
     lp_hp_dict["round_te_adhesive_curve_list"] = [[], []]
     lp_hp_dict["flat_te_adhesive_curve_list"] = [[], []]
@@ -1842,21 +2228,23 @@ def make_a_cross_section(wt_name,
         cs_normal,
     )
 
-    key_curves = split_curve_at_coordinte_points(
-        keypoints.key_points[1:5, :, i_station_geometry], hp_key_curve
-    )
+    key_points = keypoints.key_points[1:int(n_areas/2), :, i_station]
+    key_curves = split_curve_at_coordinte_points(key_points, hp_key_curve)
     web_adhesive_width = cs_params["web_adhesive_width"][i_station]
     (
         lp_hp_dict["base_curve_ids"][0],
-        lp_hp_dict["spar_cap_base_curves"][0],
-    ) = split_key_curves(key_curves, aft_web_stack, fore_web_stack, web_adhesive_width)
+        lp_hp_dict["overwrap_base_curves"][0],
+        lp_hp_dict["sparcap_base_curve"][0]
+    ) = split_key_curves(key_curves, web_stacks, web_adhesive_width)
 
-    temp = np.flip(keypoints.key_points[:, :, i_station_geometry], 0)
-    key_curves = split_curve_at_coordinte_points(temp[1:5, :], lp_key_curve)
+    # temp = np.flip(keypoints.key_points[:, :, i_station], 0)
+    key_points = keypoints.key_points[-2:int(n_areas/2)-2:-1, :, i_station]
+    key_curves = split_curve_at_coordinte_points(key_points, lp_key_curve)
     (
         lp_hp_dict["base_curve_ids"][1],
-        lp_hp_dict["spar_cap_base_curves"][1],
-    ) = split_key_curves(key_curves, aft_web_stack, fore_web_stack, web_adhesive_width)
+        lp_hp_dict["overwrap_base_curves"][1],
+        lp_hp_dict["sparcap_base_curve"][1]
+    ) = split_key_curves(key_curves, web_stacks, web_adhesive_width)
 
 
     # Make sure that the adhesive width is the same on HP and LP sides. Also 
@@ -1966,8 +2354,9 @@ def make_a_cross_section(wt_name,
     part_name_id, lp_hp_dict,stack_ct = make_cs_perimeter_layer_areas(wt_name,
         surface_dict,
         i_station,
-        stackdb.stacks[1:6, i_station],
+        stackdb.stacks[1:int(n_areas/2), i_station],
         cs_params,
+        has_webs,
         thickness_scaling,
         lp_hp_side,
         last_round_station,
@@ -1982,13 +2371,12 @@ def make_a_cross_section(wt_name,
     stack_ct+=1
     
     lp_hp_side = "LP"
-    temp = stackdb.stacks[:, i_station]
-    temp = np.flip(temp)
     part_name_id, lp_hp_dict,stack_ct = make_cs_perimeter_layer_areas(wt_name,
         surface_dict,
         i_station,
-        temp[1:6],
+        stackdb.stacks[-2:int(n_areas/2)-1:-1, i_station],
         cs_params,
+        has_webs,
         thickness_scaling,
         lp_hp_side,
         last_round_station,
@@ -2071,21 +2459,23 @@ def make_a_cross_section(wt_name,
             cubit.cmd(f'curve {curve_id} rename "{curve_name}"')
 
     birds_mouth_verts = []
-    if hasWebs:
-        part_name_id = 0  # Reset since outer areoshell is complete (LE adhesive is accouted for as aeroshell)
+    for i_web in range(n_webs):
 
-        part_name_id, birds_mouth_verts = make_cs_web_layer_areas(
-            surface_dict,
-            i_station,
-            aft_web_stack,
-            fore_web_stack,
-            lp_hp_dict["web_interface_curves"],
-            cs_params,
-            part_name_id,
-            cs_normal,
-            n_modeled_layers,
-            materials_used,
-        )
+        if has_webs[i_web]:
+            web_stack = web_stacks[i_web]
+            web_interface_curves=[lp_hp_dict["web_interface_curves"]['HP'][i_web],lp_hp_dict["web_interface_curves"]['LP'][i_web]]
+            part_name_id = 0  # Reset since outer areoshell is complete (LE adhesive is accouted for as aeroshell)
+            part_name = f'web{i_web}'
+            part_name_id, birds_mouth_verts = make_cs_web_layer_areas(part_name,
+                surface_dict,
+                i_station,
+                web_stack,
+                web_interface_curves,
+                cs_params,
+                part_name_id,
+                cs_normal,
+                n_modeled_layers,
+                materials_used)
 
     parse_string = f'with name "*station{str(i_station).zfill(3)}*"'
     cs_surfaces = parse_cubit_list("surface", parse_string)

@@ -2,12 +2,13 @@ import yaml
 import numpy as np
 import logging
 from scipy.stats import mode
+import string
 
 from pynumad.utils.misc_utils import (
     LARCetaT,
     LARCetaL,
     _parse_data,
-    full_keys_from_substrings,
+    full_keys_from_substrings, sort_based_on_root_values
 )
 from pynumad.io.airfoil_to_xml import airfoil_to_xml
 from pynumad.utils.interpolation import interpolator_wrap
@@ -59,6 +60,9 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
     # obtain blade internal structure
     blade_internal_structure = data["components"]["blade"]["internal_structure_2d_fem"]
 
+    #Get number of webs
+    blade.definition.n_webs = len(blade_internal_structure['webs'])
+
     # obtain airfoil data
     af_data = data["airfoils"]
 
@@ -82,9 +86,7 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
     ## Blade Components
 
     # Update "grid" and "values" keys to cover the whole span of the blade
-    blade_internal_structure = update_internal_structure(
-        blade_internal_structure, blade_outer_shape_bem
-    )
+    blade_internal_structure = update_internal_structure(blade_internal_structure, blade_outer_shape_bem)
 
     blade_structure_dict = {
         blade_internal_structure["layers"][i]["name"].lower(): blade_internal_structure[
@@ -92,23 +94,78 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
         ][i]
         for i in range(len(blade_internal_structure["layers"]))
     }
+
+    #Initialize
+    definition.key_arcs = []
+    definition.key_arcs = []
+
+    # TE Bands
+    _add_te_le_bands(definition, blade_structure_dict,'te')
+
     # Spar caps
     _add_spar_caps(definition, blade_structure_dict)
 
-    # TE Bands
-    _add_te_bands(definition, blade_structure_dict)
+    # Webs Bands
+    i_sorted = _add_webs(definition,blade_structure_dict,blade_internal_structure['webs']) #also returns i_sorted. The web sorting from te to le.
 
     # LE Bands
-    _add_le_bands(definition, blade_structure_dict)
+    _add_te_le_bands(definition, blade_structure_dict,'le')
+
+    definition.key_arcs = np.transpose(np.array(definition.key_arcs))
+    definition.key_arcs,_= sort_based_on_root_values(definition.key_arcs)
+
+########### TEMP
+    leReinfKeys = full_keys_from_substrings(blade_structure_dict.keys(), ["le", "reinf"])
+    if len(leReinfKeys) == 1:
+        definition.leband = (
+            blade_structure_dict[leReinfKeys[0]]["width"]["values"] * 1000 / 2
+        )
+    elif len(leReinfKeys) == 2:
+        definition.leband = (
+            (
+                blade_structure_dict[leReinfKeys[0]]["width"]["values"]
+                + blade_structure_dict[leReinfKeys[1]]["width"]["values"]
+            )
+            * 1000
+            / 2
+        )
+########### TEMP
+
+    # number of areas around airfoil profile; must be even (see calc of web areas)
+    _,num_defined_arcs = np.shape(definition.key_arcs)
+
+    num_areas = num_defined_arcs+4
+
+    blade.keypoints.key_labels.append('te')
+    letter_list = list(string.ascii_lowercase[0:int(num_areas/2)-1])
+
+    for letter in np.flip(letter_list):
+        blade.keypoints.key_labels.append(letter) 
+    blade.keypoints.key_labels.append('le')
+    for letter in letter_list:
+        blade.keypoints.key_labels.append(letter) 
+    blade.keypoints.key_labels.append('te')
+
 
     ### COMPONENTS
-    _add_components(definition, blade_internal_structure, blade_structure_dict)
+    _add_components(definition, blade_internal_structure,letter_list,blade.keypoints.key_labels,i_sorted,blade_internal_structure['webs'])
+
+
+    #Sort based on root values
+
+
+    
+    
+    
+
+
+
+    # definition.key_arcs = np.transpose(np.array(definition.key_arcs))
 
     blade.update_blade()
-    # save(blade_name)
-    # BladeDef_to_NuMADfile(obj,numad_name,matdb_name,numad_af_folder)
-    return blade
 
+
+    return blade
 
 def _add_stations(
     definition,
@@ -344,12 +401,14 @@ def _add_materials(definition, material_data):
     return
 
 
-def _add_components(definition, blade_internal_structure, blade_structure_dict):
+def _add_components(definition, blade_internal_structure, letter_list,key_labels,i_sorted,web_data_structure):
     N_layer_comp = len(blade_internal_structure["layers"])
     component_list = list()
+    web_component_indecies=list()
     for i in range(N_layer_comp):
         i_component_data = blade_internal_structure["layers"][i]
         cur_comp = Component()
+        cur_comp._keylabels = key_labels
         cur_comp.group = 0
         cur_comp.name = i_component_data["name"]
         #   comp['material'] = blade_internal_structure['layers']{i}['material'];
@@ -383,6 +442,9 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
         #     comp['cp'](:,2) = cell2mat(blade_internal_structure['layers']{i}['thickness']['values'])'.*1000;  # use when each material ply is 1 mm
         cur_comp.pinnedends = 0
         component_list.append(cur_comp)
+
+        if 'web' in i_component_data["name"].lower():
+            web_component_indecies.append(i)
 
     component_dict = dict()
     for comp in component_list:
@@ -421,18 +483,18 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
     # TE Band(s)
     key_list = full_keys_from_substrings(component_dict.keys(), ["te", "reinf"])
     if len(key_list) == 1:
-        component_dict[key_list[0]].hpextents = ["d", "te"]
-        component_dict[key_list[0]].lpextents = ["d", "te"]
+        component_dict[key_list[0]].hpextents = [letter_list[-2], "te"]
+        component_dict[key_list[0]].lpextents = [letter_list[-2], "te"]
     elif len(key_list) == 2:
         tempKeyList = full_keys_from_substrings(key_list, ["ss"])
         if len(tempKeyList) == 1:
-            component_dict[tempKeyList[0]].lpextents = ["d", "te"]
+            component_dict[tempKeyList[0]].lpextents = [letter_list[-2], "te"]
         else:
             ValueError("Incorrect number of te reinf ss components")
 
         tempKeyList = full_keys_from_substrings(key_list, ["ps"])
         if len(tempKeyList) == 1:
-            component_dict[tempKeyList[0]].hpextents = ["d", "te"]
+            component_dict[tempKeyList[0]].hpextents = [letter_list[-2], "te"]
         else:
             ValueError("Incorrect number of te reinf ps components")
     else:
@@ -461,7 +523,7 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
     # Trailing edge suction-side panel
     key_list = full_keys_from_substrings(component_dict.keys(), ["te_", "ss", "filler"])
     if len(key_list) == 1:
-        component_dict[key_list[0]].lpextents = ["c", "d"]
+        component_dict[key_list[0]].lpextents = ["c", letter_list[-2]]
     else:
         raise ValueError("Invalid number of trailing edge suction-side panels")
 
@@ -482,41 +544,56 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
     # Leading edge suction-side panel
     key_list = full_keys_from_substrings(component_dict.keys(), ["te_", "ps", "filler"])
     if len(key_list) == 1:
-        component_dict[key_list[0]].hpextents = ["c", "d"]
+        component_dict[key_list[0]].hpextents = ["c", letter_list[-2]]
     else:
         raise ValueError("Invalid number of trailing edge pressure-side panels")
 
-    # Web
+    # Webs
+    for i_web_index, i_web in enumerate(np.flip(i_sorted)):  #Work from LE to TE
+        web_data= web_data_structure[i_web]
+        target_web_name = web_data['name']
 
-    for comp in component_dict:
-        logging.debug(comp)
-    key_list = full_keys_from_substrings(component_dict.keys(), ["web", "fore"])  # Try 1
-    if len(key_list) == 0:
-        key_list = full_keys_from_substrings(component_dict.keys(), ["web", "1"])  # Try 2
+        target_web_components =[]
+        for web_component_index in web_component_indecies:
+            this_web_name = blade_internal_structure['layers'][web_component_index]['web']    
+            if this_web_name == target_web_name:
+                target_web_components.append(web_component_index)
+        
+        for web_component_index in target_web_components:
+            component_name = blade_internal_structure['layers'][web_component_index]['name']
+            component_dict[component_name].hpextents = letter_list[i_web_index+1]
+            component_dict[component_name].lpextents = letter_list[i_web_index+1]
+            component_dict[component_name].group = i_web_index+1
 
-    if len(key_list) > 0:
-        for key in key_list:
-            component_dict[key].hpextents = ["b"]
-            component_dict[key].lpextents = ["b"]
-            component_dict[key].group = 1
-    elif len(key_list) == 0:
-        raise ValueError("No fore web layers found found")
+    # for comp in component_dict:
+    #     logging.debug(comp)
+    # key_list = full_keys_from_substrings(component_dict.keys(), ["web", "fore"])  # Try 1
+    # if len(key_list) == 0:
+    #     key_list = full_keys_from_substrings(component_dict.keys(), ["web", "1"])  # Try 2
 
-    key_list = full_keys_from_substrings(component_dict.keys(), ["web", "aft"])  # Try 1
-    if len(key_list) == 0:
-        key_list = full_keys_from_substrings(component_dict.keys(), ["web", "0"])  # Try 2
-    if len(key_list) == 0:
-        key_list = full_keys_from_substrings(
-            component_dict.keys(), ["web", "rear"]
-        )  # Try 3
+    # if len(key_list) > 0:
+    #     for key in key_list:
+    #         component_dict[key].hpextents = ["b"]
+    #         component_dict[key].lpextents = ["b"]
+    #         component_dict[key].group = 1
+    # elif len(key_list) == 0:
+    #     raise ValueError("No fore web layers found found")
 
-    if len(key_list) > 0:
-        for key in key_list:
-            component_dict[key].hpextents = ["c"]
-            component_dict[key].lpextents = ["c"]
-            component_dict[key].group = 2
-    elif len(key_list) == 0:
-        raise ValueError("No rear web layers found found")
+    # key_list = full_keys_from_substrings(component_dict.keys(), ["web", "aft"])  # Try 1
+    # if len(key_list) == 0:
+    #     key_list = full_keys_from_substrings(component_dict.keys(), ["web", "0"])  # Try 2
+    # if len(key_list) == 0:
+    #     key_list = full_keys_from_substrings(
+    #         component_dict.keys(), ["web", "rear"]
+    #     )  # Try 3
+
+    # if len(key_list) > 0:
+    #     for key in key_list:
+    #         component_dict[key].hpextents = ["c"]
+    #         component_dict[key].lpextents = ["c"]
+    #         component_dict[key].group = 2
+    # elif len(key_list) == 0:
+    #     raise ValueError("No rear web layers found found")
 
     ### add components to blade
     definition.components = component_dict
@@ -572,87 +649,145 @@ def update_internal_structure(blade_internal_structure, blade_outer_shape_bem):
                 ] = fullSpanValues
     return blade_internal_structure
 
-
-def _add_spar_caps(definition, blade_structure_dict):
-    sparCapKeys = full_keys_from_substrings(blade_structure_dict.keys(), ["spar"])
-    if len(sparCapKeys) != 2:
+def _add_webs(definition,blade_structure_dict,web_data_structure):
+    key_names = full_keys_from_substrings(blade_structure_dict.keys(), ["spar"])
+    if len(key_names) != 2:
         raise ValueError("Incorrect number of spar cap components")
 
-    for iSparCap in range(2):
-        if "suc" in blade_structure_dict[sparCapKeys[iSparCap]]["side"].lower():
-            lpSideIndex = iSparCap
-        if "pres" in blade_structure_dict[sparCapKeys[iSparCap]]["side"].lower():
-            hpSideIndex = iSparCap
+    for i_side in range(2):
+        if "suc" in blade_structure_dict[key_names[i_side]]["side"].lower():
+            lp_side_index = i_side
+        if "pres" in blade_structure_dict[key_names[i_side]]["side"].lower():
+            hp_side_index = i_side
 
-    definition.sparcapwidth_lp = (
-        blade_structure_dict[sparCapKeys[lpSideIndex]]["width"]["values"] * 1000
-    )
+
+    spar_cap_edges =np.transpose(np.array([blade_structure_dict[key_names[lp_side_index]]["start_nd_arc"]["values"],
+                              blade_structure_dict[key_names[lp_side_index]]["end_nd_arc"]["values"]]))
+
+    web_edges = []
+    for i_web in range(definition.n_webs):
+        current_web = web_data_structure[i_web]
+        web_edges.append(current_web["start_nd_arc"]["values"][:])
+    web_edges = np.transpose(np.array(web_edges))
+    web_edges,i_sorted = sort_based_on_root_values(web_edges)
+
+    if len(i_sorted)>2: #Only do the following if greater than two webs
+        mean_diff = []
+        for i_web in range(definition.n_webs-1):
+            diff = abs(spar_cap_edges-web_edges[:,i_web:i_web+2])
+            mean_diff.append(np.mean(diff))
+
+        matching_index = np.argmin(mean_diff)
+        keep_indecies  =  list(range(3)) 
+        keep_indecies.pop(matching_index+1)
+        keep_indecies.pop(matching_index) #answer is zero
+        keep_webs = np.array(i_sorted)[keep_indecies]
+
+        for i_web in keep_webs:
+            current_web = web_data_structure[i_web]
+            definition.key_arcs.append(current_web["start_nd_arc"]["values"])
+            definition.key_arcs.append(current_web["end_nd_arc"]["values"])
+    return i_sorted
+
+
+def _add_spar_caps(definition, blade_structure_dict):
+    key_names = full_keys_from_substrings(blade_structure_dict.keys(), ["spar"])
+    if len(key_names) != 2:
+        raise ValueError("Incorrect number of spar cap components")
+
+    for i_side in range(2):
+        if "suc" in blade_structure_dict[key_names[i_side]]["side"].lower():
+            lp_side_index = i_side
+        if "pres" in blade_structure_dict[key_names[i_side]]["side"].lower():
+            hp_side_index = i_side
+
+    definition.sparcapwidth_lp = (blade_structure_dict[key_names[lp_side_index]]["width"]["values"] * 1000)
+
+    # definition.sparcap_start_nd_arc = blade_structure_dict[key_names[lp_side_index]]["start_nd_arc"]["values"]
+    # definition.sparcap_end_nd_arc = blade_structure_dict[key_names[lp_side_index]]["end_nd_arc"]["values"]   
     try:
         definition.sparcapoffset_lp = (
-            blade_structure_dict[sparCapKeys[lpSideIndex]]["offset_y_pa"]["values"]
+            blade_structure_dict[key_names[lp_side_index]]["offset_y_pa"]["values"]
             * 1000
         )
     except KeyError:
-        definition.sparcap_start_nd_arc = blade_structure_dict[
-            sparCapKeys[lpSideIndex]
-        ]["start_nd_arc"]["values"]
-        definition.sparcap_end_nd_arc = blade_structure_dict[sparCapKeys[lpSideIndex]][
-            "end_nd_arc"
-        ]["values"]
+        pass
 
     definition.sparcapwidth_hp = (
-        blade_structure_dict[sparCapKeys[hpSideIndex]]["width"]["values"] * 1000
+        blade_structure_dict[key_names[hp_side_index]]["width"]["values"] * 1000
     )
+
+    definition.key_arcs.append(blade_structure_dict[key_names[lp_side_index]]["start_nd_arc"]["values"])
+    definition.key_arcs.append(blade_structure_dict[key_names[lp_side_index]]["end_nd_arc"]["values"])
+
+    definition.key_arcs.append(blade_structure_dict[key_names[hp_side_index]]["start_nd_arc"]["values"])
+    definition.key_arcs.append(blade_structure_dict[key_names[hp_side_index]]["end_nd_arc"]["values"])
+
     try:
         definition.sparcapoffset_hp = (
-            blade_structure_dict[sparCapKeys[hpSideIndex]]["offset_y_pa"]["values"]
+            blade_structure_dict[key_names[hp_side_index]]["offset_y_pa"]["values"]
             * 1000
         )
     except KeyError:
-        definition.sparcap_start_nd_arc = blade_structure_dict[
-            sparCapKeys[hpSideIndex]
-        ]["start_nd_arc"]["values"]
-        definition.sparcap_end_nd_arc = blade_structure_dict[sparCapKeys[hpSideIndex]][
-            "end_nd_arc"
-        ]["values"]
+        pass
     return definition
 
 
-def _add_te_bands(definition, blade_structure_dict):
-    teReinfKeys = full_keys_from_substrings(blade_structure_dict.keys(), ["te", "reinf"])
-    if len(teReinfKeys) == 1:
+def _add_te_le_bands(definition, blade_structure_dict,te_or_le):
+    key_names = full_keys_from_substrings(blade_structure_dict.keys(), [te_or_le, "reinf"])
+    
+    if len(key_names) == 1:
+        definition.teband = (blade_structure_dict[key_names[0]]["width"]["values"] * 1000 / 2)
+        
+        # le_array = np.ones(np.shape(definition.key_arcs)[1],)*0.5  #Approximate location of LE
+
+        definition.key_arcs.append(blade_structure_dict[key_names[0]]["start_nd_arc"]["values"])
+        # definition.key_arcs.append(le_array)
+        # definition.key_arcs.append(le_array)
+        definition.key_arcs.append(blade_structure_dict[key_names[0]]["end_nd_arc"]["values"])
+
+    elif len(key_names) == 2:
         definition.teband = (
-            blade_structure_dict[teReinfKeys[0]]["width"]["values"] * 1000 / 2
-        )
-    elif len(teReinfKeys) == 2:
-        definition.teband = (
-            (
-                blade_structure_dict[teReinfKeys[0]]["width"]["values"]
-                + blade_structure_dict[teReinfKeys[1]]["width"]["values"]
-            )
-            * 1000
-            / 2
-        )
+            (blade_structure_dict[key_names[0]]["width"]["values"]
+                + blade_structure_dict[key_names[1]]["width"]["values"])* 1000/ 2)
+        
+
+        for i_side in range(2):
+            if "ss" in blade_structure_dict[key_names[i_side]]["name"].lower():
+                lp_side_index = i_side
+            if "ps" in blade_structure_dict[key_names[i_side]]["name"].lower():
+                hp_side_index = i_side
+
+        definition.key_arcs.append(blade_structure_dict[key_names[lp_side_index]]["end_nd_arc"]["values"])
+        definition.key_arcs.append(blade_structure_dict[key_names[hp_side_index]]["start_nd_arc"]["values"])
+
+
+            # definition.key_arcs.append(blade_structure_dict[key_names[1]]["start_nd_arc"]["values"]))
+            # definition.key_arcs.append(blade_structure_dict[key_names[1]]["end_nd_arc"]["values"]))
     else:
-        raise ValueError("Unknown number of TE reinforcements")
+        raise ValueError(f"Unknown number of {te_or_le} reinforcements")
     return definition
 
 
-def _add_le_bands(definition, blade_structure_dict):
-    leReinfKeys = full_keys_from_substrings(blade_structure_dict.keys(), ["le", "reinf"])
-    if len(leReinfKeys) == 1:
-        definition.leband = (
-            blade_structure_dict[leReinfKeys[0]]["width"]["values"] * 1000 / 2
-        )
-    elif len(leReinfKeys) == 2:
-        definition.leband = (
-            (
-                blade_structure_dict[leReinfKeys[0]]["width"]["values"]
-                + blade_structure_dict[leReinfKeys[1]]["width"]["values"]
-            )
-            * 1000
-            / 2
-        )
-    else:
-        raise ValueError("Invalid number of LE reinforcements")
-    return definition
+# def _add_le_bands(definition, blade_structure_dict):
+#     leReinfKeys = full_keys_from_substrings(blade_structure_dict.keys(), ["le", "reinf"])
+
+
+
+#     if len(leReinfKeys) == 1:
+#         definition.leband = (blade_structure_dict[leReinfKeys[0]]["width"]["values"] * 1000 / 2)
+
+#         definition.key_arcs.append(blade_structure_dict[leReinfKeys[0]]["start_nd_arc"]["values"]))
+#         definition.key_arcs.append(blade_structure_dict[leReinfKeys[0]]["end_nd_arc"]["values"]))
+        
+#     elif len(leReinfKeys) == 2:
+#         definition.leband = (
+#             (blade_structure_dict[leReinfKeys[0]]["width"]["values"]
+#                 + blade_structure_dict[leReinfKeys[1]]["width"]["values"])* 1000/ 2)
+    
+
+#         definition.key_arcs.append(blade_structure_dict[leReinfKeys[0]]["start_nd_arc"]["values"]))
+#         definition.key_arcs.append(blade_structure_dict[leReinfKeys[1]]["end_nd_arc"]["values"]))
+#     else:
+#         raise ValueError("Invalid number of LE reinforcements")
+#     return definition

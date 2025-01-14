@@ -6,6 +6,7 @@ from numpy import ndarray
 from pynumad.utils.interpolation import interpolator_wrap
 from pynumad.objects.definition import Definition
 from pynumad.objects.geometry import Geometry
+from pynumad.utils.misc_utils import find_frist_fully_populated_row
 
 
 
@@ -38,21 +39,7 @@ class KeyPoints:
     """
 
     def __init__(self):
-        self.key_labels = [
-            "te",
-            "e",
-            "d",
-            "c",
-            "b",
-            "a",
-            "le",
-            "a",
-            "b",
-            "c",
-            "d",
-            "e",
-            "te",
-        ]
+        self.key_labels = []
         self.key_points: ndarray = None
         self.key_arcs: ndarray = None
         self.key_cpos: ndarray = None
@@ -116,13 +103,53 @@ class KeyPoints:
         num_istations = geometry.ispan.size
 
         # number of areas around airfoil profile; must be even (see calc of web areas)
-        num_areas = 12
+        _,num_defined_arcs = np.shape(definition.key_arcs)
+
+        num_areas = num_defined_arcs+4
+        num_kp = num_defined_arcs+2
+
         self.initialize(num_areas, num_istations)
         # initialize keypoints
+
 
         # start and finish indices in geometry/arcs
         ns = 1
         nf = geometry.coordinates.shape[0] - 2
+
+
+
+        i_start = find_frist_fully_populated_row(definition.key_arcs)  
+        arc_copy = definition.key_arcs[i_start,:]
+
+        for k_station in range(i_start):
+
+            for i_arc in range(num_defined_arcs):
+                if definition.key_arcs[k_station,i_arc] == 0:
+                    definition.key_arcs[k_station,i_arc] = arc_copy[i_arc]#*total_arc_len/arc_copy_arclen
+
+
+        i_start = find_frist_fully_populated_row(np.flip(definition.key_arcs))  
+        arc_copy = definition.key_arcs[i_start-1,:]
+
+        for k_station in range(i_start,num_istations):
+            for i_arc in range(num_defined_arcs):
+                if definition.key_arcs[k_station,i_arc] == 0:
+                    definition.key_arcs[k_station,i_arc] = arc_copy[i_arc]#*total_arc_len/arc_copy_arclen
+        
+        if num_areas>12: #Make third web equidistant (target_percent = 0.5)from spar cap and te reinf.
+            target_percent =0.5
+            for k_station in range(i_start,num_istations):
+                #LP
+                prior_percent  = (definition.key_arcs[k_station-1,1]-definition.key_arcs[k_station-1,0])/(definition.key_arcs[k_station-1,2]-definition.key_arcs[k_station-1,0])
+                next_percent = min(prior_percent+0.2*(target_percent-prior_percent),0.5)
+                definition.key_arcs[k_station,1] =  (definition.key_arcs[k_station,2]-definition.key_arcs[k_station,0])*next_percent+definition.key_arcs[k_station,0] 
+
+                #HP
+                prior_percent  = (definition.key_arcs[k_station-1,-2]-definition.key_arcs[k_station-1,-1])/(definition.key_arcs[k_station-1,-3]-definition.key_arcs[k_station-1,-1])
+                next_percent = min(prior_percent+0.2*(target_percent-prior_percent),0.5)
+                definition.key_arcs[k_station,-2] =  (definition.key_arcs[k_station,-3]-definition.key_arcs[k_station,-1])*next_percent+definition.key_arcs[k_station,-1] #LP
+                # definition.key_arcs[k_station,-2] = (definition.key_arcs[k_station,-1]+definition.key_arcs[k_station,-3])/2.0 #HP
+
 
         # keypoints, keyarcs, keycpos
         te_types = []  # reset te_type
@@ -132,11 +159,11 @@ class KeyPoints:
         i_leband_end=np.max(np.nonzero(definition.leband))
         i_teband_end=np.max(np.nonzero(definition.teband))
 
-        for k in range(num_istations):
+        for k_station in range(num_istations):
             # allow for separate definitions of HP and LP spar cap
             # width and offset [HP LP]
-            n1 = mm_to_m * definition.leband[k]  # no foam width
-            n2 = mm_to_m * definition.teband[k]  # no foam width
+            n1 = mm_to_m * definition.leband[k_station]  # no foam width
+            n2 = mm_to_m * definition.teband[k_station]  # no foam width
 
             ### 
             #In order to avoid abrupt changes in geometry when the le/te bands
@@ -145,10 +172,10 @@ class KeyPoints:
             #le/te band widths since it is based on nonzero values.
             
             
-            if k < i_leband_start :
+            if k_station < i_leband_start :
                 n1= mm_to_m * definition.leband[i_leband_start]
 
-            if k < i_teband_start :
+            if k_station < i_teband_start :
                 n2= mm_to_m * definition.teband[i_teband_start]
 
             #In order to avoid abrupt changes in geometry when the le/te bands
@@ -156,22 +183,22 @@ class KeyPoints:
             #value. This algorithm will not work as well if small numbers exist in the
             #le/te band widths since it is based on nonzero values.
             
-            if k > i_leband_end :
-                n1= mm_to_m * definition.leband[k-1]*0.75
-                definition.leband[k]=n1/mm_to_m
+            if k_station > i_leband_end :
+                n1= mm_to_m * definition.leband[k_station-1]*0.75
+                definition.leband[k_station]=n1/mm_to_m
 
-            if k > i_teband_end :
-                n2= mm_to_m * definition.teband[k-1]*0.75
-                definition.teband[k]=n2/mm_to_m
+            if k_station > i_teband_end :
+                n2= mm_to_m * definition.teband[k_station-1]*0.75
+                definition.teband[k_station]=n2/mm_to_m
             ###
 
-            scwidth_hp = mm_to_m * definition.sparcapwidth_hp[k]  # type: float
-            scwidth_lp = mm_to_m * definition.sparcapwidth_lp[k]  # type: float
+            # scwidth_hp = mm_to_m * definition.sparcapwidth_hp[k_station]  # type: float
+            # scwidth_lp = mm_to_m * definition.sparcapwidth_lp[k_station]  # type: float
 
-            scoffset_hp = mm_to_m * definition.sparcapoffset_hp[k]  # type: float
-            scoffset_lp = mm_to_m * definition.sparcapoffset_lp[k]  # type: float
+            # scoffset_hp = mm_to_m * definition.sparcapoffset_hp[k_station]  # type: float
+            # scoffset_lp = mm_to_m * definition.sparcapoffset_lp[k_station]  # type: float
 
-            tempTE = geometry.get_profile_te_type(k)
+            tempTE = geometry.get_profile_te_type(k_station)
             if te_types:
                 te_types.append(tempTE)
             else:
@@ -181,118 +208,147 @@ class KeyPoints:
                 # get angle of each xy pair w.r.t. pitch axis (0,0)
                 xyangle = np.zeros(geometry.coordinates.shape[0])
                 for j in range(len(xyangle)):
-                    xy = geometry.coordinates[j, 0:2, k]
+                    xy = geometry.coordinates[j, 0:2, k_station]
                     xyangle[j] = np.arctan2(definition.rotorspin * xy[1], xy[0])
                 # unwrap and center around 0
                 xyangle = np.unwrap(xyangle)
                 xyangle = xyangle - np.pi * np.round(xyangle[self.LEindex] / np.pi)
 
-            k_arclen = geometry.arclength[ns : nf + 1, k]
-            k_geom = geometry.coordinates[ns : nf + 1, :, k]
-            k_cpos = geometry.cpos[ns : nf + 1, k]
+            k_arclen = geometry.arclength[ns : nf + 1, k_station]
+            k_geom = geometry.coordinates[ns : nf + 1, :, k_station]
+            k_cpos = geometry.cpos[ns : nf + 1, k_station]
 
             # ==================== HP surface ====================
             if definition.swtwisted:
                 # find arclength where xyangle equals normal to chord
                 # angle normal to chord line
-                twistnorm = np.pi / 180 * (-self.idegreestwist[k] - 90)
+                twistnorm = np.pi / 180 * (-self.idegreestwist[k_station] - 90)
                 z = interpolator_wrap(xyangle[ns : nf + 1], k_arclen, twistnorm)
             else:
-                z = geometry.HParcx0[0, k]
-            z0 = z
-            z = z - scoffset_hp
-            a = np.amax(((0 - n1), 0.1 * geometry.arclength[ns, k]))  # type: float
-            a = np.amin((a, 0.01 * geometry.arclength[ns, k]))
-            b = np.amin(((z + 0.5 * scwidth_hp), 0.15 * geometry.arclength[ns, k]))
-            c = np.amax(((z - 0.5 * scwidth_hp), 0.8 * geometry.arclength[ns, k]))
-            d = np.amin(
-                ((geometry.arclength[0, k] + n2), 0.85 * geometry.arclength[ns, k])
-            )
-            d = np.amax((d, 0.98 * geometry.arclength[ns, k]))
-            if str(te_types[k]) == "flat":
-                e = geometry.arclength[ns, k]
-                self.key_points[0, :, k] = geometry.coordinates[ns, :, k]
-                self.key_cpos[1, k] = -1
+                z = geometry.HParcx0[0, k_station]
+            # z0 = z
+            # z = z - scoffset_hp
+            # a = np.amax(((0 - n1), 0.1 * geometry.arclength[ns, k_station]))  # type: float
+            # a = np.amin((a, 0.01 * geometry.arclength[ns, k_station]))
+            # b = np.amin(((z + 0.5 * scwidth_hp), 0.15 * geometry.arclength[ns, k_station]))
+            # c = np.amax(((z - 0.5 * scwidth_hp), 0.8 * geometry.arclength[ns, k_station]))
+            # d = np.amin(
+            #     ((geometry.arclength[0, k_station] + n2), 0.85 * geometry.arclength[ns, k_station])
+            # )
+            # d = np.amax((d, 0.98 * geometry.arclength[ns, k_station]))
+            if str(te_types[k_station]) == "flat":
+                e = geometry.arclength[ns, k_station]
+                self.key_points[0, :, k_station] = geometry.coordinates[ns, :, k_station]
+                self.key_cpos[1, k_station] = -1
             else:
-                # e = 0.5 * (d + geometry.arclength(ns,k));
-                e = 0.99 * geometry.arclength[ns, k]
-                self.key_points[0, :, k] = interpolator_wrap(k_arclen, k_geom, e)
-                self.key_cpos[1, k] = interpolator_wrap(k_arclen, k_cpos, e)
+                # e = 0.5 * (d + geometry.arclength(ns,k_station));
+                e = 0.99 * geometry.arclength[ns, k_station]
+                self.key_points[0, :, k_station] = interpolator_wrap(k_arclen, k_geom, e)
+                self.key_cpos[1, k_station] = interpolator_wrap(k_arclen, k_cpos, e)
 
             # 1 -> e
-            self.key_points[1, :, k] = interpolator_wrap(k_arclen, k_geom, d)
-            self.key_points[2, :, k] = interpolator_wrap(k_arclen, k_geom, c)
-            # self.key_points(  ,:,k) = interpolator_wrap(geometry.arclength(ns:nf,k),self.geometry(ns:nf,:,k),z);
-            self.key_points[3, :, k] = interpolator_wrap(k_arclen, k_geom, b)
-            self.key_points[4, :, k] = interpolator_wrap(k_arclen, k_geom, a)
-            self.key_arcs[0, k] = geometry.arclength[ns, k]
-            self.key_arcs[1, k] = e
-            self.key_arcs[2, k] = d
-            self.key_arcs[3, k] = c
-            # self.key_arcs(  ,k)   = z;
-            self.key_arcs[4, k] = b
-            self.key_arcs[5, k] = a
-            self.key_arcs[6, k] = 0  # le
-            self.key_cpos[0, k] = geometry.cpos[ns, k]  # te, hp surface
+            arclen = k_arclen-k_arclen[0]
+            total_arc_len = (arclen)[-1]
+
+            LEarcsum = arclen[geometry.LEindex]
+            reversed_scaled_yaml_key_arcs= np.flip((np.ones(np.shape(definition.key_arcs[k_station,:]))-definition.key_arcs[k_station,:])*total_arc_len) - LEarcsum
+
+            #Make sure LE band is centered about leading edge
+            le_band = reversed_scaled_yaml_key_arcs[int(num_areas/2)-2]-reversed_scaled_yaml_key_arcs[int(num_areas/2)-3]
+            reversed_scaled_yaml_key_arcs[int(num_areas/2)-3]=-le_band/2  #HP side
+            reversed_scaled_yaml_key_arcs[int(num_areas/2)-2]=le_band/2   #LP side
+
+            self.key_arcs[0, k_station] = geometry.arclength[ns, k_station]
+            self.key_arcs[1, k_station] = e
+            self.key_arcs[-1, k_station] = geometry.arclength[nf, k_station]
+
+
+            self.key_cpos[0, k_station] = geometry.cpos[ns, k_station]  # te, hp surface
+            self.key_cpos[-1, k_station] = geometry.cpos[nf, k_station]  # te, lp surface
+
+            for i_kp in range(1,len(reversed_scaled_yaml_key_arcs) +1):
+
+                self.key_points[i_kp, :, k_station] = interpolator_wrap(k_arclen, k_geom, reversed_scaled_yaml_key_arcs[i_kp-1])
+                self.key_arcs[i_kp+1, k_station] = reversed_scaled_yaml_key_arcs[i_kp-1]
+                self.key_cpos[i_kp+1, k_station] = interpolator_wrap(k_arclen, k_cpos, reversed_scaled_yaml_key_arcs[i_kp-1])
+
+            self.key_cpos[int(num_areas/2)+1:num_areas-2+1, k_station] = self.key_cpos[int(num_areas/2):num_areas-2, k_station] #Shift second half by one
+            self.key_cpos[int(num_areas/2), k_station] = 0.0
+
+            self.key_arcs[int(num_areas/2)+1:num_areas-2+1, k_station] = self.key_arcs[int(num_areas/2):num_areas-2, k_station] #Shift second half by one
+            self.key_arcs[int(num_areas/2), k_station] = 0.0
+            # self.key_points[1, :, k_station] = interpolator_wrap(k_arclen, k_geom, d)
+            # self.key_points[2, :, k_station] = interpolator_wrap(k_arclen, k_geom, c)
+            # # self.key_points(  ,:,k_station) = interpolator_wrap(geometry.arclength(ns:nf,k_station),self.geometry(ns:nf,:,k_station),z);
+            # self.key_points[3, :, k_station] = interpolator_wrap(k_arclen, k_geom, b)
+            # self.key_points[4, :, k_station] = interpolator_wrap(k_arclen, k_geom, a)
+            # self.key_arcs[0, k_station] = geometry.arclength[ns, k_station]
+            # self.key_arcs[1, k_station] = e
+            # self.key_arcs[2, k_station] = d
+            # self.key_arcs[3, k_station] = c
+            # # self.key_arcs(  ,k_station)   = z;
+            # self.key_arcs[4, k_station] = b
+            # self.key_arcs[5, k_station] = a
+            # self.key_arcs[6, k_station] = 0  # le
+            # self.key_cpos[0, k_station] = geometry.cpos[ns, k_station]  # te, hp surface
             #            2   -> e
-            self.key_cpos[2, k] = interpolator_wrap(k_arclen, k_cpos, d)
-            self.key_cpos[3, k] = interpolator_wrap(k_arclen, k_cpos, c)
-            #                 self.key_cpos(  ,k) = interpolator_wrap(geometry.arclength(ns:nf,k),self.cpos(ns:nf,k),z);
-            self.key_cpos[4, k] = interpolator_wrap(k_arclen, k_cpos, b)
-            self.key_cpos[5, k] = interpolator_wrap(k_arclen, k_cpos, a)
-            self.key_cpos[6, k] = interpolator_wrap(k_arclen, k_cpos, 0)
+            # self.key_cpos[2, k_station] = interpolator_wrap(k_arclen, k_cpos, d)
+            # self.key_cpos[3, k_station] = interpolator_wrap(k_arclen, k_cpos, c)
+            # #                 self.key_cpos(  ,k_station) = interpolator_wrap(geometry.arclength(ns:nf,k_station),self.cpos(ns:nf,k_station),z);
+            # self.key_cpos[4, k_station] = interpolator_wrap(k_arclen, k_cpos, b)
+            # self.key_cpos[5, k_station] = interpolator_wrap(k_arclen, k_cpos, a)
+            # self.key_cpos[6, k_station] = interpolator_wrap(k_arclen, k_cpos, 0)
 
             # ==================== LP surface ====================
-            if definition.swtwisted:
-                # angle normal to chord line
-                twistnorm = np.pi / 180 * (-self.idegreestwist[k] + 90)
-                z = interpolator_wrap(xyangle[ns : nf + 1], k_arclen, twistnorm)
+            # if definition.swtwisted:
+            #     # angle normal to chord line
+            #     twistnorm = np.pi / 180 * (-self.idegreestwist[k_station] + 90)
+            #     z = interpolator_wrap(xyangle[ns : nf + 1], k_arclen, twistnorm)
+            # else:
+            #     z = geometry.LParcx0[0, k_station]
+            # z0 = z  # ble: location where airfoil surface crosses Xglobal=0
+            # z = z + scoffset_lp  # positive scoffset moves z toward t.e.
+            # a = np.amin(((0 + n1), 0.1 * geometry.arclength[nf, k_station]))
+            # a = np.amax((a, 0.01 * geometry.arclength[nf, k_station]))
+            # b = np.amax(((z - 0.5 * scwidth_lp), 0.15 * geometry.arclength[nf, k_station]))
+            # c = np.amin((z + 0.5 * scwidth_lp, 0.8 * geometry.arclength[nf, k_station]))
+            # d = np.amax(
+            #     (geometry.arclength[-1, k_station] - n2, 0.85 * geometry.arclength[nf, k_station])
+            # )
+            # d = np.amin((d, 0.96 * geometry.arclength[nf, k_station]))
+            if str(te_types[k_station]) == str("flat"):
+                e = geometry.arclength[nf, k_station]
+                self.key_points[-1, :, k_station] = geometry.coordinates[nf, :, k_station]
+                self.key_cpos[-2, k_station] = 1
             else:
-                z = geometry.LParcx0[0, k]
-            z0 = z  # ble: location where airfoil surface crosses Xglobal=0
-            z = z + scoffset_lp  # positive scoffset moves z toward t.e.
-            a = np.amin(((0 + n1), 0.1 * geometry.arclength[nf, k]))
-            a = np.amax((a, 0.01 * geometry.arclength[nf, k]))
-            b = np.amax(((z - 0.5 * scwidth_lp), 0.15 * geometry.arclength[nf, k]))
-            c = np.amin((z + 0.5 * scwidth_lp, 0.8 * geometry.arclength[nf, k]))
-            d = np.amax(
-                (geometry.arclength[-1, k] - n2, 0.85 * geometry.arclength[nf, k])
-            )
-            d = np.amin((d, 0.96 * geometry.arclength[nf, k]))
-            if str(te_types[k]) == str("flat"):
-                e = geometry.arclength[nf, k]
-                self.key_points[9, :, k] = geometry.coordinates[nf, :, k]
-                self.key_cpos[11, k] = 1
-            else:
-                # e = 0.5 * (d + geometry.arclength(nf,k));
-                e = 0.98 * geometry.arclength[nf, k]
-                self.key_points[9, :, k] = interpolator_wrap(k_arclen, k_geom, e)
-                self.key_cpos[11, k] = interpolator_wrap(k_arclen, k_cpos, e)
-            self.key_points[5, :, k] = interpolator_wrap(k_arclen, k_geom, a)
-            self.key_points[6, :, k] = interpolator_wrap(k_arclen, k_geom, b)
-            # self.key_points(  ,:,k) = interpolator_wrap(geometry.arclength(ns:nf,k),self.geometry(ns:nf,:,k),z);
-            self.key_points[7, :, k] = interpolator_wrap(k_arclen, k_geom, c)
-            self.key_points[8, :, k] = interpolator_wrap(k_arclen, k_geom, d)
+                # e = 0.5 * (d + geometry.arclength(nf,k_station));
+                e = 0.98 * geometry.arclength[nf, k_station]
+                self.key_points[-1, :, k_station] = interpolator_wrap(k_arclen, k_geom, e)
+                self.key_cpos[-2, k_station] = interpolator_wrap(k_arclen, k_cpos, e)
+            # self.key_points[5, :, k_station] = interpolator_wrap(k_arclen, k_geom, a)
+            # self.key_points[6, :, k_station] = interpolator_wrap(k_arclen, k_geom, b)
+            # # self.key_points(  ,:,k_station) = interpolator_wrap(geometry.arclength(ns:nf,k_station),self.geometry(ns:nf,:,k_station),z);
+            # self.key_points[7, :, k_station] = interpolator_wrap(k_arclen, k_geom, c)
+            # self.key_points[8, :, k_station] = interpolator_wrap(k_arclen, k_geom, d)
             # 10   -> e
-            self.key_arcs[7, k] = a
-            self.key_arcs[8, k] = b
-            # self.key_arcs( ,k)   = z;
-            self.key_arcs[9, k] = c
-            self.key_arcs[10, k] = d
-            self.key_arcs[11, k] = e
-            self.key_arcs[12, k] = geometry.arclength[nf, k]
-            self.key_cpos[7, k] = interpolator_wrap(k_arclen, k_cpos, a)
-            self.key_cpos[8, k] = interpolator_wrap(k_arclen, k_cpos, b)
-            # self.key_cpos(  ,k) = interpolator_wrap(geometry.arclength(ns:nf,k),self.cpos(ns:nf,k),z);
-            self.key_cpos[9, k] = interpolator_wrap(k_arclen, k_cpos, c)
-            self.key_cpos[10, k] = interpolator_wrap(k_arclen, k_cpos, d)
-            # 12   -> e
-            self.key_cpos[12, k] = geometry.cpos[nf, k]  # te, lp surface
+            # self.key_arcs[7, k_station] = a
+            # self.key_arcs[8, k_station] = b
+            # # self.key_arcs( ,k_station)   = z;
+            # self.key_arcs[9, k_station] = c
+            # self.key_arcs[10, k_station] = d
+            self.key_arcs[-2, k_station] = e
+            # self.key_arcs[11, k_station] = e
+            # self.key_arcs[12, k_station] = geometry.arclength[nf, k_station]
+            # self.key_cpos[7, k_station] = interpolator_wrap(k_arclen, k_cpos, a)
+            # self.key_cpos[8, k_station] = interpolator_wrap(k_arclen, k_cpos, b)
+            # # self.key_cpos(  ,k_station) = interpolator_wrap(geometry.arclength(ns:nf,k_station),self.cpos(ns:nf,k_station),z);
+            # self.key_cpos[9, k_station] = interpolator_wrap(k_arclen, k_cpos, c)
+            # self.key_cpos[10, k_station] = interpolator_wrap(k_arclen, k_cpos, d)
+            # # 12   -> e
+            # self.key_cpos[12, k_station] = geometry.cpos[nf, k_station]  # te, lp surface
 
         # find the points used by each shear web
-        component_groups = [
-            definition.components[name].group for name in definition.components
-        ]
+        component_groups = [definition.components[name].group for name in definition.components]
         self.web_indices = []
         self.web_arcs = []
         self.web_cpos = []
@@ -369,12 +425,12 @@ class KeyPoints:
                 p2 = self.key_arcs[n2, :]
                 p = (1 - f) * p1 + f * p2
                 self.web_arcs[ksw][0, :] = p
-                for k in range(num_istations):
-                    self.web_cpos[ksw][0, k] = interpolator_wrap(
-                        k_arclen, k_cpos, p[k]
+                for k_station in range(num_istations):
+                    self.web_cpos[ksw][0, k_station] = interpolator_wrap(
+                        k_arclen, k_cpos, p[k_station]
                     )
-                    self.web_points[ksw][0, :, k] = interpolator_wrap(
-                        k_arclen, k_geom, p[k]
+                    self.web_points[ksw][0, :, k_station] = interpolator_wrap(
+                        k_arclen, k_geom, p[k_station]
                     )
             elif hp["pt3"]:
                 try:
@@ -397,14 +453,14 @@ class KeyPoints:
                 )
                 p[np.abs(p) < np.abs(pMin)] = pMin[np.abs(p) < np.abs(pMin)]
                 self.web_cpos[ksw][0, :] = p
-                for k in range(num_istations):
-                    self.web_arcs[ksw][0, k] = interpolator_wrap(
-                        self.cpos[ns : nf + 1, :, k],
-                        geometry.arclength[ns : nf + 1, :, k],
-                        p[k],
+                for k_station in range(num_istations):
+                    self.web_arcs[ksw][0, k_station] = interpolator_wrap(
+                        self.cpos[ns : nf + 1, :, k_station],
+                        geometry.arclength[ns : nf + 1, :, k_station],
+                        p[k_station],
                     )
-                    self.web_points[ksw][0, :, k] = interpolator_wrap(
-                        k_cpos, k_geom, p[k]
+                    self.web_points[ksw][0, :, k_station] = interpolator_wrap(
+                        k_cpos, k_geom, p[k_station]
                     )
             else:
                 raise Exception(
@@ -440,12 +496,12 @@ class KeyPoints:
                 p2 = self.key_arcs[n2, :]
                 p = (1 - f) * p1 + f * p2
                 self.web_arcs[ksw][1, :] = p
-                for k in range(num_istations):
-                    self.web_cpos[ksw][1, k] = interpolator_wrap(
-                        k_arclen, k_cpos, p[k]
+                for k_station in range(num_istations):
+                    self.web_cpos[ksw][1, k_station] = interpolator_wrap(
+                        k_arclen, k_cpos, p[k_station]
                     )
-                    self.web_points[ksw][1, :, k] = interpolator_wrap(
-                        k_arclen, k_geom, p[k]
+                    self.web_points[ksw][1, :, k_station] = interpolator_wrap(
+                        k_arclen, k_geom, p[k_station]
                     )
             elif lp["pt3"]:
                 try:
@@ -466,12 +522,12 @@ class KeyPoints:
                 )
                 p[np.abs(p) < np.abs(pMin)] = pMin[np.abs(p) < np.abs(pMin)]
                 self.web_cpos[ksw][1, :] = p
-                for k in range(num_istations):
-                    self.web_arcs[ksw][1, k] = interpolator_wrap(
-                        k_cpos, k_arclen, p[k]
+                for k_station in range(num_istations):
+                    self.web_arcs[ksw][1, k_station] = interpolator_wrap(
+                        k_cpos, k_arclen, p[k_station]
                     )
-                    self.web_points[ksw][1, :, k] = interpolator_wrap(
-                        k_cpos, k_geom, p[k]
+                    self.web_points[ksw][1, :, k_station] = interpolator_wrap(
+                        k_cpos, k_geom, p[k_station]
                     )
             else:
                 raise Exception(

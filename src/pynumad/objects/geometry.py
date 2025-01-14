@@ -292,10 +292,10 @@ class Geometry:
             self.arclength[:, k] = self.arclength[:, k] - LEarcsum
 
             # find where x=0 intersects the surface
-            self.HParcx0[0, k] = (
+            self.LParcx0[0, k] = (
                 interpolator_wrap(xx[1 : le_index + 1], arclen[1 : le_index + 1], 0) - LEarcsum
             )
-            self.LParcx0[0, k] = (
+            self.HParcx0[0, k] = (
                 interpolator_wrap(xx[-2 : le_index - 1 : -1], arclen[-2 : le_index - 1 : -1], 0)
                 - LEarcsum
             )
