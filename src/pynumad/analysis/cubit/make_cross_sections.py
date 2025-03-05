@@ -1640,6 +1640,362 @@ def make_cs_web_layer_areas(
         cubit.cmd(f'surface {surf_id} rename "{surf_name}"')
     return part_name_id, (vHP, vLP)
 
+def make_a_precomp_cross_section(wt_name,
+    surface_dict,
+    i_station,
+    i_station_geometry,
+    blade,
+    hasWebs,
+    aft_web_stack,
+    fore_web_stack,
+    iLE,
+    cs_params,
+    geometry_scaling,
+    thickness_scaling,
+    last_round_station,
+    last_flat_station,
+    materials_used,
+    cs_normal,
+):
+    geometry = blade.geometry
+    stackdb = blade.stackdb
+    keypoints = blade.keypoints
+    definition = blade.definition
+
+    if i_station > last_round_station:
+        is_flatback=True
+    else:
+        is_flatback=False
+
+    with open(f"{wt_name}.log", "a") as logFile:
+        logFile.write(f"Working on Station: {i_station}\n")
+
+    part_name_id = 0
+
+
+    #### Step one create outer mold line
+    xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
+    xyz[:,0] = xyz[:,0]/blade.geometry.ichord[i_station_geometry]
+    xyz[:,1] = xyz[:,1]/blade.geometry.ichord[i_station_geometry]
+
+    # Start indexing from 1 (not 0) to ignore first point: because first point is not on the LP or HP surface but rather is the midpoint at the TE
+    #xyz = np.flip(xyz, 0)
+    xyz[:, 0]=-1*xyz[:, 0]
+    spline_points = xyz[iLE:len(xyz)-1, :]
+
+    write_spline_from_coordinate_points(cubit, spline_points)
+    lp_key_curve = get_last_id("curve")
+    LE_vert, v2 = selCurveVerts(lp_key_curve)
+
+    xyz = np.flip(xyz, 0)
+    spline_points = np.flip(xyz[iLE-1:len(xyz)-1, :],0)
+    write_spline_from_coordinate_points(cubit, spline_points)
+    hp_key_curve = get_last_id("curve")
+    v3, v4 = selCurveVerts(hp_key_curve)
+
+
+    # Undo initial twist
+    cubit.cmd(f"rotate curve {lp_key_curve} {hp_key_curve} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged ")
+    x_move,y_move,_=cubit.vertex(LE_vert).coordinates()
+    cubit.cmd(f"move curve {lp_key_curve} {hp_key_curve} x {-x_move} y {-y_move} include_merged")
+
+    #Check of HP LE is less than 0
+    
+    x,_,_=cubit.vertex(v4).coordinates()
+    if x <= 0.0:
+        cubit.cmd(f"move curve {hp_key_curve} x {-x+0.0001} y {-y_move} include_merged")
+
+
+    cubit.cmd(f"delete vertex with is_free")
+    n_start = get_last_id("vertex")+1
+    cubit.cmd(f"create vertex on curve {lp_key_curve} segment 50")
+    n_end = get_last_id("vertex")
+
+    lp_vert_ids = [LE_vert]+list(range(n_start, n_end + 1))+[v2]
+
+    n_start = get_last_id("vertex")+1
+    cubit.cmd(f"create vertex on curve {hp_key_curve} segment 50")
+    n_end = get_last_id("vertex")
+
+    hp_vert_ids = [v3]+list(range(n_start, n_end + 1))+[v4]
+    
+    vert_ids=lp_vert_ids+hp_vert_ids
+    cubit.cmd(f'save as "Debug.cub" overwrite') 
+    # n_start = get_last_id("vertex")+1
+
+    # LE_vert = n_start
+
+    # for coords in spline_points:
+    #     create_vertex(coords[0], coords[1], coords[2])
+    # flatback_vTop = get_last_id("vertex")
+    # flatback_vBot = flatback_vTop+1
+
+
+
+    # for coords in spline_points:
+    #     create_vertex(coords[0], coords[1], coords[2])
+
+    # n_end = get_last_id("vertex")
+    # vert_ids = list(range(n_start, n_end + 1))
+
+    # # Undo initial twist
+    # cubit.cmd(f"rotate vertex {l2s(vert_ids)} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged ")
+
+    # # Move LE to origin
+    # x_move,y_move,_=cubit.vertex(LE_vert).coordinates()
+    # cubit.cmd(f"move vertex {l2s(vert_ids)} x {-x_move} y {-y_move} include_merged")
+
+    # #### Step one create outer mold line
+    # xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
+    # xyz[:,0] = xyz[:,0]/blade.geometry.ichord[i_station_geometry]
+    # xyz[:,1] = xyz[:,1]/blade.geometry.ichord[i_station_geometry]
+
+    # # Start indexing from 1 (not 0) to ignore first point: because first point is not on the LP or HP surface but rather is the midpoint at the TE
+    # #xyz = np.flip(xyz, 0)
+    # xyz[:, 0]=-1*xyz[:, 0]
+    # spline_points = xyz[iLE:len(xyz)-1, :]
+
+    # n_start = get_last_id("vertex")+1
+
+    # LE_vert = n_start
+
+    # for coords in spline_points:
+    #     create_vertex(coords[0], coords[1], coords[2])
+    # flatback_vTop = get_last_id("vertex")
+    # flatback_vBot = flatback_vTop+1
+
+    # xyz = np.flip(xyz, 0)
+    # spline_points = np.flip(xyz[iLE-1:len(xyz)-1, :],0)
+
+    # for coords in spline_points:
+    #     create_vertex(coords[0], coords[1], coords[2])
+
+    # n_end = get_last_id("vertex")
+    # vert_ids = list(range(n_start, n_end + 1))
+
+    # # Undo initial twist
+    # cubit.cmd(f"rotate vertex {l2s(vert_ids)} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged ")
+
+    # # Move LE to origin
+    # x_move,y_move,_=cubit.vertex(LE_vert).coordinates()
+    # cubit.cmd(f"move vertex {l2s(vert_ids)} x {-x_move} y {-y_move} include_merged")
+
+
+    ### Write Shape File
+    directory='.'
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    file = open(f'{directory}/shape_{i_station}.inp', 'w')
+    file.write(f'{len(vert_ids)}                     N_af_nodes :no of airfoil nodes, counted clockwise starting\n')
+    file.write(f'                      with leading edge (see users" manual, fig xx)\n\n')
+    file.write(f' Xnode      Ynode   !! chord-normalized coordinated of the airfoil nodes\n')
+
+    for vertex in vert_ids:
+        x,y,_=cubit.vertex(vertex).coordinates()
+        file.write(f'{min(x,1.00)} {y}\n')
+    file.close()
+
+
+
+    flatbackCurve = cubit.create_curve(cubit.vertex(v2), cubit.vertex(v3))
+    flatback_curve_id = flatbackCurve.id()
+
+    ## Create chord line
+    cubit.cmd(f'create vertex on curve {flatback_curve_id} fraction 0.5 from start')
+    chord_line = cubit.create_curve(cubit.vertex(LE_vert), cubit.vertex(get_last_id('vertex')))
+    chord_line_id = chord_line.id()
+
+    #HP Side
+    key_points = keypoints.key_points[1:5, :, i_station_geometry]
+    key_points[:, 0]=-1*key_points[:, 0]
+    key_points[:,:2] = key_points[:,:2]/blade.geometry.ichord[i_station_geometry]
+    key_points=np.flip(key_points,0)
+
+    n_start = get_last_id("vertex")+1
+    for coords in key_points:
+        create_vertex(coords[0], coords[1], coords[2])
+    n_end = get_last_id("vertex")
+    vert_ids = list(range(n_start, n_end + 1))
+
+    # Undo initial twist
+    cubit.cmd(f"rotate vertex {l2s(vert_ids)} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged " )
+    cubit.cmd(f"move vertex {l2s(vert_ids)} x {-x_move} y {-y_move} include_merged")
+
+
+    hp_sector_boundaries = [0.0]
+    for vertex in vert_ids:
+        x,_,_=cubit.vertex(vertex).coordinates()
+        hp_sector_boundaries.append(x)
+    hp_sector_boundaries.append(1.0)
+    
+    ## LP Side
+    temp = np.flip(keypoints.key_points[:, :, i_station_geometry], 0)
+
+    key_points =temp[1:5, :]
+    key_points[:, 0]=-1*key_points[:, 0]
+    key_points[:,:2] = key_points[:,:2]/geometry.ichord[i_station_geometry]
+    key_points=np.flip(key_points,0)
+
+    n_start = get_last_id("vertex")+1
+    for coords in key_points:
+        create_vertex(coords[0], coords[1], coords[2])
+    n_end = get_last_id("vertex")
+    vert_ids = list(range(n_start, n_end + 1))
+
+    # Undo initial twist
+    cubit.cmd(f"rotate vertex {l2s(vert_ids)} angle {-1*geometry.idegreestwist[i_station_geometry]} about Z include_merged " )
+    cubit.cmd(f"move vertex {l2s(vert_ids)} x {-x_move} y {-y_move} include_merged")
+
+
+    lp_sector_boundaries = [0.0]
+    for vertex in vert_ids:
+        x,_,_=cubit.vertex(vertex).coordinates()
+        lp_sector_boundaries.append(x)
+    lp_sector_boundaries.append(1.0)
+
+    
+
+
+    file = open(f'{directory}/layup_{i_station}.inp', 'w')
+    file.write(f'Composite laminae lay-up inside the blade section\n\n')
+
+    N_scts=len(lp_sector_boundaries)-1
+    file.write(f'*************************** TOP SURFACE ****************************\n')
+    file.write(f'{N_scts}                N_scts(1):  no of sectors on top surface\n\n')
+    file.write(f'normalized chord location of  nodes defining airfoil sectors boundaries (xsec_node)\n')
+    file.write('   '.join(str(e) for e in lp_sector_boundaries)+'\n')
+    #file.write('')
+
+    blade_material_names = list(blade.definition.materials.keys())
+
+    temp = stackdb.stacks[:, i_station]
+    temp = np.flip(temp)
+
+    #TOP SURFACE IS     temp = stackdb.stacks[:, i_station] temp = np.flip(temp)
+    #BOTTOM SURFACE IS: stackdb.stacks[1:6, i_station]
+    for i_stack,stack in enumerate(np.flip(temp[1:6])):
+        file.write(f'...........................................................................\n')
+        file.write(f'Sect_num    no of laminae (N_laminas)\n')
+        file.write(f'{i_stack+1}             {len(stack.plygroups)}\n\n')
+
+        file.write(f'lamina    num of  thickness   fibers_direction  composite_material ID\n')
+        file.write(f'number    plies   of ply (m)       (deg)               (-)\n')
+        file.write(f'lam_num  N_plies    Tply         Tht_lam            Mat_id\n')
+             
+
+        for i_ply,ply in enumerate(stack.plygroups):
+            material_name =ply.materialid
+            mat_id = blade_material_names.index(material_name)+1
+            file.write(f'{i_ply+1}          {1}       {ply.thickness*ply.nPlies/1000.0}            {ply.angle}             {mat_id} ({ply.materialid})\n')
+
+    N_scts=len(lp_sector_boundaries)-1
+    file.write(f'\n\n*************************** BOTTOM SURFACE ****************************\n')
+    file.write(f'{N_scts}                N_scts(1):  no of sectors on top surface\n\n')
+    file.write(f'normalized chord location of  nodes defining airfoil sectors boundaries (xsec_node)\n')
+    file.write('   '.join(str(e) for e in hp_sector_boundaries)+'\n')        
+    
+    # stackdb.stacks[1:6, i_station]
+    # temp = stackdb.stacks[:, i_station]
+    # temp = np.flip(temp)
+    for i_stack,stack in enumerate(np.flip(stackdb.stacks[1:6, i_station])):
+        file.write(f'...........................................................................\n')
+        file.write(f'Sect_num    no of laminae (N_laminas)\n')
+        file.write(f'{i_stack+1}             {len(stack.plygroups)}\n\n')
+
+        file.write(f'lamina    num of  thickness   fibers_direction  composite_material ID\n')
+        file.write(f'number    plies   of ply (m)       (deg)               (-)\n')
+        file.write(f'lam_num  N_plies    Tply         Tht_lam            Mat_id\n')
+
+        for i_ply,ply in enumerate(stack.plygroups):
+            material_name =ply.materialid
+            mat_id = blade_material_names.index(material_name)+1
+            file.write(f'{i_ply+1}          {1}       {ply.thickness*ply.nPlies/1000}            {ply.angle}             {mat_id} ({ply.materialid})\n')
+
+
+    if hasWebs:
+        file.write(f'\n\n**********************************************************************\n')
+        file.write(f'Laminae schedule for webs (input required only if webs exist at this section):\n')
+        n_webs=len(stackdb.swstacks)
+        #Foreweb
+        for web_number in range(n_webs):
+            web_stack = stackdb.swstacks[web_number][i_station]
+            file.write(f'\nweb_num    no of laminae (N_weblams)\n')
+            file.write(f'{web_number+1}             {len(web_stack.plygroups)}\n\n')
+
+            file.write(f'lamina    num of  thickness   fibers_direction  composite_material ID\n')
+            file.write(f'number    plies   of ply (m)       (deg)               (-)\n')
+            file.write(f'wlam_num N_Plies   w_tply       Tht_Wlam            Wmat_Id\n')
+
+            for i_ply,ply in enumerate(web_stack.plygroups):
+                material_name =ply.materialid
+                mat_id = blade_material_names.index(material_name)+1
+                file.write(f'{i_ply+1}          {1}       {ply.thickness*ply.nPlies/1000}            {ply.angle}             {mat_id} ({ply.materialid})\n')
+
+
+    file.close()
+
+    #### Materials #####
+    from decimal import Decimal 
+    file = open(f'{directory}/materials.inp', 'w')
+
+    file.write(f'\nMat_Id     E1           E2          G12       Nu12     Density      Mat_Name\n')
+    file.write(f' (-)      (Pa)         (Pa)        (Pa)       (-)      (Kg/m^3)       (-)\n')
+
+    for i_mat,material_name in enumerate(blade_material_names):
+        E1=blade.definition.materials[material_name].ex
+        E2=blade.definition.materials[material_name].ey
+        G12=blade.definition.materials[material_name].gxy
+        nu12=blade.definition.materials[material_name].prxy
+        rho=blade.definition.materials[material_name].density
+        file.write(f'{i_mat+1}   {Decimal(str(E1)):10.6E}   {Decimal(str(E2)):10.6E}   {Decimal(str(G12)):10.6E}   {Decimal(str(nu12)):10.6E}    {Decimal(str(rho)):10.6E}    ({material_name})\n')
+
+    file.close()
+
+    file = open(f'{directory}/input_{i_station}.pci', 'w')
+
+    file.write(f'*****************  main input file for PreComp *****************************\n')
+    file.write(f'Sample Composite Blade Section Properties\n')
+    file.write(f'\n')
+    file.write(f'General information -----------------------------------------------\n')
+    file.write(f'1                Bl_length   : blade length (m)\n')
+    file.write(f'2                N_sections  : no of blade sections (-)\n')
+    file.write(f'{len(blade_material_names)}                N_materials : no of materials listed in the materials table (material.inp)\n')
+    file.write(f'3                Out_format  : output file   (1: general format, 2: BModes-format, 3: both)\n')
+    file.write(f'f                TabDelim     (true: tab-delimited table; false: space-delimited table)\n')
+    file.write(f'\n')
+    file.write(f'Blade-sections-specific data --------------------------------------\n')
+    file.write(f'Sec span     l.e.     chord   aerodynamic   af_shape    int str layup\n')
+    file.write(f'location   position   length    twist         file          file\n')
+    file.write(f'Span_loc    Le_loc    Chord    Tw_aero   Af_shape_file  Int_str_file\n')
+    file.write(f'  (-)        (-)       (m)    (degrees)       (-)           (-)\n\n')
+
+    file.write(f'0.00     {-1*x_move}   {geometry.ichord[i_station_geometry]}   {geometry.idegreestwist[i_station_geometry]}      shape_{i_station}.inp     layup_{i_station}.inp\n')
+    file.write(f'1.00     {-1*x_move}   {geometry.ichord[i_station_geometry]}   {geometry.idegreestwist[i_station_geometry]}      shape_{i_station}.inp     layup_{i_station}.inp\n')
+
+    if hasWebs:
+        n_webs =2 
+    else:
+        n_webs = 0
+    file.write(f'\nWebs (spars) data  --------------------------------------------------\n\n')
+    file.write(f'{n_webs}               Nweb        : number of webs (-)  ! enter 0 if the blade has no webs\n')
+    file.write(f'1                Ib_sp_stn   : blade station number where inner-most end of webs is located (-)\n')
+    file.write(f'2                Ob_sp_stn   : blade station number where outer-most end of webs is located (-)\n\n')
+
+
+    file.write(f'Web_num   Inb_end_ch_loc   Oub_end_ch_loc (fraction of chord length)\n')
+    if hasWebs:
+        i_loc = 2
+        web_loc= mean([lp_sector_boundaries[i_loc],hp_sector_boundaries[i_loc]])
+        file.write(f'1.0000        {web_loc}        {web_loc}\n')
+
+        i_loc = 3
+        web_loc= mean([lp_sector_boundaries[i_loc],hp_sector_boundaries[i_loc]])
+        file.write(f'2.0000        {web_loc}        {web_loc}\n')
+        file.write(f'\n')
+
+    file.close()
 
 def make_a_cross_section(wt_name,
     surface_dict,
