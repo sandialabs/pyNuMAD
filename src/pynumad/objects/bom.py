@@ -96,7 +96,7 @@ class BillOfMaterials(dict):
                         cur_bom.area = regionarea
                         cur_bom.thickness = mat.layerthickness
                         cur_bom.weight = mat.drydensity * regionarea
-                        cur_bom.angle = comp.fabricangle
+                        cur_bom.angle = comp.fabricangle*180/3.141592653589793
 
                         self.indices["hp"].append(
                             [begin_station[ks], end_station[ks], *hpRegion]
@@ -129,7 +129,7 @@ class BillOfMaterials(dict):
                         cur_bom.area = regionarea
                         cur_bom.thickness = mat.layerthickness
                         cur_bom.weight = mat.drydensity * regionarea
-                        cur_bom.angle = comp.fabricangle
+                        cur_bom.angle = -1*comp.fabricangle*180/3.141592653589793
                         self.indices["lp"].append(
                             [begin_station[ks], end_station[ks], *lpRegion]
                         )
@@ -190,7 +190,7 @@ class BillOfMaterials(dict):
                     cur_bom.area = regionarea
                     cur_bom.thickness = mat.layerthickness
                     cur_bom.weight = mat.drydensity * regionarea
-                    cur_bom.angle = comp.fabricangle
+                    cur_bom.angle = comp.fabricangle*180/3.141592653589793
                     self["sw"][swnum].append(cur_bom)
                     self.indices["sw"][swnum].append(
                         [begin_station[ks], end_station[ks]]
