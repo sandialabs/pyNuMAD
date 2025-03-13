@@ -367,7 +367,7 @@ def get_spanwise_splines_for_a_volume(current_surface_id,next_surface_id,spanwis
 
 
 
-def make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines):
+def make_all_volumes_for_a_part(surface_dict, volume_dict,ordered_list, i_station_end,spanwise_splines):
     # nIntervals=3
     vol_list=[]
     i_start = len(spanwise_splines)
@@ -384,8 +384,14 @@ def make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwi
                 spanwise_splines_for_a_volume = get_spanwise_splines_for_a_volume(current_surface_id,next_surface_id,spanwise_splines[part_surface_ids],
                 surface_dict[current_surface_id]["verts"],surface_dict[next_surface_id]["verts"])
                 make_a_volume(i_span,current_surface_id,next_surface_id,spanwise_splines_for_a_volume,surface_dict,i_station_end)
-                vol_list.append(get_last_id("volume"))
-                # assign_intervals(get_last_id("volume"),nIntervals)
+                vol_id = get_last_id("volume")
+                vol_list.append(vol_id)
+
+                volume_dict[vol_id] = {}
+                # volume_dict[vol_id]["material_name"] = material_name
+                volume_dict[vol_id]["ply_angle"] = surface_dict[current_surface_id]["ply_angle"]
+                del surface_dict[current_surface_id]
+                
     else:
         raise ValueError("Can't make volumes with only one cross section.")
 

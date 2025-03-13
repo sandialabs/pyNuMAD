@@ -197,26 +197,21 @@ def get_orientations_two_points(volume_id,element_shape_string):
 
     return global_el_ids_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
 
-def get_orientations_vectors(volume_id,element_shape_string):
-    global_el_ids_in_vol=[]
+def get_orientations_vectors(element_ids,volume_dict):
 
-
-    
-    spanwise_directions_in_vol = []
-    perimeter_directions_in_vol = []
-    surface_normal_directions_in_vol = []
-
-    surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
-    #volume_name = cubit.get_entity_name("volume", volume_id)
-    #t0 = time.time()
-    if 'hex' in element_shape_string:
-        element_ids = get_volume_hexes(volume_id)
-    elif 'tet' in element_shape_string:
-        element_ids = get_volume_tets(volume_id)
-
+  
+    spanwise_directions = []
+    perimeter_directions = []
+    surface_normal_directions = []
 
     for el_id in element_ids:
-        coords = cubit.get_center_point(element_shape_string, el_id)
+        volume_id  = parse_cubit_list('volume', f'in element {el_id}')[0]
+        surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
+
+        node_ids = parse_cubit_list('node',f'in element {el_id}')
+        coords = [list(get_nodal_coordinates(node_id)) for node_id in node_ids]
+        coords = np.array(coords)
+        coords = np.mean(coords, 0)
             
         surface_normal = vectNorm(
             list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
@@ -226,17 +221,20 @@ def get_orientations_vectors(volume_id,element_shape_string):
         spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
         perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+       
+        #Additional rotation about surface normal
+        theta = math.radians(volume_dict[volume_id]['ply_angle'])
+        c = math.cos(theta)
+        s = math.sin(theta)
+        beta = np.array([[c,s, 0],[-s, c, 0],[0,0,1]])
 
-        global_id=get_global_element_id(element_shape_string,el_id)
-        
-        global_el_ids_in_vol.append(global_id)
+        new_directions = beta @ [spanwise_direction,perimeter_direction,surface_normal]
 
-        
-        spanwise_directions_in_vol.append(spanwise_direction)
-        perimeter_directions_in_vol.append(perimeter_direction)
-        surface_normal_directions_in_vol.append(surface_normal)
+        spanwise_directions.append(list(new_directions[0]))
+        perimeter_directions.append(list(new_directions[1]))
+        surface_normal_directions.append(list(new_directions[2]))
 
-    return global_el_ids_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol,surface_normal_directions_in_vol
+    return spanwise_directions,perimeter_directions,surface_normal_directions
     
 def assign_material_orientations(orientation_data,output_format = 'euler'):
     #Apply Material Orientation
@@ -275,34 +273,48 @@ def assign_material_orientations(orientation_data,output_format = 'euler'):
 
     return
 
-def compute_material_orientations(element_shape,output_format = 'euler',ncpus = 1):
+def compute_material_orientations(element_shape,volume_dict, output_format = 'euler',ncpus = 1):
     # # ####################################
     # # ### Assign material orientations ###
     # # ####################################
     
-    element_shape_string = element_shape.lower()
-    parse_string = f'with name "*volume*"'
-    all_volume_ids = parse_cubit_list("volume", parse_string)
+    # element_shape_string = element_shape.lower()
+    parse_string = f'in volume with name "*volume*"'
+    global_element_ids = parse_cubit_list("element", parse_string)
     
     t0 = time.time()
     print(f'Calculating material orientations with {ncpus} CPU(s)...')
 
-    if 'hex' in element_shape_string or 'tet' in element_shape.lower():
-        if ncpus==1:
-            ans = []
-            if 'euler' in output_format:
-                for vol_id in all_volume_ids:
-                    ans.append(get_orientations_euler(vol_id,element_shape_string))
-            elif 'two_points' in output_format:
-                for vol_id in all_volume_ids:
-                    ans.append(get_orientations_two_points(vol_id,element_shape_string))
-            elif 'vectors' in output_format:
-                for vol_id in all_volume_ids:
-                    ans.append(get_orientations_vectors(vol_id,element_shape_string))
-            else:
-                raise NameError(f'Material Orientation output format: {output_format} is not supported')
-        else:
-            raise ValueError(f'Number of CPUs has to be 1 for material orientations due to multiple args in get_orientations_XXXXXX() functions')
+    ans = []
+    if 'euler' in output_format:
+        for vol_id in all_volume_ids:
+            ans.append(get_orientations_euler(vol_id,element_shape_string))
+    elif 'two_points' in output_format:
+        for vol_id in all_volume_ids:
+            ans.append(get_orientations_two_points(vol_id,element_shape_string))
+    elif 'vectors' in output_format:
+        spanwise_directions,perimeter_directions,surface_normal_directions = get_orientations_vectors(global_element_ids,volume_dict)
+        # for global_element_id in global_element_ids:
+        #     ans.append()
+    else:
+        raise NameError(f'Material Orientation output format: {output_format} is not supported')
+
+    # if 'hex' in element_shape_string or 'tet' in element_shape.lower():
+    #     if ncpus==1:
+    #         ans = []
+    #         if 'euler' in output_format:
+    #             for vol_id in all_volume_ids:
+    #                 ans.append(get_orientations_euler(vol_id,element_shape_string))
+    #         elif 'two_points' in output_format:
+    #             for vol_id in all_volume_ids:
+    #                 ans.append(get_orientations_two_points(vol_id,element_shape_string))
+    #         elif 'vectors' in output_format:
+    #             for vol_id in all_volume_ids:
+    #                 ans.append(get_orientations_vectors(vol_id,element_shape_string))
+    #         else:
+    #             raise NameError(f'Material Orientation output format: {output_format} is not supported')
+    #     else:
+    #         raise ValueError(f'Number of CPUs has to be 1 for material orientations due to multiple args in get_orientations_XXXXXX() functions')
             # pool_obj = multiprocessing.Pool(ncpus)
             # if 'euler' in output_format:
             #     ans = pool_obj.map(get_hex_orientations_euler,all_volume_ids)
@@ -314,50 +326,50 @@ def compute_material_orientations(element_shape,output_format = 'euler',ncpus = 
             #     raise NameError(f'Material Orientation output format: {output_format} is not supported')
             
             # pool_obj.close()
-    else:
-        raise NameError(f' element shape {element_shape} unsupported.')
+    # else:
+    #     raise NameError(f' element shape {element_shape} unsupported.')
     t1 = time.time()
     print(f'Total time for material orientations: {t1-t0}')
 
-    ans=np.array(ans,dtype=object)
-    global_ids=[]
+    # ans=np.array(ans,dtype=object)
+    # global_ids=[]
 
-    if 'euler' in output_format:
-        theta1s=[]
-        theta2s=[]
-        theta3s=[]
-        for i in range(len(all_volume_ids)):
-            global_ids+=list(ans[i][0])
-            theta1s+=list(ans[i][1])
-            theta2s+=list(ans[i][2])
-            theta3s+=list(ans[i][3])
+    # if 'euler' in output_format:
+    #     theta1s=[]
+    #     theta2s=[]
+    #     theta3s=[]
+    #     for i in range(len(all_volume_ids)):
+    #         global_ids+=list(ans[i][0])
+    #         theta1s+=list(ans[i][1])
+    #         theta2s+=list(ans[i][2])
+    #         theta3s+=list(ans[i][3])
 
-        return [global_ids,theta1s,theta2s,theta3s]
+    #     return [global_ids,theta1s,theta2s,theta3s]
     
-    elif 'two_points' in output_format:
-        spanwise_directions = []
-        perimiter_directions = []
+    # elif 'two_points' in output_format:
+    #     spanwise_directions = []
+    #     perimiter_directions = []
 
-        for i in range(len(all_volume_ids)):
-            global_ids+=list(ans[i][0])
-            spanwise_directions+=list(ans[i][1])
-            perimiter_directions+=list(ans[i][2])
+    #     for i in range(len(all_volume_ids)):
+    #         global_ids+=list(ans[i][0])
+    #         spanwise_directions+=list(ans[i][1])
+    #         perimiter_directions+=list(ans[i][2])
 
-        return [global_ids,spanwise_directions,perimiter_directions]
+    #     return [global_ids,spanwise_directions,perimiter_directions]
 
 
-    elif 'vectors' in output_format:
-        spanwise_directions = []
-        perimiter_directions = []
-        normal_directions = []
+    # elif 'vectors' in output_format:
+    #     spanwise_directions = []
+    #     perimiter_directions = []
+    #     normal_directions = []
 
-        for i in range(len(all_volume_ids)):
-            global_ids+=list(ans[i][0])
-            spanwise_directions+=list(ans[i][1])
-            perimiter_directions+=list(ans[i][2])
-            normal_directions+=list(ans[i][3])
+    #     for i in range(len(all_volume_ids)):
+    #         global_ids+=list(ans[i][0])
+    #         spanwise_directions+=list(ans[i][1])
+    #         perimiter_directions+=list(ans[i][2])
+            # normal_directions+=list(ans[i][3])
 
-        return [global_ids,spanwise_directions,perimiter_directions,normal_directions]
+    return [global_element_ids,spanwise_directions,perimeter_directions,surface_normal_directions]
 
 
 def order_path_points(points, ind):
@@ -1054,12 +1066,13 @@ def cubit_make_solid_blade(
     # Make volumes along the span.
     ### ### ### ###
     mesh_vol_list = []
+    volume_dict ={}
 
     part_name = "shell"
     ordered_list = get_ordered_list(part_name)
     spanwise_splines=[]
     if len(ordered_list) > 0:
-        shell_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
+        shell_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, volume_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         shell_vol_list=[]
 
@@ -1067,14 +1080,14 @@ def cubit_make_solid_blade(
     ordered_list = get_ordered_list(part_name)
     ordered_list_web = ordered_list.copy()
     if ordered_list and len(ordered_list[0]) > 1:
-        web_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
+        web_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, volume_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         web_vol_list=[]
 
     part_name = "roundTEadhesive"
     ordered_list = get_ordered_list(part_name)
     if ordered_list and len(ordered_list[0]) > 1:
-        roundTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
+        roundTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, volume_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         roundTEadhesive_vol_list=[]
 
@@ -1083,7 +1096,7 @@ def cubit_make_solid_blade(
     ordered_list = get_ordered_list(part_name)
 
     if ordered_list and len(ordered_list[0]) > 1:
-        flatTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
+        flatTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, volume_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         flatTEadhesive_vol_list=[]
 
@@ -1461,4 +1474,4 @@ def cubit_make_solid_blade(
     #         cubit.cmd(f'save as "{wt_name}.cub" overwrite')
 
 
-    return materials_used
+    return materials_used, volume_dict
