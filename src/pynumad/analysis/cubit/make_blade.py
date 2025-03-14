@@ -1390,3 +1390,65 @@ def cubit_make_solid_blade(
 
 
     return materials_used, volume_dict
+
+def yaml_mesh_to_cubit(yaml_file_base,element_type,plot_mat_ori = True):
+    import yaml
+    
+    print(f'Importing {yaml_file_base} to cubit ...')
+    with open(f'{yaml_file_base}.yaml', 'r') as file:
+        mesh_data = yaml.load(file, Loader=yaml.CLoader)
+
+    print('    Making nodes ...')
+    for node_coords in mesh_data['nodes']:
+        cubit.silent_cmd(f'create node location {node_coords[0]}')
+
+    print('    Making elements ...')
+    for element_conn in mesh_data['elements']:
+
+        cubit.silent_cmd(f'create {element_type} node {element_conn[0]}')
+
+    print('    Making blocks ...')
+    for i_mat, mat_data in enumerate(mesh_data['materials']):
+        mat_name = mat_data['name']
+        for el_set in mesh_data['sets']['element']:
+            if mat_name.lower() == el_set['name'].lower():
+                cubit.silent_cmd(f'block {i_mat+1} add {element_type} {str(el_set["labels"]).replace("[", "").replace("]", "")}')
+                cubit.silent_cmd(f'block {i_mat+1} name "{mat_name}"')
+
+
+    if plot_mat_ori:
+        print('    Material orientation lines ...')
+        dir_strings = ['xdir','ydir','zdir',]
+        for i_el, element_ori in enumerate(mesh_data['elementOrientations']):
+            hex_id = i_el+1                
+
+            node_ids = cubit.get_expanded_connectivity(element_type, hex_id)
+            coords = []
+            for iNd, node_id in enumerate(node_ids):
+                coords.append(list(get_nodal_coordinates(node_id)))
+            coords = np.array(coords)
+
+            # #######For Plotting - find the largest element side length #######
+            distances=[]
+            for iNd,node_id in enumerate(node_ids):
+                for jNd,node_idj in enumerate(node_ids):
+                    distances.append(norm(vectSub(coords[iNd],coords[jNd])))
+            length=max(distances)
+
+            coords = np.mean(coords, 0)
+
+            cubit.create_vertex(coords[0],coords[1],coords[2])
+            iVert1=get_last_id("vertex")
+            for i_dir in range(3):
+                index = 3*i_dir
+                cubit.create_vertex(coords[0]+length*element_ori[index],coords[1]+length*element_ori[index+1],coords[2]+length*element_ori[index+2])
+                iVert2=get_last_id("vertex")
+                cubit.silent_cmd(f'create curve vertex {iVert1} {iVert2}')
+                cubit.silent_cmd(f'curve {get_last_id("curve")} name "{dir_strings[i_dir]}"')
+
+
+        cubit.silent_cmd(f'color curve with name "xdir*"  geometry seagreen')
+        cubit.silent_cmd(f'color curve with name "ydir*"  geometry blue')
+        cubit.silent_cmd(f'color curve with name "zdir*"  geometry red')
+
+    print(f'Done importing! \n')
