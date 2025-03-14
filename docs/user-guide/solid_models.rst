@@ -7,23 +7,25 @@ Pure solid model (explicitly descritezed sandwich panels)
 =========================================================
 
 Pure solid models can be made in Sierra SM, Sierra SD or Abaqus.
-Currenly only SD is partially supported since it does not allow for 
-spatially varying material orientations. 
+ 
 
 Continuous meshes in Sierra
 ----------------------------
 
-#. The first step is to make a Genesis mesh file and the associated files with
-   :py:func:`~pynumad.analysis.cubit.make_blade.cubit_make_solid_blade`. This 
-   will create the following file
+#. The first step is to make a solid element Cubit model with
+   :py:func:`~pynumad.analysis.cubit.make_blade.cubit_make_solid_blade`. 
 
-      * {wt_name}.g. Genesis mesh file. 
+#. The next step is to compute material orientation vectors for each element with
+   :py:func:`~pynumad.analysis.cubit.make_blade.get_material_orientation_vectors`.
 
-#. The next step is to Compute material orientation with 
-   :py:func:`~pynumad.analysis.cubit.make_blade.compute_material_orientations`
+#. If Sierra SD is a target model, these orientation vectors can be assigned directly with 
+   :py:func:`~pynumad.analysis.cubit.make_blade.assign_material_orientation_vectors`. 
 
-#. Next, the orientation data needs to be assigned with 
-   :py:func:`~pynumad.analysis.cubit.make_blade.assign_material_orientations`
+#. If Sierra SM is a target model, the orientation vectors need to be converted to Euler Angles with 
+   :py:func:`~pynumad.analysis.cubit.make_blade.get_material_orientation_angles`. 
+
+#. The Euler Angles are then assigned to the mesh with 
+   :py:func:`~pynumad.analysis.cubit.make_blade.assign_material_orientation_angles`. 
 
 #. Finally, the mesh needs to be exported in Genisis format
    .. code-block:: python
@@ -62,7 +64,7 @@ Continuous meshes in Sierra
 #. AND/OR run Sierra SD with: launch -n 10 salinas -i sd.i, where n is the 
    number of CPUs.
 
-An example called `cubit_solid.py` exists in the examples folder.
+An example called `cubit_solid.py` exists in the examples folder illustrates these steps.
 
 Discontinuous meshes in Abaqus
 ------------------------------
