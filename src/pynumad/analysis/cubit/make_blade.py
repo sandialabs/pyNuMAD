@@ -80,9 +80,9 @@ def write_path_node_angles_to_file(set_verts,prepend,directory='.'):
             #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
             spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
-            perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+            hoop_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
 
-            newCoordinateSystemVectors = [spanwise_direction,perimeter_direction,surface_normal]
+            newCoordinateSystemVectors = [spanwise_direction,hoop_direction,surface_normal]
 
             globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
             
@@ -138,9 +138,9 @@ def get_orientations_euler(volume_id,element_shape_string):
         #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
         spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
-        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+        hoop_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
 
-        newCoordinateSystemVectors = [spanwise_direction,perimeter_direction,surface_normal]
+        newCoordinateSystemVectors = [spanwise_direction,hoop_direction,surface_normal]
 
         globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
@@ -158,50 +158,11 @@ def get_orientations_euler(volume_id,element_shape_string):
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
 
-def get_orientations_two_points(volume_id,element_shape_string):
-    global_el_ids_in_vol=[]
-
-
-    
-    spanwise_directions_in_vol = []
-    perimeter_directions_in_vol = []
-
-    surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
-    #volume_name = cubit.get_entity_name("volume", volume_id)
-    #t0 = time.time()
-
-    if 'hex' in element_shape_string:
-        element_ids = get_volume_hexes(volume_id)
-    elif 'tet' in element_shape_string:
-        element_ids = get_volume_tets(volume_id)
-        
-
-    for el_id in element_ids:
-        coords = cubit.get_center_point(element_shape_string, el_id)
-            
-        surface_normal = vectNorm(
-            list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
-
-        ref_line_direction = [0,0,1]
-        #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
-        spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
-
-        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
-
-        global_id=get_global_element_id(element_shape_string,el_id)
-        
-        global_el_ids_in_vol.append(global_id)
-
-        spanwise_directions_in_vol.append(spanwise_direction)
-        perimeter_directions_in_vol.append(perimeter_direction)
-
-    return global_el_ids_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
-
-def get_orientations_vectors(element_ids,volume_dict):
+def get_element_orientations_vectors(element_ids,volume_dict):
 
   
     spanwise_directions = []
-    perimeter_directions = []
+    hoop_directions = []
     surface_normal_directions = []
 
     for el_id in element_ids:
@@ -220,7 +181,7 @@ def get_orientations_vectors(element_ids,volume_dict):
         #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
         spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
-        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+        hoop_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
        
         #Additional rotation about surface normal
         theta = math.radians(volume_dict[volume_id]['ply_angle'])
@@ -228,148 +189,102 @@ def get_orientations_vectors(element_ids,volume_dict):
         s = math.sin(theta)
         beta = np.array([[c,s, 0],[-s, c, 0],[0,0,1]])
 
-        new_directions = beta @ [spanwise_direction,perimeter_direction,surface_normal]
+        new_directions = beta @ [spanwise_direction,hoop_direction,surface_normal]
 
         spanwise_directions.append(list(new_directions[0]))
-        perimeter_directions.append(list(new_directions[1]))
+        hoop_directions.append(list(new_directions[1]))
         surface_normal_directions.append(list(new_directions[2]))
 
-    return spanwise_directions,perimeter_directions,surface_normal_directions
-    
-def assign_material_orientations(orientation_data,output_format = 'euler'):
-    #Apply Material Orientation
+    return spanwise_directions,hoop_directions,surface_normal_directions
+def assign_material_orientation_angles(orientation_data):
+    #Assigne Euler angles to exodus mesh variables
     global_ids=orientation_data[0]
     n_el = len(global_ids)
 
-    if output_format =='euler':
-        theta1s=orientation_data[1]
-        theta2s=orientation_data[2]
-        theta3s=orientation_data[3]
 
-        cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
-        cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
-        cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
+    theta1s=orientation_data[1]
+    theta2s=orientation_data[2]
+    theta3s=orientation_data[3]
 
-        cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
-        cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
-        cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
-    elif output_format =='vectors':
+    cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
+    cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
+    cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
 
-        one_axis=np.array(orientation_data[1])
-        two_axis=np.array(orientation_data[2])
-        three_axis=np.array(orientation_data[3])
+    cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
+    cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
+    cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
 
-        cubit.set_element_variable(global_ids, 'matCoord_1_x', one_axis[:,0])
-        cubit.set_element_variable(global_ids, 'matCoord_1_y', one_axis[:,1])
-        cubit.set_element_variable(global_ids, 'matCoord_1_z', one_axis[:,2])
+    return
+def assign_material_orientation_vectors(orientation_data):
+    #Assign material orientation vectors to exodus mesh variables
+    global_ids=orientation_data[0]
+    n_el = len(global_ids)
 
-        cubit.set_element_variable(global_ids, 'matCoord_2_x', two_axis[:,0])
-        cubit.set_element_variable(global_ids, 'matCoord_2_y', two_axis[:,1])
-        cubit.set_element_variable(global_ids, 'matCoord_2_z', two_axis[:,2])
+    
 
-        cubit.set_element_variable(global_ids, 'matCoord_3_x', three_axis[:,0])
-        cubit.set_element_variable(global_ids, 'matCoord_3_y', three_axis[:,1])
-        cubit.set_element_variable(global_ids, 'matCoord_3_z', three_axis[:,2])
+    one_axis=np.array(orientation_data[1])
+    two_axis=np.array(orientation_data[2])
+    three_axis=np.array(orientation_data[3])
+
+    cubit.set_element_variable(global_ids, 'matCoord_1_x', one_axis[:,0])
+    cubit.set_element_variable(global_ids, 'matCoord_1_y', one_axis[:,1])
+    cubit.set_element_variable(global_ids, 'matCoord_1_z', one_axis[:,2])
+
+    cubit.set_element_variable(global_ids, 'matCoord_2_x', two_axis[:,0])
+    cubit.set_element_variable(global_ids, 'matCoord_2_y', two_axis[:,1])
+    cubit.set_element_variable(global_ids, 'matCoord_2_z', two_axis[:,2])
+
+    cubit.set_element_variable(global_ids, 'matCoord_3_x', three_axis[:,0])
+    cubit.set_element_variable(global_ids, 'matCoord_3_y', three_axis[:,1])
+    cubit.set_element_variable(global_ids, 'matCoord_3_z', three_axis[:,2])
 
     return
 
-def compute_material_orientations(element_shape,volume_dict, output_format = 'euler',ncpus = 1):
+def get_material_orientation_angles(orientation_vectors):
+    # orientation_vectors is the output of assign_material_orientation_vectors()
+
+    t0 = time.time()
+    print(f'Converting orientation vectors to Euler Angles...')
+
+    globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    R_1_angles = []
+    R_2_angles = []
+    R_3_angles = []
+    for i_el, element_id in enumerate(orientation_vectors[0]):
+        spanwise_direction = orientation_vectors[1][i_el]
+        hoop_direction = orientation_vectors[2][i_el]
+        surface_normal = orientation_vectors[3][i_el]
+
+        newCoordinateSystemVectors = [spanwise_direction,hoop_direction,surface_normal]
+
+        dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
+
+        temp1, temp2, temp3 = dcmToEulerAngles(dcm)
+
+        R_1_angles.append(-1*temp1)
+        R_2_angles.append(-1*temp2)
+        R_3_angles.append(-1*temp3)
+
+    t1 = time.time()
+    print(f'Total time for Euler angles: {t1-t0}')
+    return orientation_vectors[0],R_1_angles,R_2_angles,R_3_angles
+
+
+def get_material_orientation_vectors(volume_dict,ncpus = 1):
     # # ####################################
-    # # ### Assign material orientations ###
+    # # ### Get material orientations ###
     # # ####################################
-    
-    # element_shape_string = element_shape.lower()
+
     parse_string = f'in volume with name "*volume*"'
     global_element_ids = parse_cubit_list("element", parse_string)
     
     t0 = time.time()
     print(f'Calculating material orientations with {ncpus} CPU(s)...')
-
-    ans = []
-    if 'euler' in output_format:
-        for vol_id in all_volume_ids:
-            ans.append(get_orientations_euler(vol_id,element_shape_string))
-    elif 'two_points' in output_format:
-        for vol_id in all_volume_ids:
-            ans.append(get_orientations_two_points(vol_id,element_shape_string))
-    elif 'vectors' in output_format:
-        spanwise_directions,perimeter_directions,surface_normal_directions = get_orientations_vectors(global_element_ids,volume_dict)
-        # for global_element_id in global_element_ids:
-        #     ans.append()
-    else:
-        raise NameError(f'Material Orientation output format: {output_format} is not supported')
-
-    # if 'hex' in element_shape_string or 'tet' in element_shape.lower():
-    #     if ncpus==1:
-    #         ans = []
-    #         if 'euler' in output_format:
-    #             for vol_id in all_volume_ids:
-    #                 ans.append(get_orientations_euler(vol_id,element_shape_string))
-    #         elif 'two_points' in output_format:
-    #             for vol_id in all_volume_ids:
-    #                 ans.append(get_orientations_two_points(vol_id,element_shape_string))
-    #         elif 'vectors' in output_format:
-    #             for vol_id in all_volume_ids:
-    #                 ans.append(get_orientations_vectors(vol_id,element_shape_string))
-    #         else:
-    #             raise NameError(f'Material Orientation output format: {output_format} is not supported')
-    #     else:
-    #         raise ValueError(f'Number of CPUs has to be 1 for material orientations due to multiple args in get_orientations_XXXXXX() functions')
-            # pool_obj = multiprocessing.Pool(ncpus)
-            # if 'euler' in output_format:
-            #     ans = pool_obj.map(get_hex_orientations_euler,all_volume_ids)
-            # elif 'two_points' in output_format:
-            #     ans = pool_obj.map(get_hex_orientations_two_points,all_volume_ids)
-            # elif 'vectors' in output_format:
-            #     ans = pool_obj.map(get_hex_orientations_vectors,all_volume_ids)
-            # else:
-            #     raise NameError(f'Material Orientation output format: {output_format} is not supported')
-            
-            # pool_obj.close()
-    # else:
-    #     raise NameError(f' element shape {element_shape} unsupported.')
+    spanwise_directions,hoop_directions,surface_normal_directions = get_element_orientations_vectors(global_element_ids,volume_dict)
     t1 = time.time()
     print(f'Total time for material orientations: {t1-t0}')
 
-    # ans=np.array(ans,dtype=object)
-    # global_ids=[]
-
-    # if 'euler' in output_format:
-    #     theta1s=[]
-    #     theta2s=[]
-    #     theta3s=[]
-    #     for i in range(len(all_volume_ids)):
-    #         global_ids+=list(ans[i][0])
-    #         theta1s+=list(ans[i][1])
-    #         theta2s+=list(ans[i][2])
-    #         theta3s+=list(ans[i][3])
-
-    #     return [global_ids,theta1s,theta2s,theta3s]
-    
-    # elif 'two_points' in output_format:
-    #     spanwise_directions = []
-    #     perimiter_directions = []
-
-    #     for i in range(len(all_volume_ids)):
-    #         global_ids+=list(ans[i][0])
-    #         spanwise_directions+=list(ans[i][1])
-    #         perimiter_directions+=list(ans[i][2])
-
-    #     return [global_ids,spanwise_directions,perimiter_directions]
-
-
-    # elif 'vectors' in output_format:
-    #     spanwise_directions = []
-    #     perimiter_directions = []
-    #     normal_directions = []
-
-    #     for i in range(len(all_volume_ids)):
-    #         global_ids+=list(ans[i][0])
-    #         spanwise_directions+=list(ans[i][1])
-    #         perimiter_directions+=list(ans[i][2])
-            # normal_directions+=list(ans[i][3])
-
-    return [global_element_ids,spanwise_directions,perimeter_directions,surface_normal_directions]
+    return [global_element_ids,spanwise_directions,hoop_directions,surface_normal_directions]
 
 
 def order_path_points(points, ind):
