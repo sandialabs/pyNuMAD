@@ -158,22 +158,22 @@ def get_orientations_euler(volume_id,element_shape_string):
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
 
-def get_element_orientations_vectors(element_ids,volume_dict):
+def get_element_orientations_vectors(element_ids,volume_dict,mat_ori_surfs,signs,thetas):
 
-  
     spanwise_directions = []
     hoop_directions = []
     surface_normal_directions = []
 
     for el_id in element_ids:
-        volume_id  = parse_cubit_list('volume', f'in element {el_id}')[0]
-        surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
+
+        surf_id_for_mat_ori = int(mat_ori_surfs[el_id-1])
+        sign = signs[el_id-1]
 
         node_ids = parse_cubit_list('node',f'in element {el_id}')
         coords = [list(get_nodal_coordinates(node_id)) for node_id in node_ids]
         coords = np.array(coords)
         coords = np.mean(coords, 0)
-            
+
         surface_normal = vectNorm(
             list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
 
@@ -184,7 +184,7 @@ def get_element_orientations_vectors(element_ids,volume_dict):
         hoop_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
        
         #Additional rotation about surface normal
-        theta = math.radians(volume_dict[volume_id]['ply_angle'])
+        theta = thetas[el_id-1]
         c = math.cos(theta)
         s = math.sin(theta)
         beta = np.array([[c,s, 0],[-s, c, 0],[0,0,1]])
@@ -194,6 +194,8 @@ def get_element_orientations_vectors(element_ids,volume_dict):
         spanwise_directions.append(list(new_directions[0]))
         hoop_directions.append(list(new_directions[1]))
         surface_normal_directions.append(list(new_directions[2]))
+    
+
 
     return spanwise_directions,hoop_directions,surface_normal_directions
 def assign_material_orientation_angles(orientation_data):
@@ -274,13 +276,35 @@ def get_material_orientation_vectors(volume_dict,ncpus = 1):
     # # ####################################
     # # ### Get material orientations ###
     # # ####################################
+    cubit.cmd("renumber element all uniqueids")
 
     parse_string = f'in volume with name "*volume*"'
     global_element_ids = parse_cubit_list("element", parse_string)
+
+    t0 = time.time()
+    mat_ori_surfs = np.zeros(len(global_element_ids))
+    signs = np.zeros(len(global_element_ids))
+    thetas = np.zeros(len(global_element_ids))
     
+    parse_string = f'in volume with name "*volume*"'
+    volume_ids = parse_cubit_list("volume", parse_string)
+
+    for volume_id in volume_ids:
+        surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
+
+        parse_string = f'in volume {volume_id}'
+        this_volume_element_ids = parse_cubit_list("element", parse_string)
+
+        for el_id in this_volume_element_ids:
+            mat_ori_surfs[el_id-1] = surf_id_for_mat_ori
+            signs[el_id-1] = sign
+            thetas[el_id-1] = math.radians(volume_dict[volume_id]['ply_angle'])
+    t1 = time.time()
+    print(f'Total time for material orientation arrays: {t1-t0}')
+
     t0 = time.time()
     print(f'Calculating material orientations with {ncpus} CPU(s)...')
-    spanwise_directions,hoop_directions,surface_normal_directions = get_element_orientations_vectors(global_element_ids,volume_dict)
+    spanwise_directions,hoop_directions,surface_normal_directions = get_element_orientations_vectors(global_element_ids,volume_dict,mat_ori_surfs,signs,thetas)
     t1 = time.time()
     print(f'Total time for material orientations: {t1-t0}')
 
