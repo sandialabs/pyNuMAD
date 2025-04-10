@@ -1336,6 +1336,7 @@ def cubit_make_solid_blade(
     parse_string = f'with not is_meshed'
     un_meshed_vol_ids=parse_cubit_list("volume", parse_string)
     if un_meshed_vol_ids:
+        cubit.cmd(f'save as "debug.cub" overwrite')
         un_meshed_vol_names=[]
         for volume_id in un_meshed_vol_ids:
             un_meshed_vol_names.append(cubit.get_entity_name("volume", volume_id))
@@ -1476,3 +1477,164 @@ def yaml_mesh_to_cubit(yaml_file_base,element_type,plot_mat_ori = True):
         cubit.silent_cmd(f'color curve with name "zdir*"  geometry red')
 
     print(f'Done importing! \n')
+
+def get_all_segments_volume_ids(station_list,grouped_segments):
+    from copy import deepcopy
+    station_list.pop(-1)
+    all_segments_volume_ids=[[]]
+
+    #Make sure grouped stations are in ascending order
+    for group in grouped_segments:
+        group.sort()
+
+    #Make sure grouped stations are in ascending order
+    for igroup, group in enumerate(grouped_segments):
+        if len(group)>0:
+            i_start = group[0]
+            i_end =group[-1]
+            grouped_segments[igroup]=list(range(i_start,i_end+1))
+
+    ## Make sure grouped segments are in station list: 
+    for i_staion in [ x for xs in grouped_segments for x in xs]:
+        if i_staion not in station_list:
+            raise IOError(f'Grouped station {i_staion} not in station_list')
+
+    segment_ct=0
+    group_ct=0
+    for i_station in station_list:
+
+        parse_string = f'with name "*Station{str(i_station).zfill(3)}*"'
+        segment_volume_ids = parse_cubit_list("volume", parse_string)
+        # my_list = [1, 2, 3, 4, 5]
+        # segment_volume_ids = [i * (i_station+1) for i in my_list]
+        if i_station not in grouped_segments[group_ct]:
+            all_segments_volume_ids[segment_ct] = deepcopy(segment_volume_ids)
+            all_segments_volume_ids.append([])
+            segment_ct+=1
+        else:
+            if i_station == grouped_segments[group_ct][0]:
+                all_segments_volume_ids[segment_ct] = deepcopy(segment_volume_ids)
+            else:
+                all_segments_volume_ids[segment_ct]+=segment_volume_ids
+            if i_station == grouped_segments[group_ct][-1]:
+                segment_ct+=1
+                all_segments_volume_ids.append([])
+                if group_ct < len(grouped_segments)-1:
+                    group_ct+=1
+    all_segments_volume_ids.pop(-1)
+
+    return all_segments_volume_ids,grouped_segments
+
+#################################
+def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_name_base,orientation_vectors,materials_used,directory):
+    if station_list is None or len(station_list) == 0:
+        station_list = list(range(len(blade.ispan)))
+
+
+
+    print('Partitioning blade volumes into segments ...')
+    
+    all_segments_volume_ids,grouped_segments = get_all_segments_volume_ids(station_list,grouped_segments)
+
+    for iseg,segment_volume_ids in enumerate(all_segments_volume_ids):
+        print(f'Writing segment {iseg} ...')
+
+        file_name=f'{mesh_yaml_file_name_base}-segment_{iseg}.yaml'
+        path_name = directory + "/" + file_name
+        
+        segment_element_ids = parse_cubit_list('element', f'in vol {l2s(segment_volume_ids)}')
+        segment_node_ids = parse_cubit_list('node', f'in vol {l2s(segment_volume_ids)}')
+
+        # Write Nodes
+        print(f'    Writing {len(segment_node_ids)} nodes...')
+        data_string =''
+        data_string+="nodes:\n"
+        # data_string+=' '
+        temp_str=[' - '+str(list(get_nodal_coordinates(node_id))) + '\n' for node_id in segment_node_ids]
+        separator = ""
+        temp_str = separator.join(temp_str).replace(',','')
+
+        data_string+=temp_str
+        with open(path_name, "w") as f:
+            f.write(data_string)
+
+        # Write Elements
+        data_string =''
+        print(f'    Writing {len(segment_element_ids)} elements...')
+        data_string =''
+        data_string+="elements:\n"
+        # data_string+=' '
+
+        node_index_dict = dict((value, idx) for idx,value in enumerate(segment_node_ids))
+
+        temp_str=[' - '+str([node_index_dict[node_id]+1 for node_id in cubit.get_expanded_connectivity('element', segment_element_id)]) +'\n'for segment_element_id in segment_element_ids]
+        separator = ""
+        temp_str = separator.join(temp_str).replace(',','')
+
+        data_string+=temp_str
+        with open(path_name, "a") as f:
+            f.write(data_string)
+
+        # Write Element Sets
+        print(f'    Writing element sets...')
+        data_string =''
+        data_string+="sets:\n"
+
+        data_string+=f"  element:\n"
+        index_dict = dict((value, idx) for idx,value in enumerate(segment_element_ids))
+        for material_name in materials_used:
+            
+            block_elements = set(parse_cubit_list('element', f'in block with name "{material_name}"'))
+            segment_elements = set(parse_cubit_list('element', f'in vol {l2s(segment_volume_ids)}'))
+            element_list = block_elements.intersection(segment_elements)
+
+            data_string+=f"  - name: {material_name}\n"
+            data_string+=f"    labels:\n"
+
+
+            temp_str = str([index_dict[iEl]+1 for iEl in element_list])
+            temp_str = temp_str.replace("[", "")
+            temp_str = temp_str.replace("]", "")
+
+            temp_str = temp_str.replace(",", "\n    -")
+            data_string+=f"    - {temp_str}\n"
+
+        with open(path_name, "a") as f:
+            f.write(data_string)
+
+        # Write Element Orientations
+        print(f'    Writing material orientations...')
+        data_string =''
+        data_string+="elementOrientations:\n"
+        # data_string+=' '
+
+        index_dict = dict((value, idx) for idx,value in enumerate(orientation_vectors[0]))
+
+        # '- '+separator.join([str(orientation_vectors[i_dir][22]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n'
+        # data_string+=separator.join(['- '+separator.join([str(orientation_vectors[i_dir][index_dict[segment_element_id]]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n' for segment_element_id in segment_element_ids]).replace("\n, - ", "\n - ")
+
+        temp_str=[f" - [{', '.join(str(e) for e in orientation_vectors[1][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[2][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[3][index_dict[segment_element_id]])}]\n" for segment_element_id in segment_element_ids]
+        separator = ""
+        temp_str = separator.join(temp_str)
+        data_string+=temp_str
+        with open(path_name, "a") as f:
+            f.write(data_string)
+
+        #Write Materials
+        print(f'    Writing materials...')
+        data_string =''
+        data_string+="materials:\n"
+
+        materials = blade.definition.materials
+        for material_name in materials_used:
+            material=materials[material_name]
+
+            data_string+=f'   -  name: {material.name}\n'
+            data_string+=f'      E: [{material.ex}, {material.ey}, {material.ez}]\n'
+            data_string+=f'      G: [{material.gxy}, {material.gxz}, {material.gyz}]\n'
+            data_string+=f'      nu: [{material.prxy}, {material.prxz}, {material.pryz}]\n'
+            data_string+=f'      rho: {material.density}\n'
+        with open(path_name, "a") as f:
+            f.write(data_string)
+
+
