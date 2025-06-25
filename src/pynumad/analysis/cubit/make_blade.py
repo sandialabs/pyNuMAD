@@ -1416,11 +1416,11 @@ def cubit_make_solid_blade(
 
     return materials_used, volume_dict
 
-def yaml_mesh_to_cubit(yaml_file_base,element_type,plot_mat_ori = True):
+def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True):
     import yaml
     
-    print(f'Importing {yaml_file_base} to cubit ...')
-    with open(f'{yaml_file_base}.yaml', 'r') as file:
+    print(f'Importing {dir_name}/{yaml_file_base} to cubit ...')
+    with open(f'{dir_name}/{yaml_file_base}.yaml', 'r') as file:
         mesh_data = yaml.load(file, Loader=yaml.CLoader)
 
     print('    Making nodes ...')
