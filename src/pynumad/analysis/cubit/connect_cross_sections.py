@@ -367,7 +367,7 @@ def get_spanwise_splines_for_a_volume(current_surface_id,next_surface_id,spanwis
 
 
 
-def make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines):
+def make_all_volumes_for_a_part(surface_dict, volume_dict,ordered_list, i_station_end,spanwise_splines):
     # nIntervals=3
     vol_list=[]
     i_start = len(spanwise_splines)
@@ -384,8 +384,14 @@ def make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwi
                 spanwise_splines_for_a_volume = get_spanwise_splines_for_a_volume(current_surface_id,next_surface_id,spanwise_splines[part_surface_ids],
                 surface_dict[current_surface_id]["verts"],surface_dict[next_surface_id]["verts"])
                 make_a_volume(i_span,current_surface_id,next_surface_id,spanwise_splines_for_a_volume,surface_dict,i_station_end)
-                vol_list.append(get_last_id("volume"))
-                # assign_intervals(get_last_id("volume"),nIntervals)
+                vol_id = get_last_id("volume")
+                vol_list.append(vol_id)
+
+                volume_dict[vol_id] = {}
+                # volume_dict[vol_id]["material_name"] = material_name
+                volume_dict[vol_id]["ply_angle"] = surface_dict[current_surface_id]["ply_angle"]
+                del surface_dict[current_surface_id]
+                
     else:
         raise ValueError("Can't make volumes with only one cross section.")
 
@@ -529,60 +535,7 @@ def make_birds_mouth(
     return list(parse_cubit_list("volume", parse_string)) #update the web volumes
 
 
-# cubit.cmd('open "/home/ecamare/myprojects/bar/cubitDev/python/python0.cub"')
 
-
-# def get_approximate_thickness_direction_for_volume(volume_id):
-#     # This function is used when assigning material orientations
-
-#     # Get thickness direction tangents
-
-#     #Get list of curves with name layer_thickness
-#     parse_string = f'with name "*thickness*" in volume {volume_id}'
-#     thickness_curve_ids = parse_cubit_list("curve", parse_string)
-
-#     approximate_thickness_direction = []
-#     for i_curve in thickness_curve_ids:
-#         current_curve=cubit.curve(i_curve)
-#         coords = current_curve.position_from_fraction(0.5)
-#         approximate_thickness_direction.append(current_curve.tangent(coords)) 
-#     approximate_thickness_direction = np.array(approximate_thickness_direction)
-#     n_thickness_curves=len(thickness_curve_ids)
-#     # approximate_thickness_direction = []
-#     # for current_curve in cubit.volume(volume_id).curves():
-#     #     curve_name = cubit.get_entity_name("curve", current_curve.id())
-#     #     if "layer_thickness" in curve_name:
-#     #         coords = current_curve.position_from_fraction(0.5)
-#     #         approximate_thickness_direction.append(current_curve.tangent(coords))
-#     # approximate_thickness_direction = np.array(approximate_thickness_direction)
-#     # n_thickness_curves, _ = approximate_thickness_direction.shape
-
-#     if n_thickness_curves == 4:  # All other cases
-#         return np.mean(approximate_thickness_direction, 0)
-#     elif n_thickness_curves == 8:  # LE adhesive case and round TE adhesive
-#         return 0
-#     elif n_thickness_curves == 6:  # Web overwrap
-#         # Take the mean of all curves with name 'layer_thickness'
-#         mean = np.mean(approximate_thickness_direction, 0)
-
-#         errorList = []
-#         for i in range(n_thickness_curves):
-#             diff = approximate_thickness_direction[i] - mean
-
-#             errorList.append(sqrt(dotProd(diff, diff)))
-#         sortIndex = np.argsort(errorList)[:4]  # Take the first four. 
-#                                                # This discards the two directions 
-#                                                # with the largest deviation from the
-#                                                # average
-
-#         return np.mean(approximate_thickness_direction[sortIndex, :], 0)
-#     else:
-#         cubit.cmd(f'save as "Debug.cub" overwrite')
-#         raise ValueError(
-#             f"The number of thickness curves in volume is unexpected. Cannot assign material orientation. n_thickness_curves: {n_thickness_curves}"
-#         )
-
-#     return
 
 def get_mat_ori_surface(volume_id):
 
@@ -619,92 +572,4 @@ def get_mat_ori_surface(volume_id):
     else:
         sign = -1.0             
     return mat_ori_surface,sign
-def old_get_mat_ori_surface(volume_id, spanwise_mat_ori_curve):
-    # This function is used when assigning material orientations
-    # This gets returns the surface within a volume that will be used to get surface normals.
-    # The sign +-1 is also returned since some of the surfaces are oriented the wrong way
-    
-    approximate_thickness_direction = get_approximate_thickness_direction_for_volume(volume_id)
 
-
-    surface_ids = []
-    volumeSurfaces = cubit.volume(volume_id).surfaces()
-    for current_surface in volumeSurfaces:
-
-        parse_string = f'with name "*thickness*" in surface {current_surface.id()}'
-        thickness_curve_ids = parse_cubit_list("curve", parse_string)
-        
-        if len(thickness_curve_ids)==0:
-            surface_ids.append(current_surface.id()) 
-
-    # # Create a list of surface IDs in the given volume
-    # surface_ids = []
-    # volumeSurfaces = cubit.volume(volume_id).surfaces()
-    # for current_surface in volumeSurfaces:
-    #     surface_ids.append(current_surface.id())
-
-    # # Eliminate surfaces that have two curves named thickness:
-    # surface_ct = 0
-    # for current_surface in volumeSurfaces:
-    #     curve_ct = (
-    #         0  # Counts the number of curves in the surface with name 'layer_thickness'
-    #     )
-    #     for current_curve in current_surface.curves():
-    #         curve_name = cubit.get_entity_name("curve", current_curve.id())
-    #         if "layer_thickness" in curve_name:
-    #             curve_ct += 1
-
-    #     if curve_ct >= 2:
-    #         surface_ct += 1
-    #         surface_ids.remove(current_surface.id())
-
-    # surface_ids now has the list of surfaces w/o thickness curves
-    if len(surface_ids) == 3 or len(surface_ids) == 2 or len(surface_ids) == 1:
-        if len(surface_ids) == 2:
-            surface_name = cubit.get_entity_name("surface", surface_ids[0])
-            if "topFace" in surface_name:
-                surface_id = surface_ids[0]
-            else:
-                surface_id = surface_ids[-1]
-        elif len(surface_ids) == 1:  # Web overwrap
-            surface_id = surface_ids[0]
-        elif len(surface_ids) == 3:
-            if 'web' in cubit.get_entity_name("volume", volume_id).lower(): 
-                                        #This is for when birdsmouth is made and it does 
-                                        #not cut into the next station
-                max_area=0
-                for i_surf in surface_ids:
-                    area =cubit.surface(i_surf).area()
-                    if area > max_area:
-                        max_area=area
-                        surface_id=i_surf
-            else:
-                raise ValueError(
-                    "The number of thickness curves in volume is unexpected. Cannot assign material orientation"
-                )
-
-        coords = cubit.get_center_point("surface", surface_id)
-        surface_normal = cubit.surface(surface_id).normal_at(coords)
-
-        if dotProd(surface_normal, approximate_thickness_direction) > 0:
-            sign = 1.0
-        else:
-            sign = -1.0 
-    
-
-
-
-    elif len(surface_ids) == 0:
-        
-      # LE adhesive and/or TE adhesive for round cross-sections
-        # print(f'~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~volume_id {volume_id}')
-        surface_id = False
-        sign = 1.0
-        #parse_string = f'with name "*layer_thickness*" in volume {volume_id}'
-        #thickness_curve_ids = parse_cubit_list("curve", parse_string)
-    else:
-        raise ValueError(
-            "The number of thickness curves in volume is unexpected. Cannot assign material orientation"
-        )
-
-    return surface_id, sign
