@@ -80,9 +80,9 @@ def write_path_node_angles_to_file(set_verts,prepend,directory='.'):
             #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
             spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
-            perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+            hoop_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
 
-            newCoordinateSystemVectors = [spanwise_direction,perimeter_direction,surface_normal]
+            newCoordinateSystemVectors = [spanwise_direction,hoop_direction,surface_normal]
 
             globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
             
@@ -110,7 +110,7 @@ def write_path_node_angles_to_file(set_verts,prepend,directory='.'):
         file.write(f'R_32 {" ".join(map(str,dcms[7]))}\n')
         file.write(f'R_33 {" ".join(map(str,dcms[8]))}\n')
         file.close()
-def get_hex_orientations_euler(volume_id):
+def get_orientations_euler(volume_id,element_shape_string):
     global_el_ids_in_vol=[]
     theta1s_in_vol=[]
     theta2s_in_vol=[]
@@ -122,8 +122,14 @@ def get_hex_orientations_euler(volume_id):
     #volume_name = cubit.get_entity_name("volume", volume_id)
     #t0 = time.time()
 
-    for el_id in get_volume_hexes(volume_id):
-        coords = cubit.get_center_point("hex", el_id)
+    if 'hex' in element_shape_string:
+        element_ids = get_volume_hexes(volume_id)
+    elif 'tet' in element_shape_string:
+        element_ids = get_volume_tets(volume_id)
+        
+
+    for el_id in element_ids:
+        coords = cubit.get_center_point(element_shape_string, el_id)
             
         surface_normal = vectNorm(
             list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
@@ -132,13 +138,13 @@ def get_hex_orientations_euler(volume_id):
         #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
         spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
-        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+        hoop_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
 
-        newCoordinateSystemVectors = [spanwise_direction,perimeter_direction,surface_normal]
+        newCoordinateSystemVectors = [spanwise_direction,hoop_direction,surface_normal]
 
         globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
-        global_id=get_global_element_id('hex',el_id)
+        global_id=get_global_element_id(element_shape_string,el_id)
         
         dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
 
@@ -152,21 +158,22 @@ def get_hex_orientations_euler(volume_id):
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
 
-def get_hex_orientations_two_points(volume_id):
-    global_el_ids_in_vol=[]
+def get_element_orientations_vectors(element_ids,volume_dict,mat_ori_surfs,signs,thetas):
 
+    spanwise_directions = []
+    hoop_directions = []
+    surface_normal_directions = []
 
-    
-    spanwise_directions_in_vol = []
-    perimeter_directions_in_vol = []
+    for el_id in element_ids:
 
-    surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
-    #volume_name = cubit.get_entity_name("volume", volume_id)
-    #t0 = time.time()
+        surf_id_for_mat_ori = int(mat_ori_surfs[el_id-1])
+        sign = signs[el_id-1]
 
-    for el_id in get_volume_hexes(volume_id):
-        coords = cubit.get_center_point("hex", el_id)
-            
+        node_ids = parse_cubit_list('node',f'in element {el_id}')
+        coords = [list(get_nodal_coordinates(node_id)) for node_id in node_ids]
+        coords = np.array(coords)
+        coords = np.mean(coords, 0)
+
         surface_normal = vectNorm(
             list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
 
@@ -174,217 +181,134 @@ def get_hex_orientations_two_points(volume_id):
         #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
         spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
 
-        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+        hoop_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+       
+        #Additional rotation about surface normal
+        theta = thetas[el_id-1]
+        c = math.cos(theta)
+        s = math.sin(theta)
+        beta = np.array([[c,s, 0],[-s, c, 0],[0,0,1]])
 
-        global_id=get_global_element_id('hex',el_id)
-        
-        global_el_ids_in_vol.append(global_id)
+        new_directions = beta @ [spanwise_direction,hoop_direction,surface_normal]
 
-        spanwise_directions_in_vol.append(spanwise_direction)
-        perimeter_directions_in_vol.append(perimeter_direction)
+        spanwise_directions.append(list(new_directions[0]))
+        hoop_directions.append(list(new_directions[1]))
+        surface_normal_directions.append(list(new_directions[2]))
+    
 
-    return global_el_ids_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
 
-def get_hex_orientations_vectors(volume_id):
-    global_el_ids_in_vol=[]
+    return spanwise_directions,hoop_directions,surface_normal_directions
+def assign_material_orientation_angles(orientation_data):
+    #Assigne Euler angles to exodus mesh variables
+    global_ids=orientation_data[0]
+    n_el = len(global_ids)
 
+
+    theta1s=orientation_data[1]
+    theta2s=orientation_data[2]
+    theta3s=orientation_data[3]
+
+    cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
+    cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
+    cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
+
+    cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
+    cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
+    cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
+
+    return
+def assign_material_orientation_vectors(orientation_data):
+    #Assign material orientation vectors to exodus mesh variables
+    global_ids=orientation_data[0]
+    n_el = len(global_ids)
 
     
-    spanwise_directions_in_vol = []
-    perimeter_directions_in_vol = []
-    surface_normal_directions_in_vol = []
 
-    surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
-    #volume_name = cubit.get_entity_name("volume", volume_id)
-    #t0 = time.time()
+    one_axis=np.array(orientation_data[1])
+    two_axis=np.array(orientation_data[2])
+    three_axis=np.array(orientation_data[3])
 
-    for el_id in get_volume_hexes(volume_id):
-        coords = cubit.get_center_point("hex", el_id)
-            
-        surface_normal = vectNorm(
-            list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
+    cubit.set_element_variable(global_ids, 'matCoord_1_x', one_axis[:,0])
+    cubit.set_element_variable(global_ids, 'matCoord_1_y', one_axis[:,1])
+    cubit.set_element_variable(global_ids, 'matCoord_1_z', one_axis[:,2])
 
-        ref_line_direction = [0,0,1]
-        #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
-        spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
+    cubit.set_element_variable(global_ids, 'matCoord_2_x', two_axis[:,0])
+    cubit.set_element_variable(global_ids, 'matCoord_2_y', two_axis[:,1])
+    cubit.set_element_variable(global_ids, 'matCoord_2_z', two_axis[:,2])
 
-        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
+    cubit.set_element_variable(global_ids, 'matCoord_3_x', three_axis[:,0])
+    cubit.set_element_variable(global_ids, 'matCoord_3_y', three_axis[:,1])
+    cubit.set_element_variable(global_ids, 'matCoord_3_z', three_axis[:,2])
 
-        global_id=get_global_element_id('hex',el_id)
-        
-        global_el_ids_in_vol.append(global_id)
+    return
 
-        
-        spanwise_directions_in_vol.append(spanwise_direction)
-        perimeter_directions_in_vol.append(perimeter_direction)
-        surface_normal_directions_in_vol.append(surface_normal)
+def get_material_orientation_angles(orientation_vectors):
+    # orientation_vectors is the output of assign_material_orientation_vectors()
 
-    return global_el_ids_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol,surface_normal_directions_in_vol
+    t0 = time.time()
+    print(f'Converting orientation vectors to Euler Angles...')
 
-def get_tet_orientations(volume_id):
-    global_el_ids_in_vol=[]
-    theta1s_in_vol=[]
-    theta2s_in_vol=[]
-    theta3s_in_vol=[]
+    globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    R_1_angles = []
+    R_2_angles = []
+    R_3_angles = []
+    for i_el, element_id in enumerate(orientation_vectors[0]):
+        spanwise_direction = orientation_vectors[1][i_el]
+        hoop_direction = orientation_vectors[2][i_el]
+        surface_normal = orientation_vectors[3][i_el]
 
-    
-    spanwise_directions_in_vol = []
-    perimeter_directions_in_vol = []
+        newCoordinateSystemVectors = [spanwise_direction,hoop_direction,surface_normal]
 
-    surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
-    #volume_name = cubit.get_entity_name("volume", volume_id)
-    #t0 = time.time()
-
-    for el_id in get_volume_tets(volume_id):
-        coords = cubit.get_center_point("tet", el_id)
-            
-        surface_normal = vectNorm(
-            list(sign*np.array(get_surface_normal_at_coord(surf_id_for_mat_ori, coords))))
-
-        ref_line_direction = [0,0,1]
-        #https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
-        spanwise_direction = vectNorm(np.array(ref_line_direction)-np.dot(ref_line_direction,surface_normal)*np.array(surface_normal))
-
-        perimeter_direction = vectNorm(np.cross(surface_normal, spanwise_direction))
-
-        newCoordinateSystemVectors = [spanwise_direction,perimeter_direction,surface_normal]
-
-        globalAxisBasisVectors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-
-        global_id=get_global_element_id('tet',el_id)
-        
         dcm = getDCM(globalAxisBasisVectors, newCoordinateSystemVectors)
 
         temp1, temp2, temp3 = dcmToEulerAngles(dcm)
 
-        global_el_ids_in_vol.append(global_id)
-        theta1s_in_vol.append(-1*temp1)
-        theta2s_in_vol.append(-1*temp2)
-        theta3s_in_vol.append(-1*temp3)
+        R_1_angles.append(-1*temp1)
+        R_2_angles.append(-1*temp2)
+        R_3_angles.append(-1*temp3)
 
-        spanwise_directions_in_vol.append(spanwise_direction)
-        perimeter_directions_in_vol.append(perimeter_direction)
+    t1 = time.time()
+    print(f'Total time for Euler angles: {t1-t0}')
+    return orientation_vectors[0],R_1_angles,R_2_angles,R_3_angles
 
-    return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol,spanwise_directions_in_vol,perimeter_directions_in_vol
-    
-def assign_material_orientations(orientation_data,output_format = 'euler'):
-    #Apply Material Orientation
-    global_ids=orientation_data[0]
-    n_el = len(global_ids)
 
-    if output_format =='euler':
-        theta1s=orientation_data[1]
-        theta2s=orientation_data[2]
-        theta3s=orientation_data[3]
-
-        cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
-        cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
-        cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
-
-        cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
-        cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
-        cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
-    elif output_format =='vectors':
-
-        one_axis=np.array(orientation_data[1])
-        two_axis=np.array(orientation_data[2])
-        three_axis=np.array(orientation_data[3])
-
-        cubit.set_element_variable(global_ids, 'matCoord_1_x', one_axis[:,0])
-        cubit.set_element_variable(global_ids, 'matCoord_1_y', one_axis[:,1])
-        cubit.set_element_variable(global_ids, 'matCoord_1_z', one_axis[:,2])
-
-        cubit.set_element_variable(global_ids, 'matCoord_2_x', two_axis[:,0])
-        cubit.set_element_variable(global_ids, 'matCoord_2_y', two_axis[:,1])
-        cubit.set_element_variable(global_ids, 'matCoord_2_z', two_axis[:,2])
-
-        cubit.set_element_variable(global_ids, 'matCoord_3_x', three_axis[:,0])
-        cubit.set_element_variable(global_ids, 'matCoord_3_y', three_axis[:,1])
-        cubit.set_element_variable(global_ids, 'matCoord_3_z', three_axis[:,2])
-
-    return
-
-def compute_material_orientations(element_shape,output_format = 'euler',ncpus = 1):
+def get_material_orientation_vectors(volume_dict,ncpus = 1):
     # # ####################################
-    # # ### Assign material orientations ###
+    # # ### Get material orientations ###
     # # ####################################
+    cubit.cmd("renumber element all uniqueids")
+
+    parse_string = f'in volume with name "*volume*"'
+    global_element_ids = parse_cubit_list("element", parse_string)
+
+    t0 = time.time()
+    mat_ori_surfs = np.zeros(len(global_element_ids))
+    signs = np.zeros(len(global_element_ids))
+    thetas = np.zeros(len(global_element_ids))
     
-    parse_string = f'with name "*volume*"'
-    all_volume_ids = parse_cubit_list("volume", parse_string)
-    
+    parse_string = f'in volume with name "*volume*"'
+    volume_ids = parse_cubit_list("volume", parse_string)
+
+    for volume_id in volume_ids:
+        surf_id_for_mat_ori,sign = get_mat_ori_surface(volume_id)
+
+        parse_string = f'in volume {volume_id}'
+        this_volume_element_ids = parse_cubit_list("element", parse_string)
+
+        for el_id in this_volume_element_ids:
+            mat_ori_surfs[el_id-1] = surf_id_for_mat_ori
+            signs[el_id-1] = sign
+            thetas[el_id-1] = math.radians(volume_dict[volume_id]['ply_angle'])
+    t1 = time.time()
+    print(f'Total time for material orientation arrays: {t1-t0}')
+
     t0 = time.time()
     print(f'Calculating material orientations with {ncpus} CPU(s)...')
-
-    if 'hex' in element_shape:
-        if ncpus==1:
-            ans = []
-            if 'euler' in output_format:
-                for vol_id in all_volume_ids:
-                    ans.append(get_hex_orientations_euler(vol_id))
-            elif 'two_points' in output_format:
-                for vol_id in all_volume_ids:
-                    ans.append(get_hex_orientations_two_points(vol_id))
-            elif 'vectors' in output_format:
-                for vol_id in all_volume_ids:
-                    ans.append(get_hex_orientations_vectors(vol_id))
-            else:
-                raise NameError(f'Material Orientation output format: {output_format} is not supported')
-        else:
-            pool_obj = multiprocessing.Pool(ncpus)
-            if 'euler' in output_format:
-                ans = pool_obj.map(get_hex_orientations_euler,all_volume_ids)
-            elif 'two_points' in output_format:
-                ans = pool_obj.map(get_hex_orientations_two_points,all_volume_ids)
-            elif 'vectors' in output_format:
-                ans = pool_obj.map(get_hex_orientations_vectors,all_volume_ids)
-            else:
-                raise NameError(f'Material Orientation output format: {output_format} is not supported')
-            
-            pool_obj.close()
-    else:
-        raise NameError(f' element shape {element_shape} unsupported.')
+    spanwise_directions,hoop_directions,surface_normal_directions = get_element_orientations_vectors(global_element_ids,volume_dict,mat_ori_surfs,signs,thetas)
     t1 = time.time()
     print(f'Total time for material orientations: {t1-t0}')
 
-    ans=np.array(ans,dtype=object)
-    global_ids=[]
-
-    if 'euler' in output_format:
-        theta1s=[]
-        theta2s=[]
-        theta3s=[]
-        for i in range(len(all_volume_ids)):
-            global_ids+=list(ans[i][0])
-            theta1s+=list(ans[i][1])
-            theta2s+=list(ans[i][2])
-            theta3s+=list(ans[i][3])
-
-        return [global_ids,theta1s,theta2s,theta3s]
-    
-    elif 'two_points' in output_format:
-        spanwise_directions = []
-        perimiter_directions = []
-
-        for i in range(len(all_volume_ids)):
-            global_ids+=list(ans[i][0])
-            spanwise_directions+=list(ans[i][1])
-            perimiter_directions+=list(ans[i][2])
-
-        return [global_ids,spanwise_directions,perimiter_directions]
-
-
-    elif 'vectors' in output_format:
-        spanwise_directions = []
-        perimiter_directions = []
-        normal_directions = []
-
-        for i in range(len(all_volume_ids)):
-            global_ids+=list(ans[i][0])
-            spanwise_directions+=list(ans[i][1])
-            perimiter_directions+=list(ans[i][2])
-            normal_directions+=list(ans[i][3])
-
-        return [global_ids,spanwise_directions,perimiter_directions,normal_directions]
+    return [global_element_ids,spanwise_directions,hoop_directions,surface_normal_directions]
 
 
 def order_path_points(points, ind):
@@ -1081,12 +1005,13 @@ def cubit_make_solid_blade(
     # Make volumes along the span.
     ### ### ### ###
     mesh_vol_list = []
+    volume_dict ={}
 
     part_name = "shell"
     ordered_list = get_ordered_list(part_name)
     spanwise_splines=[]
     if len(ordered_list) > 0:
-        shell_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
+        shell_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, volume_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         shell_vol_list=[]
 
@@ -1094,14 +1019,14 @@ def cubit_make_solid_blade(
     ordered_list = get_ordered_list(part_name)
     ordered_list_web = ordered_list.copy()
     if ordered_list and len(ordered_list[0]) > 1:
-        web_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
+        web_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, volume_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         web_vol_list=[]
 
     part_name = "roundTEadhesive"
     ordered_list = get_ordered_list(part_name)
     if ordered_list and len(ordered_list[0]) > 1:
-        roundTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
+        roundTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, volume_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         roundTEadhesive_vol_list=[]
 
@@ -1110,7 +1035,7 @@ def cubit_make_solid_blade(
     ordered_list = get_ordered_list(part_name)
 
     if ordered_list and len(ordered_list[0]) > 1:
-        flatTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, ordered_list, i_station_end,spanwise_splines)
+        flatTEadhesive_vol_list,spanwise_splines = make_all_volumes_for_a_part(surface_dict, volume_dict, ordered_list, i_station_end,spanwise_splines)
     else:
         flatTEadhesive_vol_list=[]
 
@@ -1411,6 +1336,7 @@ def cubit_make_solid_blade(
     parse_string = f'with not is_meshed'
     un_meshed_vol_ids=parse_cubit_list("volume", parse_string)
     if un_meshed_vol_ids:
+        cubit.cmd(f'save as "debug.cub" overwrite')
         un_meshed_vol_names=[]
         for volume_id in un_meshed_vol_ids:
             un_meshed_vol_names.append(cubit.get_entity_name("volume", volume_id))
@@ -1488,4 +1414,227 @@ def cubit_make_solid_blade(
     #         cubit.cmd(f'save as "{wt_name}.cub" overwrite')
 
 
-    return materials_used
+    return materials_used, volume_dict
+
+def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True):
+    import yaml
+    
+    print(f'Importing {dir_name}/{yaml_file_base} to cubit ...')
+    with open(f'{dir_name}/{yaml_file_base}.yaml', 'r') as file:
+        mesh_data = yaml.load(file, Loader=yaml.CLoader)
+
+    print('    Making nodes ...')
+    for node_coords in mesh_data['nodes']:
+        cubit.silent_cmd(f'create node location {node_coords[0]}')
+
+    print('    Making elements ...')
+    for element_conn in mesh_data['elements']:
+
+        cubit.silent_cmd(f'create {element_type} node {element_conn[0]}')
+
+    print('    Making blocks ...')
+    for i_mat, mat_data in enumerate(mesh_data['materials']):
+        mat_name = mat_data['name']
+        for el_set in mesh_data['sets']['element']:
+            if mat_name.lower() == el_set['name'].lower():
+                cubit.silent_cmd(f'block {i_mat+1} add {element_type} {str(el_set["labels"]).replace("[", "").replace("]", "")}')
+                cubit.silent_cmd(f'block {i_mat+1} name "{mat_name}"')
+
+
+    if plot_mat_ori:
+        print('    Material orientation lines ...')
+        dir_strings = ['xdir','ydir','zdir',]
+        for i_el, element_ori in enumerate(mesh_data['elementOrientations']):
+            hex_id = i_el+1                
+
+            node_ids = cubit.get_expanded_connectivity(element_type, hex_id)
+            coords = []
+            for iNd, node_id in enumerate(node_ids):
+                coords.append(list(get_nodal_coordinates(node_id)))
+            coords = np.array(coords)
+
+            # #######For Plotting - find the largest element side length #######
+            distances=[]
+            for iNd,node_id in enumerate(node_ids):
+                for jNd,node_idj in enumerate(node_ids):
+                    distances.append(norm(vectSub(coords[iNd],coords[jNd])))
+            length=max(distances)
+
+            coords = np.mean(coords, 0)
+
+            cubit.create_vertex(coords[0],coords[1],coords[2])
+            iVert1=get_last_id("vertex")
+            for i_dir in range(3):
+                index = 3*i_dir
+                cubit.create_vertex(coords[0]+length*element_ori[index],coords[1]+length*element_ori[index+1],coords[2]+length*element_ori[index+2])
+                iVert2=get_last_id("vertex")
+                cubit.silent_cmd(f'create curve vertex {iVert1} {iVert2}')
+                cubit.silent_cmd(f'curve {get_last_id("curve")} name "{dir_strings[i_dir]}"')
+
+
+        cubit.silent_cmd(f'color curve with name "xdir*"  geometry seagreen')
+        cubit.silent_cmd(f'color curve with name "ydir*"  geometry blue')
+        cubit.silent_cmd(f'color curve with name "zdir*"  geometry red')
+
+    print(f'Done importing! \n')
+
+def get_all_segments_volume_ids(station_list,grouped_segments):
+    from copy import deepcopy
+    station_list.pop(-1)
+    all_segments_volume_ids=[[]]
+
+    #Make sure grouped stations are in ascending order
+    for group in grouped_segments:
+        group.sort()
+
+    #Make sure grouped stations are in ascending order
+    for igroup, group in enumerate(grouped_segments):
+        if len(group)>0:
+            i_start = group[0]
+            i_end =group[-1]
+            grouped_segments[igroup]=list(range(i_start,i_end+1))
+
+    ## Make sure grouped segments are in station list: 
+    for i_staion in [ x for xs in grouped_segments for x in xs]:
+        if i_staion not in station_list:
+            raise IOError(f'Grouped station {i_staion} not in station_list')
+
+    segment_ct=0
+    group_ct=0
+    for i_station in station_list:
+
+        parse_string = f'with name "*Station{str(i_station).zfill(3)}*"'
+        segment_volume_ids = parse_cubit_list("volume", parse_string)
+        # my_list = [1, 2, 3, 4, 5]
+        # segment_volume_ids = [i * (i_station+1) for i in my_list]
+        if i_station not in grouped_segments[group_ct]:
+            all_segments_volume_ids[segment_ct] = deepcopy(segment_volume_ids)
+            all_segments_volume_ids.append([])
+            segment_ct+=1
+        else:
+            if i_station == grouped_segments[group_ct][0]:
+                all_segments_volume_ids[segment_ct] = deepcopy(segment_volume_ids)
+            else:
+                all_segments_volume_ids[segment_ct]+=segment_volume_ids
+            if i_station == grouped_segments[group_ct][-1]:
+                segment_ct+=1
+                all_segments_volume_ids.append([])
+                if group_ct < len(grouped_segments)-1:
+                    group_ct+=1
+    all_segments_volume_ids.pop(-1)
+
+    return all_segments_volume_ids,grouped_segments
+
+#################################
+def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_name_base,orientation_vectors,materials_used,directory):
+    if station_list is None or len(station_list) == 0:
+        station_list = list(range(len(blade.ispan)))
+
+
+
+    print('Partitioning blade volumes into segments ...')
+    
+    all_segments_volume_ids,grouped_segments = get_all_segments_volume_ids(station_list,grouped_segments)
+
+    for iseg,segment_volume_ids in enumerate(all_segments_volume_ids):
+        print(f'Writing segment {iseg} ...')
+
+        file_name=f'{mesh_yaml_file_name_base}-segment_{iseg}.yaml'
+        path_name = directory + "/" + file_name
+        
+        segment_element_ids = parse_cubit_list('element', f'in vol {l2s(segment_volume_ids)}')
+        segment_node_ids = parse_cubit_list('node', f'in vol {l2s(segment_volume_ids)}')
+
+        # Write Nodes
+        print(f'    Writing {len(segment_node_ids)} nodes...')
+        data_string =''
+        data_string+="nodes:\n"
+        # data_string+=' '
+        temp_str=[' - '+str(list(get_nodal_coordinates(node_id))) + '\n' for node_id in segment_node_ids]
+        separator = ""
+        temp_str = separator.join(temp_str).replace(',','')
+
+        data_string+=temp_str
+        with open(path_name, "w") as f:
+            f.write(data_string)
+
+        # Write Elements
+        data_string =''
+        print(f'    Writing {len(segment_element_ids)} elements...')
+        data_string =''
+        data_string+="elements:\n"
+        # data_string+=' '
+
+        node_index_dict = dict((value, idx) for idx,value in enumerate(segment_node_ids))
+
+        temp_str=[' - '+str([node_index_dict[node_id]+1 for node_id in cubit.get_expanded_connectivity('element', segment_element_id)]) +'\n'for segment_element_id in segment_element_ids]
+        separator = ""
+        temp_str = separator.join(temp_str).replace(',','')
+
+        data_string+=temp_str
+        with open(path_name, "a") as f:
+            f.write(data_string)
+
+        # Write Element Sets
+        print(f'    Writing element sets...')
+        data_string =''
+        data_string+="sets:\n"
+
+        data_string+=f"  element:\n"
+        index_dict = dict((value, idx) for idx,value in enumerate(segment_element_ids))
+        for material_name in materials_used:
+            
+            block_elements = set(parse_cubit_list('element', f'in block with name "{material_name}"'))
+            segment_elements = set(parse_cubit_list('element', f'in vol {l2s(segment_volume_ids)}'))
+            element_list = block_elements.intersection(segment_elements)
+
+            data_string+=f"  - name: {material_name}\n"
+            data_string+=f"    labels:\n"
+
+
+            temp_str = str([index_dict[iEl]+1 for iEl in element_list])
+            temp_str = temp_str.replace("[", "")
+            temp_str = temp_str.replace("]", "")
+
+            temp_str = temp_str.replace(",", "\n    -")
+            data_string+=f"    - {temp_str}\n"
+
+        with open(path_name, "a") as f:
+            f.write(data_string)
+
+        # Write Element Orientations
+        print(f'    Writing material orientations...')
+        data_string =''
+        data_string+="elementOrientations:\n"
+        # data_string+=' '
+
+        index_dict = dict((value, idx) for idx,value in enumerate(orientation_vectors[0]))
+
+        # '- '+separator.join([str(orientation_vectors[i_dir][22]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n'
+        # data_string+=separator.join(['- '+separator.join([str(orientation_vectors[i_dir][index_dict[segment_element_id]]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n' for segment_element_id in segment_element_ids]).replace("\n, - ", "\n - ")
+
+        temp_str=[f" - [{', '.join(str(e) for e in orientation_vectors[1][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[2][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[3][index_dict[segment_element_id]])}]\n" for segment_element_id in segment_element_ids]
+        separator = ""
+        temp_str = separator.join(temp_str)
+        data_string+=temp_str
+        with open(path_name, "a") as f:
+            f.write(data_string)
+
+        #Write Materials
+        print(f'    Writing materials...')
+        data_string =''
+        data_string+="materials:\n"
+
+        materials = blade.definition.materials
+        for material_name in materials_used:
+            material=materials[material_name]
+
+            data_string+=f'   -  name: {material.name}\n'
+            data_string+=f'      E: [{material.ex}, {material.ey}, {material.ez}]\n'
+            data_string+=f'      G: [{material.gxy}, {material.gxz}, {material.gyz}]\n'
+            data_string+=f'      nu: [{material.prxy}, {material.prxz}, {material.pryz}]\n'
+            data_string+=f'      rho: {material.density}\n'
+        with open(path_name, "a") as f:
+            f.write(data_string)
+
+
