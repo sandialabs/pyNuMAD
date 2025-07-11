@@ -276,7 +276,7 @@ def get_material_orientation_vectors(volume_dict,ncpus = 1):
     # # ####################################
     # # ### Get material orientations ###
     # # ####################################
-    cubit.cmd("renumber element all uniqueids")
+    cubit.cmd("renumber element all start_id 1 uniqueids")
 
     parse_string = f'in volume with name "*volume*"'
     global_element_ids = parse_cubit_list("element", parse_string)
