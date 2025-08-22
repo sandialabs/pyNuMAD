@@ -298,7 +298,7 @@ def get_material_orientation_vectors(ncpus = 1):
         for el_id in this_volume_element_ids:
             mat_ori_surfs[el_id-1] = surf_id_for_mat_ori
             signs[el_id-1] = sign
-            ply_angle = float(get_entity_name("volume", volume_id).split('_')[-1])
+            ply_angle = float(get_entity_name("volume", volume_id).split('_')[-2])
             thetas[el_id-1] = math.radians(ply_angle)
     t1 = time.time()
     print(f'Total time for material orientation arrays: {t1-t0}')
@@ -734,36 +734,8 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
 
             # Chord line for rotation of cross-section for homogenization
             if model2Dor3D.lower() == "2d":
-                #         #Blocks
-                if 'd_tube' in cs_params.keys() and cs_params['d_tube']:
-                    keep_list=[]
 
-                    cubit.cmd(f'delete surface with x_coord < 0"')
-                    cubit.cmd(f'delete surface with name "*layer9*"')
-                    cubit.cmd(f'delete surface with name "*layer10*"')
-                    cubit.cmd(f'delete surface with name "*layer11*"')
-
-                    delete_list=[]
-                    parse_string = f'with name "*layer3*"'
-                    delete_list += list(parse_cubit_list("surface", parse_string))
-                    parse_string = f'with name "*layer4*"'
-                    delete_list += list(parse_cubit_list("surface", parse_string))
-
-                    keep_list=[]
-                    #LE
-                    for i in [121,122,123]:
-                        parse_string = f'with name "shell*Station*surface{i}"'
-                        keep_list += list(parse_cubit_list("surface", parse_string))
-
-                    #Web
-                    for i in [1,2,3,4,5,6,17,18,19,20,21,22]:
-                        parse_string = f'with name "web_web*surface{i}"'
-                        keep_list += list(parse_cubit_list("surface", parse_string))
-
-                    vol_ids=set(delete_list).difference(set(keep_list))
-
-                    cubit.cmd(f'delete vol {l2s(vol_ids)}')
-                    cubit.cmd(f'delete vol with name "*Station005*"')
+                
 
                 for imat, material_name in enumerate(materials_used):
                     cubit.cmd(f'block {imat+1} add surface with name "*{material_name}*"')
@@ -879,46 +851,6 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
                     file_name=f'{directory}/beam_{str(i_station).zfill(3)}.abscissa'
                     write_path_abscissas_to_file(set_verts,file_name)   
                     
-
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add curve 925 928 932')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}"')
-
-                    # path_type='thickness'
-                    #node_order=get_path_node_order(node_set_name,path_type)
-                    #def get_path_node_order(node_set_name,path_type):
-
-
-                    # nodeset_nodes = get_nodeset_nodes_from_name(node_set_name)
-                    # coords=get_nodal_coordinates_from_set_of_nodes(nodeset_nodes)
-
-                    # pointer=order_path_points(coords, ind)
-
-
-
-                    # file = open(directory +'/'+ axisFileName, 'w')
-                    # file.write('--------- BEAMDYN with OpenFAST INPUT FILE -------------------------------------------\n')
-                    
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add curve 1040 1065 1091')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "s2_thickness_path"')
-
-
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add vertex 9985')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "spanwise_path"')
-
-
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add curve 73 74 75 76 77 78 79 92 93 94 95 96 97 98 335 361 476 478 479 556 557 558 824 848 873 899 1014 1016 1017 1094 1095 1096 1196 1220 1224 1324 1328 1422')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "circumferential_path"')
-                    
-
-
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add curve with name "*oml*"')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}"')
-                    # oml_nodes = get_nodeset_nodes_from_name(node_set_name)
 
 
                 if settings["export"] is not None:
@@ -1405,11 +1337,6 @@ def cubit_make_solid_blade(
     cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
     cubit.cmd(f"delete vertex all with Is_Free except {spanwise_mat_ori_curve}")
     
-    #Patch: Delete need for passing on volume_dict to enable mat ori calculation after opening a cub file
-    for volume_id in parse_cubit_list("volume", 'with name "*volume*"'):
-        volume_name = cubit.get_entity_name("volume", volume_id)
-        ply_angle=volume_dict[volume_id]['ply_angle']
-        cubit.cmd(f'volume {volume_id} rename "{volume_name}_{ply_angle}"')
 
 
     return materials_used

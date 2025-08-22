@@ -406,6 +406,9 @@ def make_cross_section_surface(lp_hp_side,
 
     # surface_name = (
     #     part_name+ "Station"+ str(i_station).zfill(3)+ "_layer"+ str(i_modeled_layers)+ "_"+ material_name+ "_surface"+ str(part_name_id))
+    temp = surface_name.split('_')
+    temp.insert(-1,str(ply_angle))
+    surface_name='_'.join(temp)
     cubit.cmd(f'surface {get_last_id("surface")} rename "{surface_name}"')
 
     # part_name_id = rename_last_surface(
