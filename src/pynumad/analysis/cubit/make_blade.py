@@ -943,7 +943,7 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
     # Import all cross-sections into one cub file
     if model2Dor3D.lower() == "2d" and settings["export"] is not None and "cub" in settings["export"].lower():
         cubit.cmd("reset ")
-        
+        cubit.cmd(f"delete block all")
         #Since cross sections were translated for cross sectional codes, remove prebend and sweep from ref axis.
         ref_line_coords[:,0]=np.zeros(len(ref_line_coords[:,0]))
         ref_line_coords[:,1]=np.zeros(len(ref_line_coords[:,0]))
@@ -952,6 +952,10 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
         for i_station in stationList:
             cubit.cmd(f'import cubit "{path_name}-{str(i_station)}.cub"')
         addColor(blade, "surface")
+
+        for imat, material_name in enumerate(materials_used):
+            cubit.cmd(f'block {imat+1} add surface with name "*{material_name}*"')
+            cubit.cmd(f'block {imat+1} name "{material_name}"')
         cubit.cmd(f"delete vertex with Is_Free")
         cubit.cmd(f'save as "{path_name}.cub" overwrite')
 
