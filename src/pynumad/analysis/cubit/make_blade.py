@@ -158,7 +158,7 @@ def get_orientations_euler(volume_id,element_shape_string):
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
 
-def get_element_orientations_vectors(element_ids,volume_dict,mat_ori_surfs,signs,thetas):
+def get_element_orientations_vectors(element_ids,mat_ori_surfs,signs,thetas):
 
     spanwise_directions = []
     hoop_directions = []
@@ -272,7 +272,7 @@ def get_material_orientation_angles(orientation_vectors):
     return orientation_vectors[0],R_1_angles,R_2_angles,R_3_angles
 
 
-def get_material_orientation_vectors(volume_dict,ncpus = 1):
+def get_material_orientation_vectors(ncpus = 1):
     # # ####################################
     # # ### Get material orientations ###
     # # ####################################
@@ -298,13 +298,14 @@ def get_material_orientation_vectors(volume_dict,ncpus = 1):
         for el_id in this_volume_element_ids:
             mat_ori_surfs[el_id-1] = surf_id_for_mat_ori
             signs[el_id-1] = sign
-            thetas[el_id-1] = math.radians(volume_dict[volume_id]['ply_angle'])
+            ply_angle = float(get_entity_name("volume", volume_id).split('_')[-1])
+            thetas[el_id-1] = math.radians(ply_angle)
     t1 = time.time()
     print(f'Total time for material orientation arrays: {t1-t0}')
 
     t0 = time.time()
     print(f'Calculating material orientations with {ncpus} CPU(s)...')
-    spanwise_directions,hoop_directions,surface_normal_directions = get_element_orientations_vectors(global_element_ids,volume_dict,mat_ori_surfs,signs,thetas)
+    spanwise_directions,hoop_directions,surface_normal_directions = get_element_orientations_vectors(global_element_ids,mat_ori_surfs,signs,thetas)
     t1 = time.time()
     print(f'Total time for material orientations: {t1-t0}')
 
@@ -1404,21 +1405,14 @@ def cubit_make_solid_blade(
     cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
     cubit.cmd(f"delete vertex all with Is_Free except {spanwise_mat_ori_curve}")
     
-    # if settings["export"] is not None:
-    #     if "g" in settings["export"].lower():
-    #         cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
-    #         cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
-    #         cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
-
-    #         cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
-    #         cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
-    #         cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
-    #         cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
-    #     if "cub" in settings["export"].lower():
-    #         cubit.cmd(f'save as "{wt_name}.cub" overwrite')
+    #Patch: Delete need for passing on volume_dict to enable mat ori calculation after opening a cub file
+    for volume_id in parse_cubit_list("volume", 'with name "*volume*"'):
+        volume_name = cubit.get_entity_name("volume", volume_id)
+        ply_angle=volume_dict[volume_id]['ply_angle']
+        cubit.cmd(f'volume {volume_id} rename "{volume_name}_{ply_angle}"')
 
 
-    return materials_used, volume_dict
+    return materials_used
 
 def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True):
     import yaml
