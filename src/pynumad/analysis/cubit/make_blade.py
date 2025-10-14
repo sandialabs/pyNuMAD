@@ -1341,7 +1341,7 @@ def cubit_make_solid_blade(
 
     return materials_used
 
-def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True):
+def yaml_mesh_to_cubit(dir_name,yaml_file_base,plot_mat_ori = True):
     import yaml
     
     print(f'Importing {dir_name}/{yaml_file_base} to cubit ...')
@@ -1353,6 +1353,17 @@ def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True)
         cubit.silent_cmd(f'create node location {node_coords[0]}')
 
     print('    Making elements ...')
+    n_node_per_el = len(mesh_data['elements'][0][0].split())
+
+    if n_node_per_el == 3:
+        element_type = 'tri'
+    elif n_node_per_el == 4:
+        element_type = 'face'
+    elif n_node_per_el == 6:
+        element_type = 'tet'
+    elif n_node_per_el == 8:
+        element_type = 'hex'
+
     for element_conn in mesh_data['elements']:
 
         cubit.silent_cmd(f'create {element_type} node {element_conn[0]}')
@@ -1403,6 +1414,15 @@ def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True)
 
     print(f'Done importing! \n')
 
+def get_all_cross_section_surface_ids(station_list):
+
+
+    all_cross_section_surface_ids=[]
+
+    for i_station in station_list:
+        parse_string = f'with name "*Station{str(i_station).zfill(3)}*surface*"'
+        all_cross_section_surface_ids.append(parse_cubit_list("surface", parse_string))
+    return all_cross_section_surface_ids
 def get_all_segments_volume_ids(station_list,grouped_segments):
     from copy import deepcopy
     station_list.pop(-1)
@@ -1451,24 +1471,71 @@ def get_all_segments_volume_ids(station_list,grouped_segments):
     return all_segments_volume_ids,grouped_segments
 
 #################################
-def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_name_base,orientation_vectors,materials_used,directory):
+def export_segments_to_yaml(case_type,blade,station_list,grouped_segments,mesh_yaml_file_name_base,directory):
+
+    materials_used  = ['medium_density_foam','Adhesive','glass_biax','glass_uni','glass_triax','carbon_uni_industry_baseline']
+
+    block_ids = parse_cubit_list('block',f'in vol all')  
+    materials_used =[cubit.get_exodus_entity_name('block', block_id) for block_id in block_ids]
     if station_list is None or len(station_list) == 0:
-        station_list = list(range(len(blade.ispan)))
+        station_list=[]
+        for i_station in range(100): #Assuming there are 100 stations or less. 
+            if len(parse_cubit_list('surface', f'with name "*tation{str(i_station).zfill(3)}*surface*')):
+                station_list.append(i_station)
+
+    orientation_vectors=get_material_orientation_vectors(ncpus = 1)
+    if 'solid_cross_section' in case_type.lower(): 
+        all_segments_volume_ids = get_all_cross_section_surface_ids(station_list)
+        unit_type = 'surf'
+        element_type = 'face'
+
+        # flattened_list = [item for sublist in all_segments_volume_ids for item in sublist]
+        # all_face_ids = parse_cubit_list(element_type, f'in {unit_type} {l2s(flattened_list)}')
+        
+        # for face_id in all_face_ids:
+        #     hex_ids = parse_cubit_list('hex',f'in face {face_id}')
+        #     if len(hex_ids) > 0:
+        #         z_coord = []
+        #         for hex_id in hex_id:
+        #             z_coord.append(get_center_point("hex", hex_id)[-1])
+        #         hex_id = hex_ids[np.argmax(z_coord)]
+        #         element_id = get_hex_global_element_id(hex_id)
+
+            # else:
+            #     raise RuntimeError(f'No hex with face {face_id} found')
+
+            # get_hex_global_element_id(1537)
 
 
-
-    print('Partitioning blade volumes into segments ...')
-    
-    all_segments_volume_ids,grouped_segments = get_all_segments_volume_ids(station_list,grouped_segments)
+    elif 'solid_segment' in case_type.lower():
+        
+        print('Partitioning blade volumes into segments ...')
+        all_segments_volume_ids,grouped_segments = get_all_segments_volume_ids(station_list,grouped_segments)
+        unit_type = 'vol'
+        element_type = 'element'
+        mesh_yaml_file_name_base+='_segment'
 
     for iseg,segment_volume_ids in enumerate(all_segments_volume_ids):
+
+        # materials_used 
+        # materials_used=set()
+        # for surf_id in segment_volume_ids:
+        #     surf_name = get_entity_name('surface',surf_id)
+        #     a=surf_name.split('layer')
+        #     b=a[-1].split('_')
+        #     materials_used.add('_'.join(b[1:-1]))
+
+
+
+
+
         print(f'Writing segment {iseg} ...')
 
-        file_name=f'{mesh_yaml_file_name_base}-segment_{iseg}.yaml'
+        file_name=f'{mesh_yaml_file_name_base}-{iseg}.yaml'
         path_name = directory + "/" + file_name
         
-        segment_element_ids = parse_cubit_list('element', f'in vol {l2s(segment_volume_ids)}')
-        segment_node_ids = parse_cubit_list('node', f'in vol {l2s(segment_volume_ids)}')
+        segment_element_ids = parse_cubit_list(element_type, f'in {unit_type} {l2s(segment_volume_ids)}')
+        segment_node_ids = parse_cubit_list('node', f'in {unit_type} {l2s(segment_volume_ids)}')
 
         # Write Nodes
         print(f'    Writing {len(segment_node_ids)} nodes...')
@@ -1492,7 +1559,7 @@ def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_n
 
         node_index_dict = dict((value, idx) for idx,value in enumerate(segment_node_ids))
 
-        temp_str=[' - '+str([node_index_dict[node_id]+1 for node_id in cubit.get_expanded_connectivity('element', segment_element_id)]) +'\n'for segment_element_id in segment_element_ids]
+        temp_str=[' - '+str([node_index_dict[node_id]+1 for node_id in cubit.get_expanded_connectivity(element_type, segment_element_id)]) +'\n'for segment_element_id in segment_element_ids]
         separator = ""
         temp_str = separator.join(temp_str).replace(',','')
 
@@ -1509,9 +1576,13 @@ def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_n
         index_dict = dict((value, idx) for idx,value in enumerate(segment_element_ids))
         for material_name in materials_used:
             
-            block_elements = set(parse_cubit_list('element', f'in block with name "{material_name}"'))
-            segment_elements = set(parse_cubit_list('element', f'in vol {l2s(segment_volume_ids)}'))
-            element_list = block_elements.intersection(segment_elements)
+            if 'solid_cross_section' in case_type.lower(): 
+                element_list = list(parse_cubit_list('face', f'in surf with name "*tation{str(iseg).zfill(3)}_*{material_name}*surface*"'))
+
+            elif 'solid_segment' in case_type.lower():
+                block_elements = set(parse_cubit_list('element', f'in block with name "{material_name}"'))
+                segment_elements = set(parse_cubit_list('element', f'in {unit_type} {l2s(segment_volume_ids)}'))
+                element_list = block_elements.intersection(segment_elements)
 
             data_string+=f"  - name: {material_name}\n"
             data_string+=f"    labels:\n"
@@ -1537,6 +1608,15 @@ def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_n
 
         # '- '+separator.join([str(orientation_vectors[i_dir][22]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n'
         # data_string+=separator.join(['- '+separator.join([str(orientation_vectors[i_dir][index_dict[segment_element_id]]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n' for segment_element_id in segment_element_ids]).replace("\n, - ", "\n - ")
+        if 'solid_cross_section' in case_type.lower():
+            parse_string = f'in node in surf with name "*tation{str(iseg).zfill(3)}*surface*" except hex in node with z_coord < {blade.ispan[station_list[iseg]]}'
+            parse_string = f'in face {l2s(segment_element_ids)} and hex in node with z_coord < {blade.ispan[station_list[iseg]]}'
+
+            segment_hex_ids = parse_cubit_list('hex', parse_string)
+            
+            #Overwrite segment_element_ids since not used downstream
+            segment_element_ids=[get_hex_global_element_id(hex_id) for hex_id in segment_hex_ids]
+
 
         temp_str=[f" - [{', '.join(str(e) for e in orientation_vectors[1][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[2][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[3][index_dict[segment_element_id]])}]\n" for segment_element_id in segment_element_ids]
         separator = ""

@@ -1636,11 +1636,7 @@ def make_cs_web_layer_areas(
             materials_used,
             -1
         )
-        surf_id = get_last_id("surface")
-        surf_name = cubit.get_entity_name("surface", surf_id).split('_')
-        surf_name.insert(-1,'vertical')
-        surf_name = '_'.join(surf_name)
-        cubit.cmd(f'surface {surf_id} rename "{surf_name}"')
+
     return part_name_id, (vHP, vLP)
 
 def make_a_precomp_cross_section(wt_name,
