@@ -1517,21 +1517,9 @@ def export_segments_to_yaml(case_type,blade,station_list,grouped_segments,mesh_y
 
     for iseg,segment_volume_ids in enumerate(all_segments_volume_ids):
 
-        # materials_used 
-        # materials_used=set()
-        # for surf_id in segment_volume_ids:
-        #     surf_name = get_entity_name('surface',surf_id)
-        #     a=surf_name.split('layer')
-        #     b=a[-1].split('_')
-        #     materials_used.add('_'.join(b[1:-1]))
-
-
-
-
-
         print(f'Writing segment {iseg} ...')
 
-        file_name=f'{mesh_yaml_file_name_base}-{iseg}.yaml'
+        file_name=f'{mesh_yaml_file_name_base}-{station_list[iseg]}.yaml'
         path_name = directory + "/" + file_name
         
         segment_element_ids = parse_cubit_list(element_type, f'in {unit_type} {l2s(segment_volume_ids)}')
@@ -1577,7 +1565,7 @@ def export_segments_to_yaml(case_type,blade,station_list,grouped_segments,mesh_y
         for material_name in materials_used:
             
             if 'solid_cross_section' in case_type.lower(): 
-                element_list = list(parse_cubit_list('face', f'in surf with name "*tation{str(iseg).zfill(3)}_*{material_name}*surface*"'))
+                element_list = list(parse_cubit_list('face', f'in surf with name "*tation{str(station_list[iseg]).zfill(3)}_*{material_name}*surface*"'))
 
             elif 'solid_segment' in case_type.lower():
                 block_elements = set(parse_cubit_list('element', f'in block with name "{material_name}"'))
@@ -1609,13 +1597,17 @@ def export_segments_to_yaml(case_type,blade,station_list,grouped_segments,mesh_y
         # '- '+separator.join([str(orientation_vectors[i_dir][22]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n'
         # data_string+=separator.join(['- '+separator.join([str(orientation_vectors[i_dir][index_dict[segment_element_id]]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n' for segment_element_id in segment_element_ids]).replace("\n, - ", "\n - ")
         if 'solid_cross_section' in case_type.lower():
-            parse_string = f'in node in surf with name "*tation{str(iseg).zfill(3)}*surface*" except hex in node with z_coord < {blade.ispan[station_list[iseg]]}'
-            parse_string = f'in face {l2s(segment_element_ids)} and hex in node with z_coord < {blade.ispan[station_list[iseg]]}'
+            # parse_string = f'in node in surf with name "*tation{str(iseg).zfill(3)}*surface*" except hex in node with z_coord < {blade.ispan[station_list[iseg]]}'
+            # parse_string = f'in face {l2s(segment_element_ids)} and hex in node with z_coord < {blade.ispan[station_list[iseg]]}'
+            if station_list[iseg] == station_list[-1]:
+                parse_string = f'in face {l2s(segment_element_ids)} in hex with z_coord < {blade.ispan[station_list[iseg]]}'
+            else:
+                parse_string = f'in face {l2s(segment_element_ids)} in hex with z_coord > {blade.ispan[station_list[iseg]]}'
 
-            segment_hex_ids = parse_cubit_list('hex', parse_string)
-            
             #Overwrite segment_element_ids since not used downstream
-            segment_element_ids=[get_hex_global_element_id(hex_id) for hex_id in segment_hex_ids]
+            temp_element_ids =  list(parse_cubit_list('hex', parse_string))
+            
+            segment_element_ids=[get_hex_global_element_id(hex_id) for hex_id in temp_element_ids]
 
 
         temp_str=[f" - [{', '.join(str(e) for e in orientation_vectors[1][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[2][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[3][index_dict[segment_element_id]])}]\n" for segment_element_id in segment_element_ids]
