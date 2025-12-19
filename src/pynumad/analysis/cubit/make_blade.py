@@ -1376,9 +1376,29 @@ def yaml_mesh_to_cubit(dir_name,yaml_file_base,plot_mat_ori = True):
                 cubit.silent_cmd(f'block {i_mat+1} add {element_type} {str(el_set["labels"]).replace("[", "").replace("]", "")}')
                 cubit.silent_cmd(f'block {i_mat+1} name "{mat_name}"')
 
+    #Material Orientations
+    spanwise_directions = []
+    hoop_directions = []
+    surface_normal_directions = []
+
+    print('    Assigning Material orientations ...')
+    # global_element_ids = tuple(np.arange(len(mesh_data['elements']))+1)
+    global_element_ids = []
+    for i_el, element_ori in enumerate(mesh_data['elementOrientations']):
+        hex_id = i_el+1   
+        global_element_ids.append(get_global_element_id('hex',hex_id))             
+
+        spanwise_directions.append(element_ori[:3])
+        hoop_directions.append(element_ori[3:6])
+        surface_normal_directions.append(element_ori[6:])
+
+    
+    orientation_vectors=[global_element_ids,spanwise_directions,hoop_directions,surface_normal_directions]       
+    
+    # assign_material_orientation_vectors(orientation_vectors)
 
     if plot_mat_ori:
-        print('    Material orientation lines ...')
+        print('    Plotting material orientation lines ...')
         dir_strings = ['xdir','ydir','zdir',]
         for i_el, element_ori in enumerate(mesh_data['elementOrientations']):
             hex_id = i_el+1                
