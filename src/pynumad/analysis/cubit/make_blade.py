@@ -158,7 +158,7 @@ def get_orientations_euler(volume_id,element_shape_string):
 
     return global_el_ids_in_vol,theta1s_in_vol,theta2s_in_vol,theta3s_in_vol
 
-def get_element_orientations_vectors(element_ids,volume_dict,mat_ori_surfs,signs,thetas):
+def get_element_orientations_vectors(element_ids,mat_ori_surfs,signs,thetas):
 
     spanwise_directions = []
     hoop_directions = []
@@ -272,7 +272,7 @@ def get_material_orientation_angles(orientation_vectors):
     return orientation_vectors[0],R_1_angles,R_2_angles,R_3_angles
 
 
-def get_material_orientation_vectors(volume_dict,ncpus = 1):
+def get_material_orientation_vectors(ncpus = 1):
     # # ####################################
     # # ### Get material orientations ###
     # # ####################################
@@ -298,13 +298,14 @@ def get_material_orientation_vectors(volume_dict,ncpus = 1):
         for el_id in this_volume_element_ids:
             mat_ori_surfs[el_id-1] = surf_id_for_mat_ori
             signs[el_id-1] = sign
-            thetas[el_id-1] = math.radians(volume_dict[volume_id]['ply_angle'])
+            ply_angle = float(get_entity_name("volume", volume_id).split('_')[-2])
+            thetas[el_id-1] = math.radians(ply_angle)
     t1 = time.time()
     print(f'Total time for material orientation arrays: {t1-t0}')
 
     t0 = time.time()
     print(f'Calculating material orientations with {ncpus} CPU(s)...')
-    spanwise_directions,hoop_directions,surface_normal_directions = get_element_orientations_vectors(global_element_ids,volume_dict,mat_ori_surfs,signs,thetas)
+    spanwise_directions,hoop_directions,surface_normal_directions = get_element_orientations_vectors(global_element_ids,mat_ori_surfs,signs,thetas)
     t1 = time.time()
     print(f'Total time for material orientations: {t1-t0}')
 
@@ -733,36 +734,8 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
 
             # Chord line for rotation of cross-section for homogenization
             if model2Dor3D.lower() == "2d":
-                #         #Blocks
-                if 'd_tube' in cs_params.keys() and cs_params['d_tube']:
-                    keep_list=[]
 
-                    cubit.cmd(f'delete surface with x_coord < 0"')
-                    cubit.cmd(f'delete surface with name "*layer9*"')
-                    cubit.cmd(f'delete surface with name "*layer10*"')
-                    cubit.cmd(f'delete surface with name "*layer11*"')
-
-                    delete_list=[]
-                    parse_string = f'with name "*layer3*"'
-                    delete_list += list(parse_cubit_list("surface", parse_string))
-                    parse_string = f'with name "*layer4*"'
-                    delete_list += list(parse_cubit_list("surface", parse_string))
-
-                    keep_list=[]
-                    #LE
-                    for i in [121,122,123]:
-                        parse_string = f'with name "shell*Station*surface{i}"'
-                        keep_list += list(parse_cubit_list("surface", parse_string))
-
-                    #Web
-                    for i in [1,2,3,4,5,6,17,18,19,20,21,22]:
-                        parse_string = f'with name "web_web*surface{i}"'
-                        keep_list += list(parse_cubit_list("surface", parse_string))
-
-                    vol_ids=set(delete_list).difference(set(keep_list))
-
-                    cubit.cmd(f'delete vol {l2s(vol_ids)}')
-                    cubit.cmd(f'delete vol with name "*Station005*"')
+                
 
                 for imat, material_name in enumerate(materials_used):
                     cubit.cmd(f'block {imat+1} add surface with name "*{material_name}*"')
@@ -879,46 +852,6 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
                     write_path_abscissas_to_file(set_verts,file_name)   
                     
 
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add curve 925 928 932')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}"')
-
-                    # path_type='thickness'
-                    #node_order=get_path_node_order(node_set_name,path_type)
-                    #def get_path_node_order(node_set_name,path_type):
-
-
-                    # nodeset_nodes = get_nodeset_nodes_from_name(node_set_name)
-                    # coords=get_nodal_coordinates_from_set_of_nodes(nodeset_nodes)
-
-                    # pointer=order_path_points(coords, ind)
-
-
-
-                    # file = open(directory +'/'+ axisFileName, 'w')
-                    # file.write('--------- BEAMDYN with OpenFAST INPUT FILE -------------------------------------------\n')
-                    
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add curve 1040 1065 1091')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "s2_thickness_path"')
-
-
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add vertex 9985')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "spanwise_path"')
-
-
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add curve 73 74 75 76 77 78 79 92 93 94 95 96 97 98 335 361 476 478 479 556 557 558 824 848 873 899 1014 1016 1017 1094 1095 1096 1196 1220 1224 1324 1328 1422')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "circumferential_path"')
-                    
-
-
-                    # nodeset_id= cubit.get_next_nodeset_id()
-                    # cubit.cmd(f'nodeset {nodeset_id} add curve with name "*oml*"')
-                    # cubit.cmd(f'nodeset {nodeset_id} name "{node_set_name}"')
-                    # oml_nodes = get_nodeset_nodes_from_name(node_set_name)
-
 
                 if settings["export"] is not None:
                     if (
@@ -943,7 +876,7 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
     # Import all cross-sections into one cub file
     if model2Dor3D.lower() == "2d" and settings["export"] is not None and "cub" in settings["export"].lower():
         cubit.cmd("reset ")
-        
+        cubit.cmd(f"delete block all")
         #Since cross sections were translated for cross sectional codes, remove prebend and sweep from ref axis.
         ref_line_coords[:,0]=np.zeros(len(ref_line_coords[:,0]))
         ref_line_coords[:,1]=np.zeros(len(ref_line_coords[:,0]))
@@ -952,6 +885,10 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
         for i_station in stationList:
             cubit.cmd(f'import cubit "{path_name}-{str(i_station)}.cub"')
         addColor(blade, "surface")
+
+        for imat, material_name in enumerate(materials_used):
+            cubit.cmd(f'block {imat+1} add surface with name "*{material_name}*"')
+            cubit.cmd(f'block {imat+1} name "{material_name}"')
         cubit.cmd(f"delete vertex with Is_Free")
         cubit.cmd(f'save as "{path_name}.cub" overwrite')
 
@@ -1400,23 +1337,11 @@ def cubit_make_solid_blade(
     cubit.cmd(f"delete curve all with Is_Free except {spanwise_mat_ori_curve}")
     cubit.cmd(f"delete vertex all with Is_Free except {spanwise_mat_ori_curve}")
     
-    # if settings["export"] is not None:
-    #     if "g" in settings["export"].lower():
-    #         cubit.set_element_variable(global_ids, 'rotation_angle_one', theta1s)
-    #         cubit.set_element_variable(global_ids, 'rotation_angle_two', theta2s)
-    #         cubit.set_element_variable(global_ids, 'rotation_angle_three', theta3s)
-
-    #         cubit.set_element_variable(global_ids, 'rotation_axis_one', 1*np.ones(n_el))
-    #         cubit.set_element_variable(global_ids, 'rotation_axis_two', 2*np.ones(n_el))
-    #         cubit.set_element_variable(global_ids, 'rotation_axis_three', 3*np.ones(n_el))
-    #         cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
-    #     if "cub" in settings["export"].lower():
-    #         cubit.cmd(f'save as "{wt_name}.cub" overwrite')
 
 
-    return materials_used, volume_dict
+    return materials_used
 
-def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True):
+def yaml_mesh_to_cubit(dir_name,yaml_file_base,plot_mat_ori = True):
     import yaml
     
     print(f'Importing {dir_name}/{yaml_file_base} to cubit ...')
@@ -1428,6 +1353,17 @@ def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True)
         cubit.silent_cmd(f'create node location {node_coords[0]}')
 
     print('    Making elements ...')
+    n_node_per_el = len(mesh_data['elements'][0][0].split())
+
+    if n_node_per_el == 3:
+        element_type = 'tri'
+    elif n_node_per_el == 4:
+        element_type = 'face'
+    elif n_node_per_el == 6:
+        element_type = 'tet'
+    elif n_node_per_el == 8:
+        element_type = 'hex'
+
     for element_conn in mesh_data['elements']:
 
         cubit.silent_cmd(f'create {element_type} node {element_conn[0]}')
@@ -1440,9 +1376,29 @@ def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True)
                 cubit.silent_cmd(f'block {i_mat+1} add {element_type} {str(el_set["labels"]).replace("[", "").replace("]", "")}')
                 cubit.silent_cmd(f'block {i_mat+1} name "{mat_name}"')
 
+    #Material Orientations
+    spanwise_directions = []
+    hoop_directions = []
+    surface_normal_directions = []
+
+    print('    Assigning Material orientations ...')
+    # global_element_ids = tuple(np.arange(len(mesh_data['elements']))+1)
+    global_element_ids = []
+    for i_el, element_ori in enumerate(mesh_data['elementOrientations']):
+        hex_id = i_el+1   
+        global_element_ids.append(get_global_element_id('hex',hex_id))             
+
+        spanwise_directions.append(element_ori[:3])
+        hoop_directions.append(element_ori[3:6])
+        surface_normal_directions.append(element_ori[6:])
+
+    
+    orientation_vectors=[global_element_ids,spanwise_directions,hoop_directions,surface_normal_directions]       
+    
+    # assign_material_orientation_vectors(orientation_vectors)
 
     if plot_mat_ori:
-        print('    Material orientation lines ...')
+        print('    Plotting material orientation lines ...')
         dir_strings = ['xdir','ydir','zdir',]
         for i_el, element_ori in enumerate(mesh_data['elementOrientations']):
             hex_id = i_el+1                
@@ -1478,6 +1434,15 @@ def yaml_mesh_to_cubit(dir_name,yaml_file_base,element_type,plot_mat_ori = True)
 
     print(f'Done importing! \n')
 
+def get_all_cross_section_surface_ids(station_list):
+
+
+    all_cross_section_surface_ids=[]
+
+    for i_station in station_list:
+        parse_string = f'with name "*Station{str(i_station).zfill(3)}*surface*"'
+        all_cross_section_surface_ids.append(parse_cubit_list("surface", parse_string))
+    return all_cross_section_surface_ids
 def get_all_segments_volume_ids(station_list,grouped_segments):
     from copy import deepcopy
     station_list.pop(-1)
@@ -1526,24 +1491,59 @@ def get_all_segments_volume_ids(station_list,grouped_segments):
     return all_segments_volume_ids,grouped_segments
 
 #################################
-def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_name_base,orientation_vectors,materials_used,directory):
+def export_segments_to_yaml(case_type,blade,station_list,grouped_segments,mesh_yaml_file_name_base,directory):
+
+    materials_used  = ['medium_density_foam','Adhesive','glass_biax','glass_uni','glass_triax','carbon_uni_industry_baseline']
+
+    block_ids = parse_cubit_list('block',f'in vol all')  
+    materials_used =[cubit.get_exodus_entity_name('block', block_id) for block_id in block_ids]
     if station_list is None or len(station_list) == 0:
-        station_list = list(range(len(blade.ispan)))
+        station_list=[]
+        for i_station in range(100): #Assuming there are 100 stations or less. 
+            if len(parse_cubit_list('surface', f'with name "*tation{str(i_station).zfill(3)}*surface*')):
+                station_list.append(i_station)
+
+    orientation_vectors=get_material_orientation_vectors(ncpus = 1)
+    if 'solid_cross_section' in case_type.lower(): 
+        all_segments_volume_ids = get_all_cross_section_surface_ids(station_list)
+        unit_type = 'surf'
+        element_type = 'face'
+
+        # flattened_list = [item for sublist in all_segments_volume_ids for item in sublist]
+        # all_face_ids = parse_cubit_list(element_type, f'in {unit_type} {l2s(flattened_list)}')
+        
+        # for face_id in all_face_ids:
+        #     hex_ids = parse_cubit_list('hex',f'in face {face_id}')
+        #     if len(hex_ids) > 0:
+        #         z_coord = []
+        #         for hex_id in hex_id:
+        #             z_coord.append(get_center_point("hex", hex_id)[-1])
+        #         hex_id = hex_ids[np.argmax(z_coord)]
+        #         element_id = get_hex_global_element_id(hex_id)
+
+            # else:
+            #     raise RuntimeError(f'No hex with face {face_id} found')
+
+            # get_hex_global_element_id(1537)
 
 
-
-    print('Partitioning blade volumes into segments ...')
-    
-    all_segments_volume_ids,grouped_segments = get_all_segments_volume_ids(station_list,grouped_segments)
+    elif 'solid_segment' in case_type.lower():
+        
+        print('Partitioning blade volumes into segments ...')
+        all_segments_volume_ids,grouped_segments = get_all_segments_volume_ids(station_list,grouped_segments)
+        unit_type = 'vol'
+        element_type = 'element'
+        mesh_yaml_file_name_base+='_segment'
 
     for iseg,segment_volume_ids in enumerate(all_segments_volume_ids):
+
         print(f'Writing segment {iseg} ...')
 
-        file_name=f'{mesh_yaml_file_name_base}-segment_{iseg}.yaml'
+        file_name=f'{mesh_yaml_file_name_base}-{station_list[iseg]}.yaml'
         path_name = directory + "/" + file_name
         
-        segment_element_ids = parse_cubit_list('element', f'in vol {l2s(segment_volume_ids)}')
-        segment_node_ids = parse_cubit_list('node', f'in vol {l2s(segment_volume_ids)}')
+        segment_element_ids = parse_cubit_list(element_type, f'in {unit_type} {l2s(segment_volume_ids)}')
+        segment_node_ids = parse_cubit_list('node', f'in {unit_type} {l2s(segment_volume_ids)}')
 
         # Write Nodes
         print(f'    Writing {len(segment_node_ids)} nodes...')
@@ -1567,7 +1567,7 @@ def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_n
 
         node_index_dict = dict((value, idx) for idx,value in enumerate(segment_node_ids))
 
-        temp_str=[' - '+str([node_index_dict[node_id]+1 for node_id in cubit.get_expanded_connectivity('element', segment_element_id)]) +'\n'for segment_element_id in segment_element_ids]
+        temp_str=[' - '+str([node_index_dict[node_id]+1 for node_id in cubit.get_expanded_connectivity(element_type, segment_element_id)]) +'\n'for segment_element_id in segment_element_ids]
         separator = ""
         temp_str = separator.join(temp_str).replace(',','')
 
@@ -1584,9 +1584,13 @@ def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_n
         index_dict = dict((value, idx) for idx,value in enumerate(segment_element_ids))
         for material_name in materials_used:
             
-            block_elements = set(parse_cubit_list('element', f'in block with name "{material_name}"'))
-            segment_elements = set(parse_cubit_list('element', f'in vol {l2s(segment_volume_ids)}'))
-            element_list = block_elements.intersection(segment_elements)
+            if 'solid_cross_section' in case_type.lower(): 
+                element_list = list(parse_cubit_list('face', f'in surf with name "*tation{str(station_list[iseg]).zfill(3)}_*{material_name}*surface*"'))
+
+            elif 'solid_segment' in case_type.lower():
+                block_elements = set(parse_cubit_list('element', f'in block with name "{material_name}"'))
+                segment_elements = set(parse_cubit_list('element', f'in {unit_type} {l2s(segment_volume_ids)}'))
+                element_list = block_elements.intersection(segment_elements)
 
             data_string+=f"  - name: {material_name}\n"
             data_string+=f"    labels:\n"
@@ -1612,6 +1616,19 @@ def export_segments_to_yaml(blade,station_list,grouped_segments,mesh_yaml_file_n
 
         # '- '+separator.join([str(orientation_vectors[i_dir][22]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n'
         # data_string+=separator.join(['- '+separator.join([str(orientation_vectors[i_dir][index_dict[segment_element_id]]) for i_dir in [1,2,3]]).replace("], [", ", ")+'\n' for segment_element_id in segment_element_ids]).replace("\n, - ", "\n - ")
+        if 'solid_cross_section' in case_type.lower():
+            # parse_string = f'in node in surf with name "*tation{str(iseg).zfill(3)}*surface*" except hex in node with z_coord < {blade.ispan[station_list[iseg]]}'
+            # parse_string = f'in face {l2s(segment_element_ids)} and hex in node with z_coord < {blade.ispan[station_list[iseg]]}'
+            if station_list[iseg] == station_list[-1]:
+                parse_string = f'in face {l2s(segment_element_ids)} in hex with z_coord < {blade.ispan[station_list[iseg]]}'
+            else:
+                parse_string = f'in face {l2s(segment_element_ids)} in hex with z_coord > {blade.ispan[station_list[iseg]]}'
+
+            #Overwrite segment_element_ids since not used downstream
+            temp_element_ids =  list(parse_cubit_list('hex', parse_string))
+            
+            segment_element_ids=[get_hex_global_element_id(hex_id) for hex_id in temp_element_ids]
+
 
         temp_str=[f" - [{', '.join(str(e) for e in orientation_vectors[1][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[2][index_dict[segment_element_id]])}, {', '.join(str(e) for e in orientation_vectors[3][index_dict[segment_element_id]])}]\n" for segment_element_id in segment_element_ids]
         separator = ""

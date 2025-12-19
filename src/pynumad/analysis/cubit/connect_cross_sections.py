@@ -115,7 +115,7 @@ def old_make_spanwise_splines(surface_dict, ordered_list):
         spanwise_splines.append(tempList)
     return spanwise_splines
 def make_a_volume(
-    i_span,current_surface_id, next_surface_id, spanwise_splines_for_a_volume, surface_dict, i_station_end
+    i_span,current_surface_id, next_surface_id, spanwise_splines_for_a_volume, surface_dict, i_station_end,ply_angle
 ):
     cubit.cmd(f"surface {current_surface_id} copy")
     current_surface_id_copy = get_last_id("surface")
@@ -383,7 +383,7 @@ def make_all_volumes_for_a_part(surface_dict, volume_dict,ordered_list, i_statio
 
                 spanwise_splines_for_a_volume = get_spanwise_splines_for_a_volume(current_surface_id,next_surface_id,spanwise_splines[part_surface_ids],
                 surface_dict[current_surface_id]["verts"],surface_dict[next_surface_id]["verts"])
-                make_a_volume(i_span,current_surface_id,next_surface_id,spanwise_splines_for_a_volume,surface_dict,i_station_end)
+                make_a_volume(i_span,current_surface_id,next_surface_id,spanwise_splines_for_a_volume,surface_dict,i_station_end,surface_dict[current_surface_id]["ply_angle"])
                 vol_id = get_last_id("volume")
                 vol_list.append(vol_id)
 

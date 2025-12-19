@@ -202,3 +202,6 @@ sm.i
 euler
 mat_ori.py
 
+#Mac
+.DS_Store
+
