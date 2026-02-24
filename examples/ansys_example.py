@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 import json
 from pynumad.utils.misc_utils import setup_logging
-from pynumad.shell.shell import shell_mesh_general
+from pynumad.mesh_gen.mesh_gen import shell_mesh_general
 from pynumad.analysis.ansys.write import write_ansys_shell_model
 from pynumad.analysis.ansys.run import call_ansys
 from pynumad.utils.distributed_loading import loads_table_coordinate_trans

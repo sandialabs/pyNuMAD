@@ -72,7 +72,7 @@ class StackDatabase:
             cur_ply.component = bom["hp"][k].name
             cur_ply.materialid = bom["hp"][k].materialid
             cur_ply.thickness = bom["hp"][k].thickness
-            cur_ply.angle = 0  # TODO, set to 0 for now, bom['lp'](k, );
+            cur_ply.angle = bom["hp"][k].angle  # TODO, set to 0 for now, bom['lp'](k, );
             cur_ply.nPlies = 1  # default to 1, modified in addply() if necessary
 
             # ... and add the ply to every area that is part of the region
@@ -88,7 +88,7 @@ class StackDatabase:
             cur_ply.component = bom["lp"][k].name
             cur_ply.materialid = bom["lp"][k].materialid
             cur_ply.thickness = bom["lp"][k].thickness
-            cur_ply.angle = 0  # TODO, set to 0 for now, bom['lp'](k, );
+            cur_ply.angle = bom["lp"][k].angle  # TODO, set to 0 for now, bom['lp'](k, );
             cur_ply.nPlies = 1  # default to 1, modified in addply() if necessary
 
             # ... and add the ply to every area that is part of the region
@@ -158,8 +158,8 @@ class StackDatabase:
                         newPg = np.array([ply1, ply2, ply3])
                     else:
                         if len(pg) == 2:
-                            ply1 = deepcopy(pg[0])
-                            ply2 = deepcopy(pg[0])
+                            ply1 = deepcopy(pg[1])
+                            ply2 = deepcopy(pg[1])
                             ply3 = deepcopy(pg[1])
                             # newPg = np.array([pg[0],pg[0],pg[1]])
                             t1 = ply1.thickness

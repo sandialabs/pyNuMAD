@@ -17,8 +17,8 @@ Next, to initialize an empty blade object run::
 
 To populate the blade with a yaml or Excel file you can run::
 
-    blade.load_yaml("path/to/yaml")
-    blade.load_excel("path/to/excel")
+    blade.read_yaml("path/to/yaml")
+    blade.read_excel("path/to/excel")
 
 or initialize the blade with the path::
 

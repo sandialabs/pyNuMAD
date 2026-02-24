@@ -1,6 +1,5 @@
-{
-    "numad": "",
-    "ansys": "",
-    "cubit": "",
-    "cubit_enhancements": ""
+{"pynumad" : "/Users/ecamare/repos/pynumad/",
+"ansys" : "mapdl",
+"cubit" : "/Applications/Cubit-16.18/Cubit.app/Contents/MacOS/",
+"cubit_enhancements" : "/Applications/Cubit-16.18/Cubit.app/Contents/MacOS/python3/lib/site-packages/"
 }

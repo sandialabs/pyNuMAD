@@ -183,3 +183,25 @@ cython_debug/
 
 # pynumad
 src/pynumad/software_paths.json
+
+#VABS
+*.in
+*.in.*
+
+#Cubit
+*.cub
+*.g
+*.jou
+
+#BeamDyn
+*BeamDyn*dat
+
+#Sierra
+sd.i
+sm.i
+euler
+mat_ori.py
+
+#Mac
+.DS_Store
+

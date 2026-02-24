@@ -16,9 +16,9 @@ def lint(session):
 @nox.session
 def docs(session):
     """Generate documentation."""
-    session.install(".")
+    session.run("pip", "install", "-e", ".")
     session.install("sphinx")
-    session.install("sphinx_rtd_theme")
+    session.install("pydata-sphinx-theme")
     session.install("sphinxcontrib-bibtex")
     session.cd("docs/")
     session.run("make", "html")
