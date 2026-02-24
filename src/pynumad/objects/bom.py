@@ -1,36 +1,85 @@
+from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 
 from pynumad.objects.definition import Definition
 from pynumad.objects.keypoints import KeyPoints
 
-class BillOfMaterials(dict):
-    """Bill of Materials class
-    
-    This class is designed replicate the bom
-    blade attribute from NuMAD. It is currently
-    not used in pyNuMAD analyses and isn't actively
-    maintained.
+
+# Column names shared by hp, lp, and sw DataFrames.
+_BOM_COLUMNS = [
+    "layernum",
+    "materialid",
+    "name",
+    "beginsta",
+    "endsta",
+    "maxwidth",
+    "avgwidth",
+    "area",
+    "thickness",
+    "weight",
+    "angle",
+    # Integer index bounds consumed by StackDatabase.generate()
+    "sta_begin_idx",
+    "sta_end_idx",
+    "seg_start",
+    "seg_end",
+]
+
+# The sw DataFrame adds one extra column.
+_SW_COLUMNS = _BOM_COLUMNS + ["web_id"]
+
+
+class BillOfMaterials:
+    """Bill of Materials class.
+
+    Contains per-layer material information for each component region of the
+    blade (HP shell, LP shell, and each shear web), stored as
+    :class:`pandas.DataFrame` objects.
 
     Attributes
     ----------
-    indices : dict
+    hp : pd.DataFrame
+        HP-side shell layers.  Columns: ``layernum``, ``materialid``,
+        ``name``, ``beginsta``, ``endsta``, ``maxwidth``, ``avgwidth``,
+        ``area``, ``thickness``, ``weight``, ``angle``,
+        ``sta_begin_idx``, ``sta_end_idx``, ``seg_start``, ``seg_end``.
+    lp : pd.DataFrame
+        LP-side shell layers (same columns as ``hp``).
+    sw : pd.DataFrame
+        Shear-web layers.  Same columns as ``hp`` plus ``web_id`` (int).
+    lebond : float
+        Total leading-edge bond length [mm].
+    tebond : float
+        Total trailing-edge bond length [mm].
+    swbonds : list[ndarray]
+        Per-web bond-line length arrays [mm].
+    dryweight : float
+        Total dry material weight [kg].
     """
+
     def __init__(self):
-        self.indices: dict = None
-        pass
-    
+        self.hp: pd.DataFrame = pd.DataFrame(columns=_BOM_COLUMNS)
+        self.lp: pd.DataFrame = pd.DataFrame(columns=_BOM_COLUMNS)
+        self.sw: pd.DataFrame = pd.DataFrame(columns=_SW_COLUMNS)
+        self.lebond: float = None
+        self.tebond: float = None
+        self.swbonds: list = []
+        self.dryweight: float = None
+
     def generate(self, definition: Definition, keypoints: KeyPoints):
-        """This method generates the Bill-of-Materials
-        See datatypes.BOM
+        """Generate the Bill-of-Materials from a Definition and KeyPoints.
+
+        Parameters
+        ----------
+        definition : Definition
+        keypoints : KeyPoints
 
         Returns
         -------
-
-        None
-
+        self
         """
-        # raise DeprecationWarning("update_bom currently deprecated. Please do not use.")
         # set conversion constants
         g_to_kg = 0.001
         m_to_mm = 1000.0
@@ -40,19 +89,20 @@ class BillOfMaterials(dict):
         components = definition.components
         ispan = definition.ispan
 
-        self["hp"] = []
-        self["lp"] = []
-        self["sw"] = []
-        self["lebond"] = []
-        self["tebond"] = []
-        self["swbonds"] = []
-        self["dryweight"] = []
-        
-        self.indices = {"hp": [], "lp": [], "sw": []}
+        # reset
+        self.hp = pd.DataFrame(columns=_BOM_COLUMNS)
+        self.lp = pd.DataFrame(columns=_BOM_COLUMNS)
+        self.sw = pd.DataFrame(columns=_SW_COLUMNS)
+        self.lebond = None
+        self.tebond = None
+        self.swbonds = []
+        self.dryweight = None
 
         # calculate non-dimensional span
         ndspan = (ispan - ispan[0]) / (ispan[-1] - ispan[0])
 
+        hp_rows = []
+        lp_rows = []
         hprow = 0
         lprow = 0
         outer_shape_comps = [name for name in components if components[name].group == 0]
@@ -68,9 +118,7 @@ class BillOfMaterials(dict):
                     num_layers, k_layer
                 )
                 ks_max = np.amin((len(begin_station), len(end_station)))
-                # situation that beginSta/endSta is longer than 1
                 for ks in range(ks_max):
-                    ## END
                     if hpRegion:
                         areas = keypoints.key_areas[
                             hpRegion[0] : hpRegion[1],
@@ -85,24 +133,24 @@ class BillOfMaterials(dict):
                                 hpRegion[0], begin_station[ks] : end_station[ks] + 1
                             ]
                         )
-                        cur_bom = BillOfMaterialsEntry()
-                        cur_bom.layernum = hprow
-                        cur_bom.materialid = comp.materialid
-                        cur_bom.name = comp.name
-                        cur_bom.beginsta = ispan[begin_station[ks]]
-                        cur_bom.endsta = ispan[end_station[ks]]
-                        cur_bom.maxwidth = np.amax(arcs)
-                        cur_bom.avgwidth = np.mean(arcs)
-                        cur_bom.area = regionarea
-                        cur_bom.thickness = mat.layerthickness
-                        cur_bom.weight = mat.drydensity * regionarea
-                        cur_bom.angle = comp.fabricangle*180/3.141592653589793
-
-                        self.indices["hp"].append(
-                            [begin_station[ks], end_station[ks], *hpRegion]
-                        )
-                        self["hp"].append(cur_bom)
-                        hprow = hprow + 1
+                        hp_rows.append({
+                            "layernum": hprow,
+                            "materialid": comp.materialid,
+                            "name": comp.name,
+                            "beginsta": ispan[begin_station[ks]],
+                            "endsta": ispan[end_station[ks]],
+                            "maxwidth": np.amax(arcs),
+                            "avgwidth": np.mean(arcs),
+                            "area": regionarea,
+                            "thickness": mat.layerthickness,
+                            "weight": mat.drydensity * regionarea,
+                            "angle": comp.fabricangle * 180 / 3.141592653589793,
+                            "sta_begin_idx": begin_station[ks],
+                            "sta_end_idx": end_station[ks],
+                            "seg_start": hpRegion[0],
+                            "seg_end": hpRegion[1],
+                        })
+                        hprow += 1
 
                     if lpRegion:
                         areas = keypoints.key_areas[
@@ -118,37 +166,39 @@ class BillOfMaterials(dict):
                                 lpRegion[0], begin_station[ks] : end_station[ks] + 1
                             ]
                         )
-                        cur_bom = BillOfMaterialsEntry()
-                        cur_bom.layernum = lprow
-                        cur_bom.materialid = comp.materialid
-                        cur_bom.name = comp.name
-                        cur_bom.beginsta = ispan[begin_station[ks]]
-                        cur_bom.endsta = ispan[end_station[ks]]
-                        cur_bom.maxwidth = np.amax(arcs)
-                        cur_bom.avgwidth = np.mean(arcs)
-                        cur_bom.area = regionarea
-                        cur_bom.thickness = mat.layerthickness
-                        cur_bom.weight = mat.drydensity * regionarea
-                        cur_bom.angle = -1*comp.fabricangle*180/3.141592653589793
-                        self.indices["lp"].append(
-                            [begin_station[ks], end_station[ks], *lpRegion]
-                        )
-                        self["lp"].append(cur_bom)
-                        lprow = lprow + 1
+                        lp_rows.append({
+                            "layernum": lprow,
+                            "materialid": comp.materialid,
+                            "name": comp.name,
+                            "beginsta": ispan[begin_station[ks]],
+                            "endsta": ispan[end_station[ks]],
+                            "maxwidth": np.amax(arcs),
+                            "avgwidth": np.mean(arcs),
+                            "area": regionarea,
+                            "thickness": mat.layerthickness,
+                            "weight": mat.drydensity * regionarea,
+                            "angle": -1 * comp.fabricangle * 180 / 3.141592653589793,
+                            "sta_begin_idx": begin_station[ks],
+                            "sta_end_idx": end_station[ks],
+                            "seg_start": lpRegion[0],
+                            "seg_end": lpRegion[1],
+                        })
+                        lprow += 1
+
+        self.hp = pd.DataFrame(hp_rows, columns=_BOM_COLUMNS)
+        self.lp = pd.DataFrame(lp_rows, columns=_BOM_COLUMNS)
 
         # shearwebs
         swnum = None
         swrow = 0
         sw_begin_station = []
         sw_end_station = []
+        sw_rows = []
         sw_comps = [comp for comp in components.values() if comp.group > 0]
 
         def sorter(e):
             return e.group
 
-        # enforce an ordering on components based on group number
-        # to ensure below loop functions correctly
-        # probably should re-write the loop at some point...
         sw_comps.sort(key=sorter)
         for comp in sw_comps:
             mat = materials[comp.materialid]
@@ -160,15 +210,12 @@ class BillOfMaterials(dict):
                     num_layers, k_layer
                 )
                 ks_max = np.amin((len(begin_station), len(end_station)))
-                # situation that beginSta/endSta is longer than 1
                 for ks in range(ks_max):
                     if swnum != comp.group - 1:
                         swnum = comp.group - 1
                         swrow = 0
                         sw_begin_station.append(begin_station[0])
                         sw_end_station.append(end_station[0])
-                        self["sw"].append([])
-                        self.indices["sw"].append([])
                     sw_begin_station[swnum] = np.amin(
                         [*begin_station, sw_begin_station[swnum]]
                     )
@@ -179,46 +226,62 @@ class BillOfMaterials(dict):
                         begin_station[ks] : end_station[ks]
                     ]
                     regionarea = sum(areas.flatten())
-                    cur_bom = BillOfMaterialsEntry()
-                    cur_bom.layernum = swrow
-                    cur_bom.materialid = comp.materialid
-                    cur_bom.name = comp.name
-                    cur_bom.beginsta = ispan[begin_station[ks]]
-                    cur_bom.endsta = ispan[end_station[ks]]
-                    cur_bom.maxwidth = np.amax(keypoints.web_width[swnum])
-                    cur_bom.avgwidth = np.mean(keypoints.web_width[swnum])
-                    cur_bom.area = regionarea
-                    cur_bom.thickness = mat.layerthickness
-                    cur_bom.weight = mat.drydensity * regionarea
-                    cur_bom.angle = comp.fabricangle*180/3.141592653589793
-                    self["sw"][swnum].append(cur_bom)
-                    self.indices["sw"][swnum].append(
-                        [begin_station[ks], end_station[ks]]
-                    )
-                    swrow = swrow + 1
+                    sw_rows.append({
+                        "layernum": swrow,
+                        "materialid": comp.materialid,
+                        "name": comp.name,
+                        "beginsta": ispan[begin_station[ks]],
+                        "endsta": ispan[end_station[ks]],
+                        "maxwidth": np.amax(keypoints.web_width[swnum]),
+                        "avgwidth": np.mean(keypoints.web_width[swnum]),
+                        "area": regionarea,
+                        "thickness": mat.layerthickness,
+                        "weight": mat.drydensity * regionarea,
+                        "angle": comp.fabricangle * 180 / 3.141592653589793,
+                        "sta_begin_idx": begin_station[ks],
+                        "sta_end_idx": end_station[ks],
+                        "seg_start": 0,  # not used for shear webs
+                        "seg_end": 0,    # not used for shear webs
+                        "web_id": swnum,
+                    })
+                    swrow += 1
+
+        self.sw = pd.DataFrame(sw_rows, columns=_SW_COLUMNS)
 
         # compute lebond, tebond, and dryweight
-        self["lebond"] = sum(keypoints.le_bond) * m_to_mm
-        self["tebond"] = sum(keypoints.te_bond) * m_to_mm
-        hp_dw = sum([L.weight for L in self["hp"]])
-        lp_dw = sum([L.weight for L in self["lp"]])
-        self["dryweight"] = g_to_kg * (hp_dw + lp_dw)
+        self.lebond = sum(keypoints.le_bond) * m_to_mm
+        self.tebond = sum(keypoints.te_bond) * m_to_mm
 
-        nsw = len(self["sw"])
-        self["swbonds"] = [None] * nsw
+        hp_dw = self.hp["weight"].sum() if not self.hp.empty else 0.0
+        lp_dw = self.lp["weight"].sum() if not self.lp.empty else 0.0
+        self.dryweight = g_to_kg * (hp_dw + lp_dw)
+
+        nsw = len(sw_begin_station)
+        self.swbonds = [None] * nsw
         for k in range(nsw):
-            sw_dw = sum([L.weight for L in self["sw"][k]])
-            self["dryweight"] = self["dryweight"] + sw_dw
+            sw_web = self.sw[self.sw["web_id"] == k]
+            sw_dw = sw_web["weight"].sum() if not sw_web.empty else 0.0
+            self.dryweight = self.dryweight + sw_dw
             C = keypoints.web_bonds[k][:, sw_begin_station[k] : sw_end_station[k]]
-            self["swbonds"][k] = m_to_mm * np.sum(C, 1)
-
+            self.swbonds[k] = m_to_mm * np.sum(C, 1)
 
         return self
-    
-    # Supporting function for update_bom
+
+
 def find_layer_extents(layer_dist, layer_n):
-    """
-    TODO docstring
+    """Find the begin and end station indices where a layer count reaches *layer_n*.
+
+    Parameters
+    ----------
+    layer_dist : array-like
+        Per-station layer count distribution.
+    layer_n : scalar
+        Layer threshold to find extents for.
+
+    Returns
+    -------
+    begin_station : list[int]
+    end_station : list[int]
     """
     assert np.isscalar(layer_n), 'second argument "layer_n" must be a scalar'
     sta_logical = layer_dist >= layer_n
@@ -235,45 +298,3 @@ def find_layer_extents(layer_dist, layer_n):
         prev = sta_logical[k]
 
     return begin_station, end_station
-
-    
-class BillOfMaterialsEntry:
-    """A simple class to organize the attributes of a Bill of Materials
-
-    Attributes
-    ----------
-
-    layernum : int
-        Layer
-    materialid : int
-        Material ID
-    name : str
-        Component or region name
-    beginsta : float
-        Begin station (m)
-    endsta : float
-        End station (m)
-    maxwidth : float
-        Max width (m)
-    avgwidth : float
-        Average width (m)
-    area : float
-        3D area (m^2)
-    thickness : float
-        Layer thickness (mm)
-    weight : float
-        Computed dry layer weight (g)
-    """
-
-    def __init__(self):
-        self.layernum: int = None
-        self.materialid: int = None
-        self.name: str = None
-        self.beginsta: float = None
-        self.endsta: float = None
-        self.maxwidth: float = None
-        self.avgwidth: float = None
-        self.area: float = None
-        self.thickness: float = None
-        self.weight: float = None
-        self.angle: float = None

@@ -3,8 +3,8 @@ from numpy import ndarray
 
 from pynumad.utils.interpolation import interpolator_wrap
 from pynumad.objects.airfoil import (
-    get_airfoil_normals,
-    get_airfoil_normals_angle_change,
+    _get_airfoil_normals,
+    _get_airfoil_normals_angle_change,
 )
 from pynumad.utils.affinetrans import rotation, translation
 
@@ -68,11 +68,13 @@ class Geometry:
         self.LEindex: ndarray = None
         self.iprebend: ndarray = None
         self.isweep: ndarray = None
-
-        # init properties
-        self._natural_offset: int = 1
-        self._rotorspin: int = 1
-        self._swtwisted: int = 0
+        # Configuration flags are populated from the Definition during generate().
+        # They are cached here so that update_oml_geometry() can be called
+        # independently (e.g. from expand_blade_geometry_te()) without needing
+        # to re-pass the Definition.  Do not set these directly — call generate().
+        self._natural_offset: int = None
+        self._rotorspin: int = None
+        self._swtwisted: int = None
         
     def __eq__(self, other):
         attrs = [
@@ -83,9 +85,11 @@ class Geometry:
         for attr in attrs:
             self_attr = getattr(self, attr)
             other_attr = getattr(other, attr)
-            if isinstance(self_attr, (int,)):
+            if isinstance(self_attr, (int, float)):
                 if self_attr != other_attr:
                     return False
+            elif self_attr is None and other_attr is None:
+                continue
             elif isinstance(self_attr, ndarray):
                 if (self_attr != other_attr).any():
                     return False
@@ -204,7 +208,6 @@ class Geometry:
         for k in range(len(self.ispan)):
             try:
                 ind = np.argwhere(self.ispan[k] < spanlocation)[0][0]
-                # maybe better: ind = np.flatnonzero(self.ispan[k] < spanlocation)[0]
             except:
                 continue
             else:
@@ -415,24 +418,11 @@ class Geometry:
         coords[:, 3] = np.ones(len(x))
 
         # use the generating line to translate and rotate the coordinates
-        # NOTE currently, rotation is not assigned from blade properties
-        # and defaults to 0
+        # NOTE: section rotation to follow the generating line direction (normal
+        # to the sweep/prebend curve) is not yet implemented; sections default
+        # to parallel planes.
         prebend_rot = 0
         sweep_rot = 0
-        """
-        jcb: This code, copied from NuMAD 2.0, causes each section to rotate out
-        of plane so that its normal follows the generating line direction. Need
-        to replace 'twistFlag' with '-1*self.rotorspin' and calculate the slopes
-        based on the available data. For now, default to parallel sections.
-        if isequal(blade.PresweepRef.method,'normal')
-            sweep_slope = ppval(blade.PresweepRef.dpp,sta.LocationZ);
-            sweep_rot = atan(sweep_slope*twistFlag);
-        end
-        if isequal(blade.PrecurveRef.method,'normal')
-            prebend_slope = ppval(blade.PrecurveRef.dpp,sta.LocationZ);
-            prebend_rot = atan(-prebend_slope);
-        endc
-        """
         transX = -1 * self._rotorspin * self.isweep[k]
         transY = self.iprebend[k]
         transZ = self.ispan[k]
@@ -457,8 +447,8 @@ class Geometry:
         tetype : str
         """
         xy = self.profiles[:, :, k]
-        unitNormals = get_airfoil_normals(xy)
-        angleChange = get_airfoil_normals_angle_change(unitNormals)
+        unitNormals = _get_airfoil_normals(xy)
+        angleChange = _get_airfoil_normals_angle_change(unitNormals)
         disconts = np.flatnonzero(angleChange > 30)
 
         if np.std(angleChange) < 2:

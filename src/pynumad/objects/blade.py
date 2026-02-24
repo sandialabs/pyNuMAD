@@ -2,12 +2,12 @@
 from numpy import ndarray
 
 import numpy as np
+import pandas as pd
 
 from pynumad.io.yaml_to_blade import yaml_to_blade
 from pynumad.io.excel_to_blade import excel_to_blade
 from pynumad.utils.interpolation import interpolator_wrap
 from pynumad.objects.geometry import Geometry
-from pynumad.objects.settings import BladeSettings
 from pynumad.objects.keypoints import KeyPoints
 from pynumad.objects.definition import Definition
 from pynumad.objects.bom import BillOfMaterials
@@ -30,8 +30,6 @@ class Blade:
         Name of the blade
     definition : Definition
         Object containing the definition of the blade.
-    ispan : ndarray
-        Array defining the interpolated stations from 0 to 1
     geometry : Geometry
         Object containing the interpolated geometry of the blade
     keypoints : KeyPoints
@@ -39,7 +37,8 @@ class Blade:
     bill_of_materials : BillOfMaterials
     stackdb : StackDatabase
     materialdb : MaterialDatabase
-    settings : BladeSettings
+    mesh_size : float
+        Target element size used by mesh generation utilities (default 0.45).
 
     Example
     -------
@@ -50,15 +49,13 @@ class Blade:
     def __init__(self, filename: str = None):
         self.name: str = None
         self.definition: Definition = Definition()
-        self.ispan: ndarray = None
         self.geometry: Geometry = Geometry()
         self.keypoints: KeyPoints = KeyPoints()
         self.bill_of_materials: BillOfMaterials = BillOfMaterials()
         self.stackdb: StackDatabase = StackDatabase()
         self.materialdb: MaterialDatabase = MaterialDatabase()
-        self.settings: BladeSettings = BladeSettings()
+        self.mesh_size: float = 0.45  # target element size for mesh generation
 
-        # read input file
         if filename:
             if "yaml" in filename or "yml" in filename:
                 self.read_yaml(filename)
@@ -71,7 +68,15 @@ class Blade:
             self.name = filename.split(".")[0]
         else:
             self.name = "blade"
-        return
+
+    @property
+    def ispan(self) -> ndarray:
+        """Interpolated span stations. Delegates to ``definition.ispan``."""
+        return self.definition.ispan
+
+    @ispan.setter
+    def ispan(self, value: ndarray):
+        self.definition.ispan = value
 
     def __str__(self):
         attributes = ""
@@ -149,10 +154,10 @@ class Blade:
         int
             integer index where the new span was inserted
         """
-        x0 = self.ispan
+        x0 = self.definition.ispan.copy()
 
-        if span_location < self.ispan[-1] and span_location > 0:
-            for i_span, spanLocation in enumerate(self.ispan[1:]):
+        if span_location < self.definition.ispan[-1] and span_location > 0:
+            for i_span, spanLocation in enumerate(self.definition.ispan[1:]):
                 if span_location < spanLocation:
                     insertIndex = i_span + 1
                     break
@@ -161,15 +166,14 @@ class Blade:
                 f"A new span location with value {span_location} is not possible."
             )
 
-        self.ispan = np.insert(self.ispan, insertIndex, np.array([span_location]))
-        self.definition.ispan = np.insert(self.definition.ispan, insertIndex, np.array([span_location]))
+        new_ispan = np.insert(x0, insertIndex, span_location)
 
-        self.definition.leband = interpolator_wrap(x0, self.definition.leband, self.ispan)
-        self.definition.teband = interpolator_wrap(x0, self.definition.teband, self.ispan)
-        self.definition.sparcapwidth_hp = interpolator_wrap(x0, self.definition.sparcapwidth_hp, self.ispan)
-        self.definition.sparcapwidth_lp = interpolator_wrap(x0, self.definition.sparcapwidth_lp, self.ispan)
-        self.definition.sparcapoffset_hp = interpolator_wrap(x0, self.definition.sparcapoffset_hp, self.ispan)
-        self.definition.sparcapoffset_lp = interpolator_wrap(x0, self.definition.sparcapoffset_lp, self.ispan)
+        # Interpolate all ispan-grid columns in one loop, then rebuild the DataFrame.
+        new_data = {}
+        for col in self.definition.ispan_data.columns:
+            old_values = self.definition.ispan_data[col].to_numpy(dtype=float)
+            new_data[col] = interpolator_wrap(x0, old_values, new_ispan)
+        self.definition.ispan_data = pd.DataFrame(new_data, index=new_ispan)
 
         self.update_blade()
         return insertIndex

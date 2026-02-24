@@ -8,6 +8,24 @@ from pynumad.objects.definition import Definition
 from pynumad.objects.geometry import Geometry
 
 
+# Ordered keypoint labels running from TE on the HP side, around the LE,
+# to TE on the LP side.  Both KeyPoints and Component rely on this ordering.
+KEY_LABELS: list = [
+    "te",
+    "e",
+    "d",
+    "c",
+    "b",
+    "a",
+    "le",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "te",
+]
+
 
 class KeyPoints:
     """Keypoints class
@@ -38,21 +56,7 @@ class KeyPoints:
     """
 
     def __init__(self):
-        self.key_labels = [
-            "te",
-            "e",
-            "d",
-            "c",
-            "b",
-            "a",
-            "le",
-            "a",
-            "b",
-            "c",
-            "d",
-            "e",
-            "te",
-        ]
+        self.key_labels = list(KEY_LABELS)  # mutable copy of the shared constant
         self.key_points: ndarray = None
         self.key_arcs: ndarray = None
         self.key_cpos: ndarray = None
@@ -126,44 +130,30 @@ class KeyPoints:
 
         # keypoints, keyarcs, keycpos
         te_types = []  # reset te_type
-        i_leband_start=np.min(np.nonzero(definition.leband))
-        i_teband_start=np.min(np.nonzero(definition.teband))
+        i_leband_start = np.min(np.nonzero(definition.leband))
+        i_teband_start = np.min(np.nonzero(definition.teband))
+        i_leband_end = np.max(np.nonzero(definition.leband))
+        i_teband_end = np.max(np.nonzero(definition.teband))
 
-        i_leband_end=np.max(np.nonzero(definition.leband))
-        i_teband_end=np.max(np.nonzero(definition.teband))
+        # Build tapered local copies of leband and teband so that the source
+        # Definition is never mutated here.
+        leband_local = definition.leband.copy()
+        teband_local = definition.teband.copy()
+        for k in range(num_istations):
+            if k < i_leband_start:
+                leband_local[k] = definition.leband[i_leband_start]
+            if k < i_teband_start:
+                teband_local[k] = definition.teband[i_teband_start]
+            if k > i_leband_end:
+                leband_local[k] = leband_local[k - 1] * 0.75
+            if k > i_teband_end:
+                teband_local[k] = teband_local[k - 1] * 0.75
 
         for k in range(num_istations):
             # allow for separate definitions of HP and LP spar cap
             # width and offset [HP LP]
-            n1 = mm_to_m * definition.leband[k]  # no foam width
-            n2 = mm_to_m * definition.teband[k]  # no foam width
-
-            ### 
-            #In order to avoid abrupt changes in geometry when the le/te bands
-            #begin, set the le/te band width equal to the first nonzero value.
-            #This algorithm will not work as well if small numbers exist in the
-            #le/te band widths since it is based on nonzero values.
-            
-            
-            if k < i_leband_start :
-                n1= mm_to_m * definition.leband[i_leband_start]
-
-            if k < i_teband_start :
-                n2= mm_to_m * definition.teband[i_teband_start]
-
-            #In order to avoid abrupt changes in geometry when the le/te bands
-            #end, set the le/te band width is tapered starting with the last nonzero.
-            #value. This algorithm will not work as well if small numbers exist in the
-            #le/te band widths since it is based on nonzero values.
-            
-            if k > i_leband_end :
-                n1= mm_to_m * definition.leband[k-1]*0.75
-                definition.leband[k]=n1/mm_to_m
-
-            if k > i_teband_end :
-                n2= mm_to_m * definition.teband[k-1]*0.75
-                definition.teband[k]=n2/mm_to_m
-            ###
+            n1 = mm_to_m * leband_local[k]  # no foam width
+            n2 = mm_to_m * teband_local[k]  # no foam width
 
             scwidth_hp = mm_to_m * definition.sparcapwidth_hp[k]  # type: float
             scwidth_lp = mm_to_m * definition.sparcapwidth_lp[k]  # type: float
@@ -222,22 +212,18 @@ class KeyPoints:
             # 1 -> e
             self.key_points[1, :, k] = interpolator_wrap(k_arclen, k_geom, d)
             self.key_points[2, :, k] = interpolator_wrap(k_arclen, k_geom, c)
-            # self.key_points(  ,:,k) = interpolator_wrap(geometry.arclength(ns:nf,k),self.geometry(ns:nf,:,k),z);
             self.key_points[3, :, k] = interpolator_wrap(k_arclen, k_geom, b)
             self.key_points[4, :, k] = interpolator_wrap(k_arclen, k_geom, a)
             self.key_arcs[0, k] = geometry.arclength[ns, k]
             self.key_arcs[1, k] = e
             self.key_arcs[2, k] = d
             self.key_arcs[3, k] = c
-            # self.key_arcs(  ,k)   = z;
             self.key_arcs[4, k] = b
             self.key_arcs[5, k] = a
             self.key_arcs[6, k] = 0  # le
             self.key_cpos[0, k] = geometry.cpos[ns, k]  # te, hp surface
-            #            2   -> e
             self.key_cpos[2, k] = interpolator_wrap(k_arclen, k_cpos, d)
             self.key_cpos[3, k] = interpolator_wrap(k_arclen, k_cpos, c)
-            #                 self.key_cpos(  ,k) = interpolator_wrap(geometry.arclength(ns:nf,k),self.cpos(ns:nf,k),z);
             self.key_cpos[4, k] = interpolator_wrap(k_arclen, k_cpos, b)
             self.key_cpos[5, k] = interpolator_wrap(k_arclen, k_cpos, a)
             self.key_cpos[6, k] = interpolator_wrap(k_arclen, k_cpos, 0)
@@ -270,20 +256,17 @@ class KeyPoints:
                 self.key_cpos[11, k] = interpolator_wrap(k_arclen, k_cpos, e)
             self.key_points[5, :, k] = interpolator_wrap(k_arclen, k_geom, a)
             self.key_points[6, :, k] = interpolator_wrap(k_arclen, k_geom, b)
-            # self.key_points(  ,:,k) = interpolator_wrap(geometry.arclength(ns:nf,k),self.geometry(ns:nf,:,k),z);
             self.key_points[7, :, k] = interpolator_wrap(k_arclen, k_geom, c)
             self.key_points[8, :, k] = interpolator_wrap(k_arclen, k_geom, d)
             # 10   -> e
             self.key_arcs[7, k] = a
             self.key_arcs[8, k] = b
-            # self.key_arcs( ,k)   = z;
             self.key_arcs[9, k] = c
             self.key_arcs[10, k] = d
             self.key_arcs[11, k] = e
             self.key_arcs[12, k] = geometry.arclength[nf, k]
             self.key_cpos[7, k] = interpolator_wrap(k_arclen, k_cpos, a)
             self.key_cpos[8, k] = interpolator_wrap(k_arclen, k_cpos, b)
-            # self.key_cpos(  ,k) = interpolator_wrap(geometry.arclength(ns:nf,k),self.cpos(ns:nf,k),z);
             self.key_cpos[9, k] = interpolator_wrap(k_arclen, k_cpos, c)
             self.key_cpos[10, k] = interpolator_wrap(k_arclen, k_cpos, d)
             # 12   -> e
@@ -552,8 +535,8 @@ class KeyPoints:
                 base2 = np.sqrt(np.sum(b2**2, 1))[0]
                 b1 = b1 / base1
                 b2 = b2 / base2
-                h1 = np.abs(np.dot((ob[0, :] - ib[0, :]), (1 - np.transpose(b1))))
-                h2 = np.abs(np.dot((ib[1, :] - ob[1, :]), (1 - np.transpose(b2))))
+                h1 = float(np.abs(np.dot((ob[0, :] - ib[0, :]), (1 - np.squeeze(b1)))))
+                h2 = float(np.abs(np.dot((ib[1, :] - ob[1, :]), (1 - np.squeeze(b2)))))
                 self.web_areas[ksw][kc] = 0.5 * (base1 * h1 + base2 * h2)
                 self.web_width[ksw][kc] = base1
                 # calculate edge (bond-line) lengths

@@ -5,6 +5,12 @@ from numpy import ndarray
 
 from pynumad.objects.keypoints import KeyPoints
 from pynumad.objects.bom import BillOfMaterials
+from pynumad.objects.stack import Stack, Ply
+
+# Stack and Ply are defined in pynumad.objects.stack and re-exported here
+# for backward compatibility with code that imports them from stackdb.
+__all__ = ["StackDatabase", "Stack", "Ply"]
+
 
 class StackDatabase:
     def __init__(self):
@@ -31,8 +37,16 @@ class StackDatabase:
             if self_stack != other_stack:
                 return False
         return True
+
     def generate(self, keypoints: KeyPoints, bom: BillOfMaterials):
-        # build the material stack for each area
+        """Build material stacks for every surface region and shear web.
+
+        Parameters
+        ----------
+        keypoints : KeyPoints
+        bom : BillOfMaterials
+            Must have been generated prior to calling this method.
+        """
         n_segments = keypoints.key_areas.shape[0]
         n_stations = keypoints.key_areas.shape[1]
         n_webs = len(keypoints.web_points)
@@ -66,46 +80,40 @@ class StackDatabase:
                     k_seg + 1,
                 ]
 
-        for k in range(len(bom["hp"])):
-            # for each row in the BOM, get the ply definition ...
-            cur_ply = Ply()
-            cur_ply.component = bom["hp"][k].name
-            cur_ply.materialid = bom["hp"][k].materialid
-            cur_ply.thickness = bom["hp"][k].thickness
-            cur_ply.angle = bom["hp"][k].angle  # TODO, set to 0 for now, bom['lp'](k, );
-            cur_ply.nPlies = 1  # default to 1, modified in addply() if necessary
-
-            # ... and add the ply to every area that is part of the region
-            ind = bom.indices["hp"][k]
-            for k_seg in range(ind[2], ind[3]):
-                for k_stat in range(ind[0], ind[1]):
-                    # deepcopy is important to keep make ply object unique in each stack
-                    self.stacks[k_seg, k_stat].addply(deepcopy(cur_ply))  
-
-        for k in range(len(bom["lp"])):
-            # for each row in the BOM, get the ply definition ...
-            cur_ply = Ply()
-            cur_ply.component = bom["lp"][k].name
-            cur_ply.materialid = bom["lp"][k].materialid
-            cur_ply.thickness = bom["lp"][k].thickness
-            cur_ply.angle = bom["lp"][k].angle  # TODO, set to 0 for now, bom['lp'](k, );
-            cur_ply.nPlies = 1  # default to 1, modified in addply() if necessary
-
-            # ... and add the ply to every area that is part of the region
-            ind = bom.indices["lp"][k]
-            for k_seg in range(ind[2], ind[3]):
-                for k_stat in range(ind[0], ind[1]):
+        # HP layers — iterate over DataFrame rows
+        for _, row in bom.hp.iterrows():
+            cur_ply = Ply(
+                component=row["name"],
+                materialid=row["materialid"],
+                thickness=row["thickness"],
+                angle=row["angle"],
+                nPlies=1,
+            )
+            for k_seg in range(int(row["seg_start"]), int(row["seg_end"])):
+                for k_stat in range(int(row["sta_begin_idx"]), int(row["sta_end_idx"])):
                     self.stacks[k_seg, k_stat].addply(deepcopy(cur_ply))
 
+        # LP layers
+        for _, row in bom.lp.iterrows():
+            cur_ply = Ply(
+                component=row["name"],
+                materialid=row["materialid"],
+                thickness=row["thickness"],
+                angle=row["angle"],
+                nPlies=1,
+            )
+            for k_seg in range(int(row["seg_start"]), int(row["seg_end"])):
+                for k_stat in range(int(row["sta_begin_idx"]), int(row["sta_end_idx"])):
+                    self.stacks[k_seg, k_stat].addply(deepcopy(cur_ply))
+
+        # Shear-web stacks
         self.swstacks = np.empty(shape=(n_webs, n_stations), dtype=object)
         for k_web in range(n_webs):
             for k_stat in range(n_stations):
                 self.swstacks[k_web, k_stat] = Stack()
-                # name the stacks <webnumber+1>_<stationnumber+1>_SW
                 self.swstacks[k_web, k_stat].name = "{:02d}_{:02d}_SW".format(
                     k_web, k_stat
                 )
-                # currently, the shearweb indices do not change down the span
                 ind = keypoints.web_indices[k_web]
                 self.swstacks[k_web][k_stat].indices = [
                     k_stat,
@@ -113,21 +121,20 @@ class StackDatabase:
                     ind[0],
                     ind[1],
                 ]
-        for k_web in range(n_webs):
-            for k in range(len(bom["sw"][k_web])):
-                # for each row in the BOM, get the ply definition ...
-                cur_ply = Ply()
-                cur_ply.component = bom["sw"][k_web][k].name
-                cur_ply.materialid = bom["sw"][k_web][k].materialid
-                cur_ply.thickness = bom["sw"][k_web][k].thickness
-                cur_ply.angle = 0  # TODO, set to 0 for now, bom['lp'](k, );
-                cur_ply.nPlies = 1  # default to 1, modified in addply() if necessary
-                
-                # ... and add the ply to every area that is part of the region
-                ind = bom.indices["sw"][k_web][k]
-                for k_stat in range(ind[0], ind[1]):
-                    self.swstacks[k_web, k_stat].addply(deepcopy(cur_ply))
-        
+
+        # Shear-web layers
+        for _, row in bom.sw.iterrows():
+            k_web = int(row["web_id"])
+            cur_ply = Ply(
+                component=row["name"],
+                materialid=row["materialid"],
+                thickness=row["thickness"],
+                angle=0,
+                nPlies=1,
+            )
+            for k_stat in range(int(row["sta_begin_idx"]), int(row["sta_end_idx"])):
+                self.swstacks[k_web, k_stat].addply(deepcopy(cur_ply))
+
     def edit_stacks_for_solid_mesh(self):
         """
 
@@ -146,7 +153,6 @@ class StackDatabase:
                     newPg = np.array([ply1, ply2, ply3])
                 else:
                     if len(pg) == 3:
-                        # newPg = np.array([pg[1],pg[1],pg[2]])
                         ply1 = deepcopy(pg[1])
                         ply2 = deepcopy(pg[1])
                         ply3 = deepcopy(pg[2])
@@ -161,7 +167,6 @@ class StackDatabase:
                             ply1 = deepcopy(pg[1])
                             ply2 = deepcopy(pg[1])
                             ply3 = deepcopy(pg[1])
-                            # newPg = np.array([pg[0],pg[0],pg[1]])
                             t1 = ply1.thickness
                             t2 = ply3.thickness
                             ply2.thickness = 0.3333333 * (t1 + t2)
@@ -172,7 +177,6 @@ class StackDatabase:
                             ply1 = deepcopy(pg[0])
                             ply2 = deepcopy(pg[0])
                             ply3 = deepcopy(pg[0])
-                            # newPg = np.array([pg[0],pg[0],pg[0]])
                             t1 = ply1.thickness
                             ply2.thickness = 0.3333333 * t1
                             ply1.thickness = 0.3333333 * t1
@@ -188,7 +192,6 @@ class StackDatabase:
                     ply1 = deepcopy(pg[0])
                     ply2 = deepcopy(pg[0])
                     ply3 = deepcopy(pg[1])
-                    # newPg = np.array([pg[0],pg[0],pg[1]])
                     t1 = ply1.thickness
                     t2 = ply3.thickness
                     ply2.thickness = 0.3333333 * (t1 + t2)
@@ -200,7 +203,6 @@ class StackDatabase:
                     ply1 = deepcopy(pg[0])
                     ply2 = deepcopy(pg[0])
                     ply3 = deepcopy(pg[0])
-                    # newPg = np.array([pg[0],pg[0],pg[0]])
                     t1 = ply1.thickness
                     ply2.thickness = 0.3333333 * t1
                     ply1.thickness = 0.3333333 * t1
@@ -208,113 +210,3 @@ class StackDatabase:
                     newPg = np.array([ply1, ply2, ply3])
                     self.swstacks[i][j].plygroups = newPg
         return self
-    
-class Stack:
-    """A class definition for a stack of composite layers.
-
-    Parameters
-    ----------
-
-    Attributes
-    ----------
-    name : string
-        Name of the stack or composite material used by NuMAD, e.g. '000000_HP_LE_PANEL'
-    indices : list
-        Indices of stack, ``[in board station, out board station,
-        1st kepoint, 2nd keypoint]``, e.g. ``[ibSta,obSta,keypt1,keypt2]``
-    plygroups : list
-        List of ``ply`` objects
-
-    """
-
-    def __init__(self):
-        self.name: str = ""
-        self.indices = []
-        self.plygroups: list = []
-        
-    def __eq__(self, other):
-        attrs = vars(self).keys()
-        for attr in attrs:
-            self_attr = getattr(self, attr)
-            other_attr = getattr(other, attr)
-            if isinstance(self_attr, (int, float, str, list, dict)):
-                if self_attr != other_attr:
-                    return False
-            elif isinstance(self_attr, ndarray):
-                if (self_attr != other_attr).any():
-                    return False
-        return True
-
-    def addply(self, ply):
-        """This method adds a Ply object to stack
-
-        Parameters
-        ----------
-        ply : Ply object
-            Ply object to be added
-        Returns
-        -------
-        None
-
-        """
-        # modifies
-        plygroups = self.plygroups
-        if (
-            plygroups
-            and ply.component == plygroups[-1].component
-            and ply.angle == plygroups[-1].angle
-        ):
-            plygroups[-1].nPlies += 1
-        else:
-            plygroups.append(ply)
-
-        return self
-
-    def layer_thicknesses(self) -> ndarray:
-        """Computes the thickness of each layer
-
-        Returns:
-            ndarray:
-        """
-        nLayers = len(self.plygroups)
-        thicknesses = [
-            self.plygroups[iLayer].nPlies * self.plygroups[iLayer].thickness
-            for iLayer in range(nLayers)
-        ]
-        return np.array(thicknesses)
-    
-    
-class Ply:
-    """A simple class to organize the attributes of a ply
-
-    Attributes
-    ----------
-
-    component : str
-        parent component
-    materialid : str
-        Material id of ply
-    thickness : float
-        thickness of single ply (mm)
-    angle : float
-        ply angle
-    nPlies : int
-        number of plies
-    """
-
-    def __init__(self):
-        self.component: str = None
-        self.materialid: str = None
-        self.thickness: float = None
-        self.angle: float = None
-        self.nPlies: int = None
-
-    def __eq__(self, other):
-        attrs = vars(self).keys()
-        for attr in attrs:
-            self_attr = getattr(self, attr)
-            other_attr = getattr(other, attr)
-            if isinstance(self_attr, (int, float, str)):
-                if self_attr != other_attr:
-                    return False
-        return True
