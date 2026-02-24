@@ -1,16 +1,26 @@
 Cubit Meshing
 ==============
 
-.. automodule:: pynumad.analysis.cubit
+make_blade
+----------
+
+.. automodule:: pynumad.analysis.cubit.make_blade
     :members:
     :no-undoc-members:
     :show-inheritance:
 
+connect_cross_sections
+----------------------
 
-Submodules
-----------
+.. automodule:: pynumad.analysis.cubit.connect_cross_sections
+    :members:
+    :no-undoc-members:
+    :show-inheritance:
 
-.. toctree::
-    :maxdepth: 1
-    
-    pynumad.analysis.cubit.make_blade
+make_cross_sections
+-------------------
+
+.. automodule:: pynumad.analysis.cubit.make_cross_sections
+    :members:
+    :no-undoc-members:
+    :show-inheritance:

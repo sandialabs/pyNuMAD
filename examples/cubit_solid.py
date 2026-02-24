@@ -2,21 +2,22 @@ import sys
 import pynumad
 
 sys.path.append(pynumad.SOFTWARE_PATHS['cubit'])
-sys.path.append(pynumad.SOFTWARE_PATHS['cubitEnhancements'])
+sys.path.append(pynumad.SOFTWARE_PATHS['cubit_enhancements'])
 
 import cubit
 from pynumad.analysis.cubit.make_blade import *
 import numpy as np
 
-from pynumad.analysis.make_models import write_sierra_model
-
+from pynumad.analysis.make_models import write_sierra_sm_model
+from pynumad.analysis.make_models import write_sierra_sd_model
 
 
 def get_cs_params():
     cs_params = {}
-    cs_params['nel_per_layer'] = 3 
+    cs_params['nel_per_layer'] = 1 
     cs_params['element_ar'] = 5
-    cs_params['element_shape'] = 'quad'
+    cs_params['element_shape'] = 'hex'
+    cs_params['element_thickness_ar'] =5
 
 
     cs_params['layer_transition_angle'] = 30
@@ -67,18 +68,36 @@ yamlName='myBlade_Modified'
 blade.read_yaml('example_data/'+yamlName+'.yaml') 
 
 
-
-
 wt_name=yamlName
 dirName='.'
 
 
 cs_params=get_cs_params()
 settings={}
-settings['make_input_for']='Sd'  #SM, VABS, ANBA, or None
+settings['make_input_for']='SmSd'  #SM, VABS, ANBA, or None
 settings['export']='cubg' #cub, g, or None
 
-materials_used=cubit_make_solid_blade(blade, wt_name, settings, cs_params, stationList=[2,3])
-    
 
-write_sierra_model(wt_name,settings,blade,materials_used,'.') 
+#Make Cubit Geometry
+station_list = [2,3]
+materials_used, volume_dict=cubit_make_solid_blade(blade, wt_name, settings, cs_params, stationList=station_list)
+
+#Compute material orientation
+orientation_vectors=get_material_orientation_vectors(volume_dict,ncpus = 1)
+orientation_angles=get_material_orientation_angles(orientation_vectors)
+
+#assign material orientation in Cubit
+assign_material_orientation_vectors(orientation_vectors)
+assign_material_orientation_angles(orientation_angles)
+
+#Export mesh in Genisis format 
+cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
+
+
+#Write Sierra input file
+from pynumad.paths import SOFTWARE_PATHS
+template_path=SOFTWARE_PATHS['pynumad']+'src/pynumad/data/templates/'
+
+write_sierra_sm_model(template_path+'sm.i.template',wt_name,station_list,blade,materials_used,'.') 
+
+write_sierra_sd_model(template_path+'sd.i.template',wt_name,station_list,blade,materials_used,'.') 

@@ -1,6 +1,6 @@
 import unittest
 import os
-from pynumad.shell.shell import get_shell_mesh
+from pynumad.mesh_gen.mesh_gen import get_shell_mesh
 from pynumad.objects.blade import Blade
 
 test_data_dir = os.path.join(os.path.dirname(__file__), "test_data")

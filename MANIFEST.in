@@ -1,0 +1,2 @@
+include src/pynumad/software_paths.json
+recursive-include src/pynumad/data *
