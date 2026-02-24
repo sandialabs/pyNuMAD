@@ -73,9 +73,9 @@ def write_beam_model(wt_name,station_list,settings,blade,mu,log,directory='.'):
 ### Read inputs
     extension='K'
     if station_list is None or len(station_list) == 0:
-        station_list = list(range(len(geometry.ispan)))
+        station_list = list(range(len(blade.definition.ispan)))
 
-    radial_stations=geometry.ispan/geometry.ispan[-1]
+    radial_stations=blade.definition.ispan/blade.definition.ispan[-1]
     radial_stations=radial_stations[station_list]
 
     if round(radial_stations[-1],2) ==1.0:

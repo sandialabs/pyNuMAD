@@ -47,6 +47,11 @@ class Geometry:
         interpolated prebend
     isweep : ndarray
         interpolated sweep
+
+    Notes
+    -----
+    Spanwise station locations (ispan) are owned by ``Definition``.
+    Access them via ``blade.definition.ispan``, not from this object.
     """
 
     def __init__(self, settings=None):
@@ -133,8 +138,8 @@ class Geometry:
         -------
         self
         """
-        self.ispan = definition.ispan
-        num_istations = self.ispan.size
+        ispan = definition.ispan
+        num_istations = ispan.size
         stations = definition.stations
         num_stations = len(stations)
         if num_stations > 0:
@@ -179,7 +184,7 @@ class Geometry:
 
         ## ic
         self.ic = interpolator_wrap(
-            spanlocation, self.c, self.ispan, "pchip", axis=1
+            spanlocation, self.c, ispan, "pchip", axis=1
         )
 
         ## cpos
@@ -195,19 +200,19 @@ class Geometry:
 
         ## icamber
         self.icamber = interpolator_wrap(
-            spanlocation, self.camber, self.ispan, "pchip", axis=1
+            spanlocation, self.camber, ispan, "pchip", axis=1
         )
 
         ## ithickness
         self.ithickness = interpolator_wrap(
-            spanlocation, self.thickness, self.ispan, "pchip", axis=1
+            spanlocation, self.thickness, ispan, "pchip", axis=1
         )
         # Adjust the thickness profiles based on te_type of stations.
         # This is mainly for transitions to flatbacks were the
         # interpolated airfoil needs to look like a round.
-        for k in range(len(self.ispan)):
+        for k in range(len(ispan)):
             try:
-                ind = np.argwhere(self.ispan[k] < spanlocation)[0][0]
+                ind = np.argwhere(ispan[k] < spanlocation)[0][0]
             except:
                 continue
             else:
@@ -219,18 +224,18 @@ class Geometry:
         # Interpolate the blade parameter curves.
         ## idegreestwist
         self.idegreestwist = interpolator_wrap(
-            definition.span, definition.degreestwist, self.ispan, "pchip"
+            definition.span, definition.degreestwist, ispan, "pchip"
         )
 
         ## ichord
         self.ichord = interpolator_wrap(
-            definition.span, definition.chord, self.ispan, "pchip"
+            definition.span, definition.chord, ispan, "pchip"
         )
 
         ## ipercentthick
         absolutethick = np.multiply(definition.percentthick, definition.chord) / 100
         iabsolutethick = interpolator_wrap(
-            definition.span, absolutethick, self.ispan, "pchip"
+            definition.span, absolutethick, ispan, "pchip"
         )
         self.ipercentthick = iabsolutethick / self.ichord * 100
         # ensure that the interpolation doesn't reduce the percent
@@ -241,12 +246,12 @@ class Geometry:
 
         ## ichordoffset
         self.ichordoffset = interpolator_wrap(
-            definition.span, definition.chordoffset, self.ispan, "pchip"
+            definition.span, definition.chordoffset, ispan, "pchip"
         )
 
         ## iaerocenter
         self.iaerocenter = interpolator_wrap(
-            definition.span, definition.aerocenter, self.ispan, "pchip"
+            definition.span, definition.aerocenter, ispan, "pchip"
         )
 
         ## isweep
@@ -256,16 +261,16 @@ class Geometry:
             definition.prebend = np.zeros((self.span.shape, self.span.shape))
 
         self.isweep = interpolator_wrap(
-            definition.span, definition.sweep, self.ispan, "pchip"
+            definition.span, definition.sweep, ispan, "pchip"
         )
 
         ## iprebend
         self.iprebend = interpolator_wrap(
-            definition.span, definition.prebend, self.ispan, "pchip"
+            definition.span, definition.prebend, ispan, "pchip"
         )
 
         # Generate the blade surface self.
-        n_istations = np.asarray(self.ispan).size
+        n_istations = ispan.size
         n_areas = num_points * 2 + 1
         self.profiles = np.zeros((n_areas, 2, n_istations))
         self.coordinates = np.zeros((n_areas, 3, n_istations))
@@ -276,7 +281,7 @@ class Geometry:
             self.update_airfoil_profile(k)
             mtindex = np.argmax(self.ithickness[:, k])
             self.xoffset[0, k] = self.ic[mtindex, k]
-            self.update_oml_geometry(k)
+            self.update_oml_geometry(k, ispan[k])
 
         # Calculate the arc length of each curve
         self.arclength = np.zeros((n_areas, n_istations))
@@ -390,19 +395,18 @@ class Geometry:
 
                 mtindex = np.argmax(self.ithickness[:, i_station])
                 self.xoffset[0, i_station] = self.ic[mtindex, i_station]
-                self.update_oml_geometry(i_station)
+                self.update_oml_geometry(i_station, self.coordinates[0, 2, i_station])
                 # first_point=self.ichord(i_station)*self.profiles(end-1,:,i_station);
                 # second_point=self.ichord(i_station)*self.profiles(2,:,i_station);
                 # edgeLength2=norm(second_point-first_point);
                 # fprintf('station #i, edgeLength: #f, New edgeLength=#f, percent diff: #f\n',i_station,edgeLength*1000,edgeLength2*1000,(edgeLength2-edgeLength)/edgeLength2*100)
         return self
 
-    def update_oml_geometry(self, k):
-        """ """
+    def update_oml_geometry(self, k, transZ):
+        """Update OML coordinates for station k at span position transZ."""
         x = self.profiles[:, 0, k]
         y = self.profiles[:, 1, k]
 
-        # self.xoffset[0,k] = c[mtindex]
         if self._natural_offset:
             x = x - self.xoffset[0, k]
         x = x - self.ichordoffset[k]  # apply chordwise offset
@@ -425,7 +429,6 @@ class Geometry:
         sweep_rot = 0
         transX = -1 * self._rotorspin * self.isweep[k]
         transY = self.iprebend[k]
-        transZ = self.ispan[k]
         Ry = rotation("y", sweep_rot)
         Rx = rotation("x", prebend_rot)
         R = Ry @ Rx

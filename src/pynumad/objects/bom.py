@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from pynumad.objects.definition import Definition
 from pynumad.objects.keypoints import KeyPoints
 
 
@@ -68,12 +67,17 @@ class BillOfMaterials:
         self.swbonds: list = []
         self.dryweight: float = None
 
-    def generate(self, definition: Definition, keypoints: KeyPoints):
-        """Generate the Bill-of-Materials from a Definition and KeyPoints.
+    def generate(self, ispan, components, materials, keypoints: KeyPoints):
+        """Generate the Bill-of-Materials.
 
         Parameters
         ----------
-        definition : Definition
+        ispan : ndarray
+            Interpolated span station locations [m].
+        components : dict
+            Component definitions (from ``Definition.components``).
+        materials : dict
+            Material definitions (from ``Definition.materials``).
         keypoints : KeyPoints
 
         Returns
@@ -84,10 +88,6 @@ class BillOfMaterials:
         g_to_kg = 0.001
         m_to_mm = 1000.0
         mm_to_m = 0.001
-
-        materials = definition.materials
-        components = definition.components
-        ispan = definition.ispan
 
         # reset
         self.hp = pd.DataFrame(columns=_BOM_COLUMNS)

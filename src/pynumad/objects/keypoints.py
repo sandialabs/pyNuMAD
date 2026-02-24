@@ -117,7 +117,7 @@ class KeyPoints:
         mm_to_m = 0.001
 
         # number of interpolated span stations
-        num_istations = geometry.ispan.size
+        num_istations = definition.ispan.size
 
         # number of areas around airfoil profile; must be even (see calc of web areas)
         num_areas = 12

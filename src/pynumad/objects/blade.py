@@ -128,7 +128,12 @@ class Blade:
         """
         self.geometry.generate(self.definition)
         self.keypoints.generate(self.definition, self.geometry)
-        self.bill_of_materials.generate(self.definition, self.keypoints)
+        self.bill_of_materials.generate(
+            self.definition.ispan,
+            self.definition.components,
+            self.definition.materials,
+            self.keypoints,
+        )
         self.stackdb.generate(self.keypoints, self.bill_of_materials)
         self.materialdb.generate(self.definition.materials, self.stackdb)
         return self

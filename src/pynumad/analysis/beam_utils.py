@@ -88,12 +88,12 @@ def write_beamdyn_axis(directory, wt_name, blade):
 
     geometry = blade.geometry
     n_pts = 50
-    input_span = blade.geometry.ispan/blade.geometry.ispan[-1]
+    input_span = blade.definition.ispan/blade.definition.ispan[-1]
     target_span = np.linspace(0, 1, n_pts)
 
     kp_xr=interpolator_wrap(input_span,definition.prebend,target_span,'pchip', axis=1)
     kp_yr=interpolator_wrap(input_span,definition.sweep,target_span,'pchip', axis=1)
-    kp_zr=interpolator_wrap(input_span,geometry.ispan,target_span,'pchip', axis=1)
+    kp_zr=interpolator_wrap(input_span,blade.definition.ispan,target_span,'pchip', axis=1)
     twist_interp=interpolator_wrap(input_span,geometry.idegreestwist,target_span,'pchip', axis=1)
 
 

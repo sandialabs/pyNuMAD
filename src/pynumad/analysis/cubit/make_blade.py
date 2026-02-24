@@ -460,7 +460,7 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
     keypoints = blade.keypoints
 
     if stationList is None or len(stationList) == 0:
-        stationList = list(range(len(geometry.ispan)))
+        stationList = list(range(len(definition.ispan)))
 
     # Initialize variables
     surface_dict = {}
@@ -560,7 +560,7 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
     #### Step one create outer mold line
     excess_lengths=[]
     te_angles=[]
-    for i_station_geometry in range(len(blade.geometry.ispan)-1): #-1 b/c fewer stacks than stations
+    for i_station_geometry in range(len(blade.definition.ispan)-1): #-1 b/c fewer stacks than stations
         xyz = get_blade_geometry_for_station(blade, i_station_geometry) * geometry_scaling
         
         npts=5
@@ -636,8 +636,8 @@ def cubit_make_cross_sections(blade,wt_name,settings,cs_params,model2Dor3D,stati
             )  # This is needed to restart node numbering for VABS. VABS neeeds every element and node starting from 1 to nelem/nnode should be present
         write_spline_from_coordinate_points(cubit, ref_line_coords)
         i_station_geometry = i_station
-        if i_station == len(geometry.ispan) - 1:  # Only do this for the last station
-            blade.add_interpolated_station(geometry.ispan[-1] * 0.999)
+        if i_station == len(definition.ispan) - 1:  # Only do this for the last station
+            blade.add_interpolated_station(definition.ispan[-1] * 0.999)
             stackdb.edit_stacks_for_solid_mesh()
             expandTEthicknesses.append(expandTEthicknesses[-1])
             blade.expand_blade_geometry_te(expandTEthicknesses)
