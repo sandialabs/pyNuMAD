@@ -44,6 +44,17 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 
+[project.optional-dependencies]
+test = [
+  "pytest >=6.0",
+]
+# doc = [
+#   "matplotlib >=2.0",
+# ]
+
+[tool.black]
+line-length = 140
+
 [project.urls]
 Homepage = "https://github.com/sandialabs/pynumad"
 Documentation = "https://sandialabs.github.io/pyNuMAD/"
