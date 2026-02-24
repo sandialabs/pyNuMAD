@@ -1,6 +1,10 @@
-from numpy import ndarray
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Optional
 
 
+@dataclass
 class Material:
     """Material class
 
@@ -13,110 +17,113 @@ class Material:
     layerthickness : float
         Layer thickness [mm]
     ex : float
-                Longitudinal elastic modulus [Pa]
+        Longitudinal elastic modulus [Pa]
     ey : float
-                Transverse elastic modulus [Pa]
+        Transverse elastic modulus [Pa]
     ez : float
-                Through-the-thickness elastic modulus in the
+        Through-the-thickness elastic modulus in the
         principal material coordinates [Pa]
     gxy : float
-                In-plane shear modulus [Pa]
+        In-plane shear modulus [Pa]
     gyz : float
-                Transverse shear modulus [Pa]
+        Transverse shear modulus [Pa]
     gxz : float
-                Transverse shear modulus [Pa]
+        Transverse shear modulus [Pa]
     prxy : float
-                In-plane Poisson ratio [ ]
+        In-plane Poisson ratio [ ]
     pryz : float
-                Transverse Poisson ratio [ ]
+        Transverse Poisson ratio [ ]
     prxz : float
-                Transverse Poisson ratio [ ]
+        Transverse Poisson ratio [ ]
     density : float
-                Cured mass density [kg/m2]
+        Cured mass density [kg/m2]
     drydensity : float
-                Density of fabric
+        Density of fabric
     uts : float
-                1 x 3 array of ultimate tensile strength design values.
+        1 x 3 array of ultimate tensile strength design values.
         Sequence: SL , ST, Sz, 1 x 1 for isotropic.
     ucs : float
-                1 x 3 array of ultimate compressive strength design values.
-      Sequence: SL , ST, Sz, 1 x 1 for isotropic.
+        1 x 3 array of ultimate compressive strength design values.
+        Sequence: SL , ST, Sz, 1 x 1 for isotropic.
     uss : float
-                1 x 3 array of ultimate shear strength design values.
+        1 x 3 array of ultimate shear strength design values.
         Sequence: SLT , STz, SLz, 1 x 1 for isotropic.
     xzit : float
-                Lz tensile inclination parameter for Puck failure index
+        Lz tensile inclination parameter for Puck failure index
     xzic : float
-                Lz compressive inclination parameter for Puck failure index
+        Lz compressive inclination parameter for Puck failure index
     yzit : float
-                Tz tensile inclination parameter for Puck failure index
+        Tz tensile inclination parameter for Puck failure index
     yzic : float
-                Tz compressive inclination parameter for Puck failure index
+        Tz compressive inclination parameter for Puck failure index
     g1g2 : float
-                Fracture toughness ratio between GI (mode I) and GII (mode II) [ ]
+        Fracture toughness ratio between GI (mode I) and GII (mode II) [ ]
     alp0 : float
-                Fracture angle under pure transverse compression [degrees]
+        Fracture angle under pure transverse compression [degrees]
     etat : float
-                Transverse friction coefficient for Larc [ ]
+        Transverse friction coefficient for Larc [ ]
     etal : float
-                Longitudinal friction coefficient for Larc [ ]
+        Longitudinal friction coefficient for Larc [ ]
     m : list
-                Fatigue slope exponent [ ]
+        Fatigue slope exponent [ ]
     gamma_mf : list
-                from DNL-GL standard, fatigue strength reduction factor
+        From DNL-GL standard, fatigue strength reduction factor
     gamma_ms : list
-                from DNV-GL standard, short term strength reduction factor
-    reference : str = None
-
+        From DNV-GL standard, short term strength reduction factor
+    reference : str
     """
 
-    def __init__(self):
-        self.name: str = None
-        self.type: str = None
-        self.reference: str = None
-        self.layerthickness: float = None
-        self.ex: float = None
-        self.ey: float = None
-        self.ez: float = None
-        self.gxy: float = None
-        self.gyz: float = None
-        self.gxz: float = None
-        self.prxy: float = None
-        self.pryz: float = None
-        self.prxz: float = None
-        self.density: float = None
-        self.drydensity: float = None
-        self.uts: float = None
-        self.ucs: float = None
-        self.uss: float = None
-        self.xzit: float = None
-        self.xzic: float = None
-        self.yzit: float = None
-        self.yzic: float = None
-        self.g1g2: float = None
-        self.alp0: float = None
-        self.etat: float = None
-        self.etal: float = None
-        self.m: list[float] = None
-        self.gamma_mf: list[float] = None
-        self.gamma_ms: list[float] = None
-        
-    
-    def __eq__(self, other):
-        attrs = vars(self).keys()
+    name: Optional[str] = None
+    type: Optional[str] = None
+    reference: Optional[str] = None
+    layerthickness: Optional[float] = None
+    ex: Optional[float] = None
+    ey: Optional[float] = None
+    ez: Optional[float] = None
+    gxy: Optional[float] = None
+    gyz: Optional[float] = None
+    gxz: Optional[float] = None
+    prxy: Optional[float] = None
+    pryz: Optional[float] = None
+    prxz: Optional[float] = None
+    density: Optional[float] = None
+    drydensity: Optional[float] = None
+    uts: Optional[float] = None
+    ucs: Optional[float] = None
+    uss: Optional[float] = None
+    xzit: Optional[float] = None
+    xzic: Optional[float] = None
+    yzit: Optional[float] = None
+    yzic: Optional[float] = None
+    g1g2: Optional[float] = None
+    alp0: Optional[float] = None
+    etat: Optional[float] = None
+    etal: Optional[float] = None
+    m: Optional[list] = None
+    gamma_mf: Optional[list] = None
+    gamma_ms: Optional[list] = None
 
-        for attr in attrs:
-            self_attr = getattr(self, attr)
-            other_attr = getattr(other, attr)
-            try:
-                if (self_attr != self_attr) & (other_attr != other_attr):
-                    continue
-            except ValueError:
-                pass
-            if isinstance(self_attr, (int,float,str,list)):
-                if self_attr != other_attr:
-                    return False
-            elif isinstance(self_attr, ndarray):
-                if (self_attr != other_attr).any():
-                    return False
-        return True
+
+@dataclass
+class Layer:
+    """A single layer entry within a :class:`~pynumad.objects.materialdb.MaterialDatabaseEntry`.
+
+    Attributes
+    ----------
+    layer_name : str
+        Name of the base material used in this layer.
+    thicknessA : float
+        Nominal ply thickness [m].
+    thicknessB : float
+        Secondary thickness (e.g. for tapered plies) [m].
+    quantity : int
+        Number of plies.
+    theta : float
+        Fibre orientation angle [degrees].
+    """
+
+    layer_name: Optional[str] = None
+    thicknessA: Optional[float] = None
+    thicknessB: Optional[float] = None
+    quantity: Optional[int] = None
+    theta: Optional[float] = None

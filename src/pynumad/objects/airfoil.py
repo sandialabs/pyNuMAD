@@ -8,6 +8,7 @@ import scipy as sp
 
 from pynumad.io.xml_to_airfoil import xml_to_airfoil
 from pynumad.utils.interpolation import interpolator_wrap
+from pynumad.utils.affinetrans import rotate2d
 
 
 
@@ -160,8 +161,8 @@ class Airfoil:
         -------
         """
         # Modifies self.te_type and self.coordinates
-        unitNormals = get_airfoil_normals(self.coordinates)
-        angleChange = get_airfoil_normals_angle_change(unitNormals)
+        unitNormals = _get_airfoil_normals(self.coordinates)
+        angleChange = _get_airfoil_normals_angle_change(unitNormals)
         discontinuities = np.flatnonzero(angleChange > 45)
 
         if discontinuities.shape[0] == 2:
@@ -201,9 +202,9 @@ class Airfoil:
         af.resample(200,'half-cosine');
         """
         coords_in = self.coordinates
-        coords_out = resample_airfoil(coords_in, n_samples, spacing)
+        coords_out = _resample_airfoil(coords_in, n_samples, spacing)
         # self(k).percentthick = (max(ycoord) - min(ycoord))*100;
-        self.c, self.camber, self.thickness = compute_camber_and_thickness(coords_out)
+        self.c, self.camber, self.thickness = _compute_camber_and_thickness(coords_out)
         m = np.max(self.thickness)
         i = np.argmax(self.thickness)
         self.percentthick = m * 100
@@ -213,7 +214,7 @@ class Airfoil:
         return self
 
 
-def get_airfoil_normals(coordinates) -> ndarray:
+def _get_airfoil_normals(coordinates) -> ndarray:
     """Method finds which airfoil is flatback.
 
     If points are placed
@@ -251,7 +252,7 @@ def get_airfoil_normals(coordinates) -> ndarray:
     return unitNormals
 
 
-def resample_airfoil(coords_in: ndarray, n_samples: int, spacing: str) -> ndarray:
+def _resample_airfoil(coords_in: ndarray, n_samples: int, spacing: str) -> ndarray:
     """Resample airfoil coordinates
 
     Parameters
@@ -416,11 +417,8 @@ def resample_airfoil(coords_in: ndarray, n_samples: int, spacing: str) -> ndarra
     return coords_out
 
 
-def get_airfoil_normals_angle_change(unit_normals):
-    """
-    TODO: Docstring
-    TODO: Test
-    """
+def _get_airfoil_normals_angle_change(unit_normals):
+    """Find the angle change (degrees) between consecutive unit normal vectors."""
     # Find the angle changes between adjacent unit vectors
     nPoints = unit_normals.shape[0]
     angleChange = np.zeros(nPoints)
@@ -438,18 +436,7 @@ def get_airfoil_normals_angle_change(unit_normals):
     return angleChange
 
 
-def rotate2d(xyin, angle):
-    """
-    NOTE: might be able to use affinetrans module here
-    TODO: Docstring
-    TODO: Test
-    """
-    xyout1 = np.cos(angle) * xyin[:, 0] - np.sin(angle) * xyin[:, 1]
-    xyout2 = np.sin(angle) * xyin[:, 0] + np.cos(angle) * xyin[:, 1]
-    return np.stack((xyout1, xyout2), axis=1)
-
-
-def compute_camber_and_thickness(coords: ndarray):
+def _compute_camber_and_thickness(coords: ndarray):
     """Computes c, camber, and thickness from airfoil coordinates
 
     Parameters:
@@ -475,50 +462,3 @@ def compute_camber_and_thickness(coords: ndarray):
     camber = (yhp + ylp) / 2
     thickness = np.abs(ylp - yhp)
     return c, camber, thickness
-
-
-# currently unused
-def _adjust_te(self, tet, tes, onset):
-    """TODO docstring
-
-    Parameters
-    ----------
-    tet :
-        the amount of TE thickness to add
-    tes :
-        the slope of the added thickness profile at TE,
-        defaults to 5/3 * TE_thick
-    onset :
-        the chord fraction where adjustment begins,
-        defaults to location of max thickness
-    Returns
-    -------
-
-    Example
-    -------
-    AirfoilDef.adjustTE
-    af.adjustTE(TE_thick,[TE_slope],[onset])
-    af.adjustTE(0.02)
-    af.adjustTE(0.02,0)
-    af.adjustTE(0.02,[],0.8)
-    """
-
-    if not tes:
-        tes = 5 / 3 * tet  # slope of TE adjustment; 5/3*tet is "natural"
-
-    if not onset:
-        USEMAXTHICK = True
-    else:
-        USEMAXTHICK = False  # use the given 'onset' instead
-    # continuous first & second derivatives at 'onset'
-    # maintain second & third derivative at mc==1 (TE)
-    # adjust slope at mc==1 (TE) by tes
-    A = np.array([[1, 1, 1, 1], [3, 4, 5, 6], [6, 12, 20, 30], [6, 24, 60, 120]])
-    d = np.array([[tet], [tes], [0], [0]])
-    p = np.linalg.solve(A, d)
-    if USEMAXTHICK:
-        onset = self.maxthick
-    mc = np.amax((self.c - onset) / (1 - onset), 0)
-    temod = np.array([mc**3, mc**4, mc**5, mc**6]) * p
-    self.thickness = self.thickness + temod
-    return self
