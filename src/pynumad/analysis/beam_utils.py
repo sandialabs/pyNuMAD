@@ -478,7 +478,16 @@ def get_bd_blade_length(bd_sum_file_name):
     with open(bd_sum_file_name) as blade_yaml:
         data = yaml.load(blade_yaml,Loader=yaml.FullLoader)
     return data['Length']
+def get_bd_quadrature_method(bd_sum_file_name):
+    '''
+    Returns 
+        blade length
+    '''
+    import yaml
 
+    with open(bd_sum_file_name) as blade_yaml:
+        data = yaml.load(blade_yaml,Loader=yaml.FullLoader)
+    return data['Quadrature_method']
 def get_spanwise_target_qois_at_one_time(source_radial_stations,target_radial_stations,spanwise_source_qois):
     nqois=len(spanwise_source_qois[0])
     target_qois=[]

@@ -7,12 +7,19 @@ SOLUTION
 END
 
 file
-    geometry_file 'IN_MESH'
+  geometry_file 'IN_MESH'
+  initialize variable name = material_direction_1
+   read variable = matCoord_1_
+    variable type = element
+  initialize variable name = material_direction_2
+    read variable = matCoord_2_
+    variable type = element
+  initialize variable name = material_direction_3
+    read variable = matCoord_3_
+    variable type = element
 end
 
 BLADE_BLOCKS
-
-
 
 outputs
     disp
@@ -26,8 +33,6 @@ end
 BLADE_MATERIALS
 
 boundary
-   nodeset root
+   nodeset ROOT_STATION_ns
    fixed
-   nodeset tip
-   z=-10.5
 end
