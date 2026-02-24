@@ -180,6 +180,8 @@ BLADE_BLOCKS
          function = ramp
          scale factor = -750
       end traction
+
+
         ### ------------------###
         ### Solver definition ###
         ### ------------------###
@@ -188,11 +190,11 @@ BLADE_BLOCKS
          type = secant
       end
       begin cg
-         target relative residual = 2.0e-5
-         acceptable relative residual = 4.0e-5
+         target relative residual = 2.0e-3
+         acceptable relative residual = 4.0e-3
          target residual = 1.0e-7
          acceptable residual = 2.0e-7
-         maximum iterations       = 3000
+         maximum iterations       = 4000
          iteration print          = 100
          reference = belytschko 
          preconditioner = probe
@@ -208,7 +210,7 @@ BLADE_BLOCKS
           cutback factor = 0.5
           growth factor = 1.0
           maximum failure cutbacks = 10
-          target iterations = 3000
+          target iterations = 4000
           iteration window = 200
       end adaptive time stepping
     end adagio region adagio

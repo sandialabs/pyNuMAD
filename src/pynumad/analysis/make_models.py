@@ -223,11 +223,13 @@ def write_sierra_sd_model(template_file,wt_name,station_list,blade,materials_use
 
         blockLines+=f'block {material.name}\n'
         blockLines+=f'    material {material.name}\n'
+        blockLines+=f'    coordinate from_transfer\n'
         blockLines+=f'end \n'
         blockLines+='\n\n' 
 
     copy_and_replace(template_file, sierra_file_name,
         {
+            'ROOT_STATION': 'station'+str(station_list[0]).zfill(3),
             'BLADE_MATERIALS': materialLines,
             'IN_MESH':wt_name+'.g',
             'BLADE_BLOCKS': blockLines,

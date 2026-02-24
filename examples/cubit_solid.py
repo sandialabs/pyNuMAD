@@ -80,13 +80,15 @@ settings['export']='cubg' #cub, g, or None
 
 #Make Cubit Geometry
 station_list = [2,3]
-materials_used=cubit_make_solid_blade(blade, wt_name, settings, cs_params, stationList=station_list)
+materials_used, volume_dict=cubit_make_solid_blade(blade, wt_name, settings, cs_params, stationList=station_list)
 
 #Compute material orientation
-orientation_data=compute_material_orientations(cs_params['element_shape'],ncpus = 1)
+orientation_vectors=get_material_orientation_vectors(volume_dict,ncpus = 1)
+orientation_angles=get_material_orientation_angles(orientation_vectors)
 
 #assign material orientation in Cubit
-assign_material_orientations(orientation_data)
+assign_material_orientation_vectors(orientation_vectors)
+assign_material_orientation_angles(orientation_angles)
 
 #Export mesh in Genisis format 
 cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
@@ -94,7 +96,7 @@ cubit.cmd(f'export mesh "{wt_name}.g" overwrite')
 
 #Write Sierra input file
 from pynumad.paths import SOFTWARE_PATHS
-template_path=SOFTWARE_PATHS['pynumad']+'src/data/templates/'
+template_path=SOFTWARE_PATHS['pynumad']+'src/pynumad/data/templates/'
 
 write_sierra_sm_model(template_path+'sm.i.template',wt_name,station_list,blade,materials_used,'.') 
 
