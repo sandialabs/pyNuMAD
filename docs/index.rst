@@ -3,6 +3,7 @@
 pyNuMAD
 ========
 
+pyNuMAD
 The structural design and optimization of wind turbine blades is a
 complex task. In many cases it is difficult to find the optimal design
 of a turbine blade by hand, or by trial and error, and the software
