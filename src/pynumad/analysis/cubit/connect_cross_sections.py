@@ -405,7 +405,7 @@ def verify_web_cutting_amplitude(
     geometry = blade.geometry
     for i_station_check in range(i_station_first_web + 1, i_station_last_web + 1):
         blade_segment_length = (
-            geometry.ispan[i_station_check] - geometry.ispan[i_station_first_web]
+            blade.definition.ispan[i_station_check] - blade.definition.ispan[i_station_first_web]
         )
         gap = blade_segment_length - amplitude
         # print(f'blade_segment_length: {blade_segment_length}\ngap {gap}')
