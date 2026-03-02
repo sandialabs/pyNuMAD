@@ -57,6 +57,7 @@ class KeyPoints:
         self.key_arcs: ndarray = None
         self.key_cpos: ndarray = None
         self.key_areas: ndarray = None
+        self.key_bonds: ndarray = None
 
         self.le_bond: ndarray = None
         self.te_bond: ndarray = None
@@ -93,6 +94,7 @@ class KeyPoints:
         self.key_arcs = np.zeros((num_areas + 1, num_stations))
         self.key_cpos = np.zeros((num_areas + 1, num_stations))
         self.key_areas = np.zeros((num_areas, num_stations - 1))
+        self.key_bonds = np.zeros((num_areas + 1, num_stations - 1))
         self.le_bond = np.zeros((num_stations - 1))
         self.te_bond = np.zeros((num_stations - 1))
         return self
@@ -532,6 +534,9 @@ class KeyPoints:
                     np.sqrt(np.sum(np.diff(ob, 1, axis=0) ** 2, 1)), dspan[1:]
                 )
                 self.key_areas[kr, kc] = t1 + t2
+                self.key_bonds[kr, kc] = dspan[0]
+                if kr == num_areas - 1:
+                    self.key_bonds[num_areas, kc] = dspan[-1]
                 if kr == 0:
                     self.te_bond[kc] = dspan[0]
                 if (num_areas / 2 + 1) == (kr + 1):
@@ -552,8 +557,8 @@ class KeyPoints:
                 base2 = np.sqrt(np.sum(b2**2, 1))[0]
                 b1 = b1 / base1
                 b2 = b2 / base2
-                h1 = np.abs(np.dot((ob[0, :] - ib[0, :]), (1 - np.transpose(b1))))
-                h2 = np.abs(np.dot((ib[1, :] - ob[1, :]), (1 - np.transpose(b2))))
+                h1 = np.abs(np.dot((ob[0, :] - ib[0, :]), (1 - b1.flatten())))
+                h2 = np.abs(np.dot((ib[1, :] - ob[1, :]), (1 - b2.flatten())))
                 self.web_areas[ksw][kc] = 0.5 * (base1 * h1 + base2 * h2)
                 self.web_width[ksw][kc] = base1
                 # calculate edge (bond-line) lengths
