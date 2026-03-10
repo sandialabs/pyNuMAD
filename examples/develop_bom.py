@@ -7,7 +7,7 @@ import os
 from pynumad.objects.blade import Blade
 
 yaml_file = os.path.join(
-    os.path.dirname(__file__), "thisblade.yaml"
+    os.path.dirname(__file__), "example_data", "IEA-15MW_modified.yaml"
 )
 
 # Choose a segmentation case: 'one-piece', 'two-piece', 'chord-wise', 'three-piece'
