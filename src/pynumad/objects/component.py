@@ -1,6 +1,7 @@
 import numpy as np
 
 from pynumad.utils.interpolation import interpolator_wrap
+from pynumad.objects.keypoints import KEY_LABELS
 
 
 class Component:
@@ -39,21 +40,7 @@ class Component:
         self.control_points: np.ndarray = None
         self.imethod: str = "linear"
         self.pinnedends: bool = None
-        self._keylabels = [
-            "te",
-            "e",
-            "d",
-            "c",
-            "b",
-            "a",
-            "le",
-            "a",
-            "b",
-            "c",
-            "d",
-            "e",
-            "te",
-        ]
+        self._keylabels = list(KEY_LABELS)  # shared keypoint ordering
         
         
     def __eq__(self, other):
@@ -70,18 +57,6 @@ class Component:
                     return False
         return True
     
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : Component
-
-        Returns
-        -------
-        bool
-        """
-        return self == other
-
     def get_control_points(self):
         if self.pinnedends:
             if np.any(self.control_points[:, 0] < 0) or np.any(self.control_points[:, 0] > 1):
@@ -140,12 +115,4 @@ class Component:
         except TypeError:
             lpRegion = []
 
-        # if length(comp['hpextents'])==1 && length(comp['lpextents'])==1
-        # sw1 = find(1==strcmpi(comp['hpextents']{1},_keylabels(1:le)));
-        # assert(~isempty(sw1),'HP extent label "#s" not defined.',comp['hpextents']{1});
-        #  w2 = find(1==strcmpi(comp['lpextents']{1},_keylabels(le:end))) + le-1;
-        # assert(~isempty(sw2),'LP extent label "#s" not defined.',comp['lpextents']{1});
-        # swRegion = [sw1 sw2];
-        # else
-        swRegion = []
-        return hpRegion, lpRegion  # ,swRegion
+        return hpRegion, lpRegion

@@ -1,12 +1,38 @@
-import logging
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
 
 from pynumad.objects.stackdb import StackDatabase
+from pynumad.objects.material import Layer  # re-exported from material.py
 
 
-class MaterialDatabase(dict):
+class MaterialDatabase:
+    """Database of all blade materials in a solver-ready format.
+
+    Entries are keyed by material/composite name and stored in
+    ``entries``.  Use ``db[name]`` / ``db[name] = entry`` for convenient
+    dict-style access.
+
+    Attributes
+    ----------
+    entries : dict[str, MaterialDatabaseEntry]
+        All material and composite stack entries indexed by name.
+    """
+
     def __init__(self):
-        pass
-    
+        self.entries: dict = {}
+
+    # Dict-style access delegates to self.entries for convenience
+    def __getitem__(self, key):
+        return self.entries[key]
+
+    def __setitem__(self, key, value):
+        self.entries[key] = value
+
+    def __contains__(self, key):
+        return key in self.entries
+
     def generate(self, materials: dict, stackdb: StackDatabase):
         """Adds material and composites information to MatDB
 
@@ -101,148 +127,53 @@ class MaterialDatabase(dict):
                     cur_entry.layer[j] = cur_layer
                 self[cur_entry.name] = cur_entry
         
-        # shearweb information from NuMAD v1 is formatted in a specific
-        # way, recreating that here
-        # recreating data.shearweb ====================================
-        # NOTE: do we care about this anymore? -kb
-        # ctr = 0
-        # self.shearweb = []
-        # for k_web in range(n_webs):
-        #     ind = keypoints.web_indices[k_web]
-        #     for k_stat in range(n_stations):
-        #         if swstacks[k_web, k_stat].plygroups:
-        #             cur_sw = ShearWeb()
-        #             cur_sw.Material = swstacks[k_web, k_stat].name
-        #             cur_sw.BeginStation = swstacks[k_web, k_stat].indices[0]  # =k
-        #             cur_sw.EndStation = swstacks[k_web, k_stat].indices[1]  # =k+1
-        #             cur_sw.Corner = [
-        #                 ind[1] - 1,
-        #                 ind[0] - 1,
-        #                 ind[0] - 1,
-        #                 ind[1] - 1,
-        #             ]  # dp number is offset by 1 in NuMAD v1
-        #             self.shearweb.append(cur_sw)
-        #             ctr += 1
         return self
     
     
+@dataclass
 class MaterialDatabaseEntry:
     """A simple class to organize the attributes of a material"""
-
-    def __init__(self):
-        self.type: str = None
-        self.name: str = None
-        self.reference: str = None
-        self.dens: list = None
-        self.nuxy: list = None
-        self.ex: list = None
-        self.ey: list = None
-        self.ez: list = None
-        self.gxy: list = None
-        self.gyz: list = None
-        self.gxz: list = None
-        self.prxy: list = None
-        self.pryz: list = None
-        self.prxz: list = None
-        self.xten: list = None
-        self.xcmp: list = None
-        self.yten: list = None
-        self.ycmp: list = None
-        self.zten: list = None
-        self.zcmp: list = None
-        self.xy: list = None
-        self.yz: list = None
-        self.xz: list = None
-        self.xycp: list = None
-        self.yzcp: list = None
-        self.xzcp: list = None
-        self.xzit: list = None
-        self.xzic: list = None
-        self.yzit: list = None
-        self.yzic: list = None
-        self.g1g2: list = None
-        self.etal: list = None
-        self.etat: list = None
-        self.alp0: list = None
-        self.thicknessType: list = None
-        self.uniqueLayers: list = None
-        self.symmetryType: list = None
-        self.layer: list = None
+    type: Optional[str] = None
+    name: Optional[str] = None
+    reference: Optional[str] = None
+    dens: Optional[float] = None
+    nuxy: Optional[float] = None
+    ex: Optional[float] = None
+    ey: Optional[float] = None
+    ez: Optional[float] = None
+    gxy: Optional[float] = None
+    gyz: Optional[float] = None
+    gxz: Optional[float] = None
+    prxy: Optional[float] = None
+    pryz: Optional[float] = None
+    prxz: Optional[float] = None
+    xten: Optional[float] = None
+    xcmp: Optional[float] = None
+    yten: Optional[float] = None
+    ycmp: Optional[float] = None
+    zten: Optional[float] = None
+    zcmp: Optional[float] = None
+    xy: Optional[float] = None
+    yz: Optional[float] = None
+    xz: Optional[float] = None
+    xycp: Optional[float] = None
+    yzcp: Optional[float] = None
+    xzcp: Optional[float] = None
+    xzit: Optional[float] = None
+    xzic: Optional[float] = None
+    yzit: Optional[float] = None
+    yzic: Optional[float] = None
+    g1g2: Optional[float] = None
+    etal: Optional[float] = None
+    etat: Optional[float] = None
+    alp0: Optional[float] = None
+    thicknessType: Optional[str] = None
+    uniqueLayers: Optional[int] = None
+    symmetryType: Optional[str] = None
+    layer: Optional[list] = None
                  
-class Layer:
-    """A simple class to organize the attributes of a material layer.
+# Layer is defined in pynumad.objects.material and re-exported here
+# for backward compatibility.
+__all__ = ["MaterialDatabase", "MaterialDatabaseEntry", "Layer"]
 
-    Attributes
-    ----------
-    layer_name : str
-    thicknessA : float
-    thicknessB :float
-    quantity : int
-    theta : float
-    """
 
-    def __init__(self):
-        self.layer_name: str = None
-        self.thicknessA: float = None
-        self.thicknessB: float = None
-        self.quantity: int = None
-        self.theta: float = None
-        
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : Layer
-
-        Returns
-        -------
-        bool
-        """
-        attrs = [
-            a
-            for a in dir(self)
-            if not a.startswith("__") and not callable(getattr(self, a))
-        ]
-        for attr in attrs:
-            if getattr(self, attr) != getattr(other, attr):
-                return False
-        return True
-       
-class ShearWeb:
-    """A simple class to organize the attributes of a shear web
-
-    Attributes
-    ----------
-    Material : str
-    BeginStation : int
-    EndStation : int
-    Corner : list
-    """
-
-    def __init__(self):
-        self.Material: str = None
-        self.BeginStation: int = None
-        self.EndStation: int = None
-        self.Corner: list = None
-        
-    def _compare(self, other):
-        """
-        Parameters
-        ----------
-        other : ShearWeb
-
-        Returns
-        -------
-        bool
-        """
-        attrs = [
-            a
-            for a in dir(self)
-            if not a.startswith("__") and not callable(getattr(self, a))
-        ]
-        for attr in attrs:
-            if getattr(self, attr) != getattr(other, attr):
-                msg = f"{getattr(self, attr)} != {getattr(other, attr)}"
-                logging.debug(msg)
-                return False
-        return True

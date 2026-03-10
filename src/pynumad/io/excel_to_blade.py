@@ -150,26 +150,29 @@ def excel_to_blade(blade, filename):
     for prop in props:
         # For each of the input properties, interpolate where ever values
         # are missing.
-        ind = np.isnan(getattr(definition, prop))
+        arr = getattr(definition, prop)
+        ind = np.isnan(arr)
         if np.any(ind):
+            arr = arr.copy()
             if not prop == "percentthick":
-                getattr(definition, prop)[ind] = interpolator_wrap(
+                arr[ind] = interpolator_wrap(
                     np.delete(definition.span, ind),
-                    np.delete(getattr(definition, prop), ind),
+                    np.delete(arr, ind),
                     definition.span[ind],
                     "pchip",
                 )
             else:
                 # jcb: note that definition.chord must be interpolated before
                 # definition.percentthick
-                absthick = np.multiply(definition.percentthick, definition.chord) / 100
+                absthick = np.multiply(arr, definition.chord) / 100
                 iabsthick = interpolator_wrap(
                     np.delete(definition.span, ind),
                     np.delete(absthick, ind),
                     definition.span[ind],
                     "pchip",
                 )
-                definition.percentthick[ind] = iabsthick / definition.chord[ind] * 100
+                arr[ind] = iabsthick / definition.chord[ind] * 100
+            setattr(definition, prop, arr)
             # The next two lines report when a property has been
             # interpolated.
             # rowstr = sprintf('#d,',find(ind==1));

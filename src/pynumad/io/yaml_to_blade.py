@@ -74,8 +74,6 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
         filename,
         write_airfoils,
     )
-    blade.ispan = definition.ispan
-
     ### MATERIALS
     _add_materials(definition, mat_data)
 
