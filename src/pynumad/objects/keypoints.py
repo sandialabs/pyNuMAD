@@ -61,6 +61,7 @@ class KeyPoints:
         self.key_arcs: ndarray = None
         self.key_cpos: ndarray = None
         self.key_areas: ndarray = None
+        self.key_bonds: ndarray = None
 
         self.le_bond: ndarray = None
         self.te_bond: ndarray = None
@@ -97,6 +98,7 @@ class KeyPoints:
         self.key_arcs = np.zeros((num_areas + 1, num_stations))
         self.key_cpos = np.zeros((num_areas + 1, num_stations))
         self.key_areas = np.zeros((num_areas, num_stations - 1))
+        self.key_bonds = np.zeros((num_areas + 1, num_stations - 1))
         self.le_bond = np.zeros((num_stations - 1))
         self.te_bond = np.zeros((num_stations - 1))
         return self
@@ -515,6 +517,9 @@ class KeyPoints:
                     np.sqrt(np.sum(np.diff(ob, 1, axis=0) ** 2, 1)), dspan[1:]
                 )
                 self.key_areas[kr, kc] = t1 + t2
+                self.key_bonds[kr, kc] = dspan[0]
+                if kr == num_areas - 1:
+                    self.key_bonds[num_areas, kc] = dspan[-1]
                 if kr == 0:
                     self.te_bond[kc] = dspan[0]
                 if (num_areas / 2 + 1) == (kr + 1):
