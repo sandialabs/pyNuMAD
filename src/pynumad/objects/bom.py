@@ -268,7 +268,7 @@ class BillOfMaterials:
         for k in range(nsw):
             sw_web = self.sw[self.sw["web_id"] == k]
             sw_dw = sw_web["weight"].sum() if not sw_web.empty else 0.0
-            self.dryweight = self.dryweight + sw_dw
+            self.dryweight = self.dryweight + g_to_kg * sw_dw
             C = keypoints.web_bonds[k][:, sw_begin_station[k] : sw_end_station[k]]
             self.swbonds[k] = m_to_mm * np.sum(C, 1)
 
