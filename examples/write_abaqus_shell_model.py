@@ -8,7 +8,7 @@ from pynumad.io.mesh_to_yaml import *
 from pynumad.analysis.abaqus.write import *
 
 ## Define inputs
-bladeYaml = join("example_data","blade.yaml")
+bladeYaml = join("example_data","BAR0_5MW.yaml")
 meshYaml = "BAR0.yaml"
 abqFileName = "BAR0.inp"
 abqScriptName = "runModalAnalysis.py"

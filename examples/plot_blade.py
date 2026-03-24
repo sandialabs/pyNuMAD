@@ -11,7 +11,7 @@ import pynumad as pynu
 from pynumad.mesh_gen.mesh_gen import get_shell_mesh
 from pynumad.graphics.graphics import plot_blade_geometry_pv, plot_shell_mesh_pv
 
-yaml_file = os.path.join(os.path.dirname(__file__), "example_data", "blade.yaml")
+yaml_file = os.path.join(os.path.dirname(__file__), "example_data", "BAR0_5MW.yaml")
 
 blade = pynu.Blade()
 blade.read_yaml(yaml_file)

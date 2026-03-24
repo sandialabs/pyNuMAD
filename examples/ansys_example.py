@@ -16,7 +16,7 @@ from pynumad.analysis.ansys.main_ansys_analysis import main_ansys_analysis
 
 
 blade=pynumad.Blade()
-yamlName='myBlade_Modified'
+yamlName='BAR0_5MW'
 blade.read_yaml('example_data/'+yamlName+'.yaml') 
 
 log=setup_logging(yamlName+'_ansys')
