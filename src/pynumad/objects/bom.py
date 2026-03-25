@@ -105,8 +105,9 @@ class BillOfMaterials:
         self.swbonds = []
         self.dryweight = None
 
-        # calculate non-dimensional span
+        # calculate non-dimensional span and interval midpoints
         ndspan = (ispan - ispan[0]) / (ispan[-1] - ispan[0])
+        ndspan_mid = (ndspan[:-1] + ndspan[1:]) / 2
 
         hp_rows = []
         lp_rows = []
@@ -117,12 +118,12 @@ class BillOfMaterials:
             comp = components[comp_name]
             mat = materials[comp.materialid]
             hpRegion, lpRegion = comp.find_region_extents()
-            num_layers = comp.get_num_layers(ndspan)
-            num_layers = np.round(num_layers)
+            num_layers = np.round(comp.get_num_layers(ndspan_mid))
+            num_layers_padded = np.append(num_layers, 0)
 
             for k_layer in range(1, int(np.max(num_layers)) + 1):
                 begin_station, end_station = find_layer_extents(
-                    num_layers, k_layer
+                    num_layers_padded, k_layer
                 )
                 ks_max = np.amin((len(begin_station), len(end_station)))
                 for ks in range(ks_max):
@@ -209,12 +210,12 @@ class BillOfMaterials:
         sw_comps.sort(key=sorter)
         for comp in sw_comps:
             mat = materials[comp.materialid]
-            num_layers = comp.get_num_layers(ndspan)
-            num_layers = np.round(num_layers)
+            num_layers = np.round(comp.get_num_layers(ndspan_mid))
+            num_layers_padded = np.append(num_layers, 0)
 
             for k_layer in range(1, int(np.max(num_layers)) + 1):
                 begin_station, end_station = find_layer_extents(
-                    num_layers, k_layer
+                    num_layers_padded, k_layer
                 )
                 ks_max = np.amin((len(begin_station), len(end_station)))
                 for ks in range(ks_max):
