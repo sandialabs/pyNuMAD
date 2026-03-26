@@ -19,7 +19,8 @@ _BOM_COLUMNS = [
     "avgwidth",
     "area",
     "thickness",
-    "weight",
+    "dryweight",
+    "curedweight",
     "angle",
     # Integer index bounds consumed by StackDatabase.generate()
     "sta_begin_idx",
@@ -60,8 +61,11 @@ class BillOfMaterials:
         Total trailing-edge bond length [mm].
     swbonds : list[ndarray]
         Per-web bond-line length arrays [mm].
-    dryweight : float
-        Total dry material weight [kg].
+    total_dryweight : float
+        Total dry (pre-cure fiber) weight [kg], computed from ``drydensity`` [g/m²].
+    total_curedweight : float
+        Total cured composite weight [kg], computed from ``density`` [kg/m³]
+        times ``layerthickness`` [m] times area [m²].
     """
 
     def __init__(self):
@@ -72,7 +76,8 @@ class BillOfMaterials:
         self.lebond: float = None
         self.tebond: float = None
         self.swbonds: list = []
-        self.dryweight: float = None
+        self.total_dryweight: float = None
+        self.total_curedweight: float = None
 
     def generate(self, ispan, components, materials, keypoints: KeyPoints):
         """Generate the Bill-of-Materials.
@@ -103,11 +108,12 @@ class BillOfMaterials:
         self.lebond = None
         self.tebond = None
         self.swbonds = []
-        self.dryweight = None
+        self.total_dryweight = None
+        self.total_curedweight = None
 
         # calculate non-dimensional span and interval midpoints
+        # calculate non-dimensional span
         ndspan = (ispan - ispan[0]) / (ispan[-1] - ispan[0])
-        ndspan_mid = (ndspan[:-1] + ndspan[1:]) / 2
 
         hp_rows = []
         lp_rows = []
@@ -118,12 +124,12 @@ class BillOfMaterials:
             comp = components[comp_name]
             mat = materials[comp.materialid]
             hpRegion, lpRegion = comp.find_region_extents()
-            num_layers = np.round(comp.get_num_layers(ndspan_mid))
-            num_layers_padded = np.append(num_layers, 0)
+            num_layers = comp.get_num_layers(ndspan)
+            num_layers = np.round(num_layers)
 
             for k_layer in range(1, int(np.max(num_layers)) + 1):
                 begin_station, end_station = find_layer_extents(
-                    num_layers_padded, k_layer
+                    num_layers, k_layer
                 )
                 ks_max = np.amin((len(begin_station), len(end_station)))
                 for ks in range(ks_max):
@@ -151,7 +157,8 @@ class BillOfMaterials:
                             "avgwidth": np.mean(arcs),
                             "area": regionarea,
                             "thickness": mat.layerthickness,
-                            "weight": mat.drydensity * regionarea,
+                            "dryweight": mat.drydensity * regionarea,
+                            "curedweight": mat.density * mat.layerthickness * mm_to_m * regionarea,
                             "angle": comp.fabricangle * 180 / 3.141592653589793,
                             "sta_begin_idx": begin_station[ks],
                             "sta_end_idx": end_station[ks],
@@ -184,7 +191,8 @@ class BillOfMaterials:
                             "avgwidth": np.mean(arcs),
                             "area": regionarea,
                             "thickness": mat.layerthickness,
-                            "weight": mat.drydensity * regionarea,
+                            "dryweight": mat.drydensity * regionarea,
+                            "curedweight": mat.density * mat.layerthickness * mm_to_m * regionarea,
                             "angle": -1 * comp.fabricangle * 180 / 3.141592653589793,
                             "sta_begin_idx": begin_station[ks],
                             "sta_end_idx": end_station[ks],
@@ -210,12 +218,12 @@ class BillOfMaterials:
         sw_comps.sort(key=sorter)
         for comp in sw_comps:
             mat = materials[comp.materialid]
-            num_layers = np.round(comp.get_num_layers(ndspan_mid))
-            num_layers_padded = np.append(num_layers, 0)
+            num_layers = comp.get_num_layers(ndspan)
+            num_layers = np.round(num_layers)
 
             for k_layer in range(1, int(np.max(num_layers)) + 1):
                 begin_station, end_station = find_layer_extents(
-                    num_layers_padded, k_layer
+                    num_layers, k_layer
                 )
                 ks_max = np.amin((len(begin_station), len(end_station)))
                 for ks in range(ks_max):
@@ -244,7 +252,8 @@ class BillOfMaterials:
                         "avgwidth": np.mean(keypoints.web_width[swnum]),
                         "area": regionarea,
                         "thickness": mat.layerthickness,
-                        "weight": mat.drydensity * regionarea,
+                        "dryweight": mat.drydensity * regionarea,
+                        "curedweight": mat.density * mat.layerthickness * mm_to_m * regionarea,
                         "angle": comp.fabricangle * 180 / 3.141592653589793,
                         "sta_begin_idx": begin_station[ks],
                         "sta_end_idx": end_station[ks],
@@ -256,20 +265,26 @@ class BillOfMaterials:
 
         self.sw = pd.DataFrame(sw_rows, columns=_SW_COLUMNS)
 
-        # compute lebond, tebond, and dryweight
+        # compute lebond, tebond, total_dryweight, and total_curedweight
         self.lebond = sum(keypoints.le_bond) * m_to_mm
         self.tebond = sum(keypoints.te_bond) * m_to_mm
 
-        hp_dw = self.hp["weight"].sum() if not self.hp.empty else 0.0
-        lp_dw = self.lp["weight"].sum() if not self.lp.empty else 0.0
-        self.dryweight = g_to_kg * (hp_dw + lp_dw)
+        hp_dw = self.hp["dryweight"].sum() if not self.hp.empty else 0.0
+        lp_dw = self.lp["dryweight"].sum() if not self.lp.empty else 0.0
+        self.total_dryweight = g_to_kg * (hp_dw + lp_dw)
+
+        hp_tw = self.hp["curedweight"].sum() if not self.hp.empty else 0.0
+        lp_tw = self.lp["curedweight"].sum() if not self.lp.empty else 0.0
+        self.total_curedweight = hp_tw + lp_tw
 
         nsw = len(sw_begin_station)
         self.swbonds = [None] * nsw
         for k in range(nsw):
             sw_web = self.sw[self.sw["web_id"] == k]
-            sw_dw = sw_web["weight"].sum() if not sw_web.empty else 0.0
-            self.dryweight = self.dryweight + g_to_kg * sw_dw
+            sw_dw = sw_web["dryweight"].sum() if not sw_web.empty else 0.0
+            sw_tw = sw_web["curedweight"].sum() if not sw_web.empty else 0.0
+            self.total_dryweight = self.total_dryweight + g_to_kg * sw_dw
+            self.total_curedweight = self.total_curedweight + sw_tw
             C = keypoints.web_bonds[k][:, sw_begin_station[k] : sw_end_station[k]]
             self.swbonds[k] = m_to_mm * np.sum(C, 1)
 
@@ -296,6 +311,7 @@ class BillOfMaterials:
         """
         g_to_kg = 0.001
         m_to_mm = 1000.0
+        mm_to_m = 0.001
 
         ndspan = (ispan - ispan[0]) / (ispan[-1] - ispan[0])
         n_segments = len(segments)
@@ -379,6 +395,7 @@ class BillOfMaterials:
                                 'area': float(np.sum(areas)),
                                 'thickness': mat.layerthickness,
                                 'weight': mat.drydensity * float(np.sum(areas)),
+                                'totalweight': mat.density * mat.layerthickness * mm_to_m * float(np.sum(areas)),
                                 'angle': comp.fabricangle * 180 / np.pi,
                                 'sta_begin_idx': b_sta,
                                 'sta_end_idx': e_sta,
@@ -414,6 +431,7 @@ class BillOfMaterials:
                                 'area': float(np.sum(areas)),
                                 'thickness': mat.layerthickness,
                                 'weight': mat.drydensity * float(np.sum(areas)),
+                                'totalweight': mat.density * mat.layerthickness * mm_to_m * float(np.sum(areas)),
                                 'angle': -comp.fabricangle * 180 / np.pi,
                                 'sta_begin_idx': b_sta,
                                 'sta_end_idx': e_sta,
@@ -470,6 +488,7 @@ class BillOfMaterials:
                                 'area': float(np.sum(areas)),
                                 'thickness': mat.layerthickness,
                                 'weight': mat.drydensity * float(np.sum(areas)),
+                                'totalweight': mat.density * mat.layerthickness * mm_to_m * float(np.sum(areas)),
                                 'angle': comp.fabricangle * 180 / np.pi,
                                 'sta_begin_idx': b_sta,
                                 'sta_end_idx': e_sta,
@@ -507,7 +526,12 @@ class BillOfMaterials:
         hp_dw = self.hp['weight'].sum() if not self.hp.empty else 0.0
         lp_dw = self.lp['weight'].sum() if not self.lp.empty else 0.0
         sw_dw = self.sw['weight'].sum() if not self.sw.empty else 0.0
-        self.dryweight = g_to_kg * (hp_dw + lp_dw + sw_dw)
+        self.total_dryweight = g_to_kg * (hp_dw + lp_dw + sw_dw)
+
+        hp_tw = self.hp['totalweight'].sum() if not self.hp.empty else 0.0
+        lp_tw = self.lp['totalweight'].sum() if not self.lp.empty else 0.0
+        sw_tw = self.sw['totalweight'].sum() if not self.sw.empty else 0.0
+        self.total_curedweight = hp_tw + lp_tw + sw_tw
 
         return self
 

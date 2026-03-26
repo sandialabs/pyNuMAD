@@ -36,9 +36,9 @@ class Material:
     prxz : float
         Transverse Poisson ratio [ ]
     density : float
-        Cured mass density [kg/m2]
+        Cured composite volumetric density [kg/m³]
     drydensity : float
-        Density of fabric
+        Dry fiber areal density [g/m²]
     uts : float
         1 x 3 array of ultimate tensile strength design values.
         Sequence: SL , ST, Sz, 1 x 1 for isotropic.
