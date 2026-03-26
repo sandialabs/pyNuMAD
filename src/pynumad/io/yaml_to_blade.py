@@ -315,7 +315,8 @@ def _add_materials(definition, material_data):
             msg = f"No fatigue exponent found for material: {material_data[i]['name']}"
             logging.debug(msg)
         cur_mat.density = material_data[i]["rho"]
-        cur_mat.drydensity = cur_mat.density * cur_mat.layerthickness
+        # cur_mat.dens = mat_data[i]['rho']
+        cur_mat.drydensity = material_data[i]["rho"]
         if (
             "description" in material_data[i].keys()
             and "source" in material_data[i].keys()
@@ -401,20 +402,10 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
     # Shell skin
     key_list = full_keys_from_substrings(component_dict.keys(), ["shell"])
     if len(key_list) == 2:
-        inner_keys = [k for k in key_list if "inner" in k.lower()]
-        outer_keys = [k for k in key_list if "inner" not in k.lower()]
-        if len(inner_keys) == 1 and len(outer_keys) == 1:
-            # Outer shell: full arc coverage
-            component_dict[outer_keys[0]].hpextents = ["le", "te"]
-            component_dict[outer_keys[0]].lpextents = ["le", "te"]
-            # Inner shell: covers from TE band inner edge to LE on each side
-            component_dict[inner_keys[0]].hpextents = ["d", "le"]
-            component_dict[inner_keys[0]].lpextents = ["le", "d"]
-        else:
-            component_dict[key_list[0]].hpextents = ["le", "te"]
-            component_dict[key_list[0]].lpextents = ["le", "te"]
-            component_dict[key_list[1]].hpextents = ["le", "te"]
-            component_dict[key_list[1]].lpextents = ["le", "te"]
+        component_dict[key_list[0]].hpextents = ["le", "te"]
+        component_dict[key_list[0]].lpextents = ["le", "te"]
+        component_dict[key_list[1]].hpextents = ["le", "te"]
+        component_dict[key_list[1]].lpextents = ["le", "te"]
     else:
         raise ValueError("Incorrect number of shell components")
 
