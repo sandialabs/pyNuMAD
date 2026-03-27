@@ -11,7 +11,7 @@ adhesiveMat = "Adhesive"
 
 ## Read blade data from yaml file
 blade = pynu.Blade()
-file_name = join("example_data","blade.yaml")
+file_name = join("example_data","BAR0_5MW.yaml")
 blade.read_yaml(file_name)
 
 ## Set the airfoil point resolution

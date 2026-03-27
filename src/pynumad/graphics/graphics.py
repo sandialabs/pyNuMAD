@@ -101,13 +101,13 @@ def plot_segment_mass(bom, segments):
         seg_num = str(i + 1)
         if not bom.hp.empty:
             mask = bom.hp["segment_id"].str.endswith(seg_num)
-            hp_mass[i] = bom.hp.loc[mask, "weight"].sum() * g_to_kg
+            hp_mass[i] = bom.hp.loc[mask, "dryweight"].sum()
         if not bom.lp.empty:
             mask = bom.lp["segment_id"].str.endswith(seg_num)
-            lp_mass[i] = bom.lp.loc[mask, "weight"].sum() * g_to_kg
+            lp_mass[i] = bom.lp.loc[mask, "dryweight"].sum()
         if not bom.sw.empty:
             mask = bom.sw["segment_id"].str.contains(f"_{seg_num}_SW|^{seg_num}_SW", regex=True)
-            sw_mass[i] = bom.sw.loc[mask, "weight"].sum() * g_to_kg
+            sw_mass[i] = bom.sw.loc[mask, "dryweight"].sum()
 
     x = np.arange(n_segs)
     fig, ax = plt.subplots()
