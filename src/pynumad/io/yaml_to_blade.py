@@ -315,8 +315,7 @@ def _add_materials(definition, material_data):
             msg = f"No fatigue exponent found for material: {material_data[i]['name']}"
             logging.debug(msg)
         cur_mat.density = material_data[i]["rho"]
-        # cur_mat.dens = mat_data[i]['rho']
-        cur_mat.drydensity = material_data[i]["rho"]
+        cur_mat.drydensity = material_data[i].get("area_density_dry", float("nan"))
         if (
             "description" in material_data[i].keys()
             and "source" in material_data[i].keys()

@@ -271,7 +271,7 @@ class BillOfMaterials:
 
         hp_dw = self.hp["dryweight"].sum() if not self.hp.empty else 0.0
         lp_dw = self.lp["dryweight"].sum() if not self.lp.empty else 0.0
-        self.total_dryweight = g_to_kg * (hp_dw + lp_dw)
+        self.total_dryweight = hp_dw + lp_dw
 
         hp_tw = self.hp["curedweight"].sum() if not self.hp.empty else 0.0
         lp_tw = self.lp["curedweight"].sum() if not self.lp.empty else 0.0
@@ -283,7 +283,7 @@ class BillOfMaterials:
             sw_web = self.sw[self.sw["web_id"] == k]
             sw_dw = sw_web["dryweight"].sum() if not sw_web.empty else 0.0
             sw_tw = sw_web["curedweight"].sum() if not sw_web.empty else 0.0
-            self.total_dryweight = self.total_dryweight + g_to_kg * sw_dw
+            self.total_dryweight = self.total_dryweight + sw_dw
             self.total_curedweight = self.total_curedweight + sw_tw
             C = keypoints.web_bonds[k][:, sw_begin_station[k] : sw_end_station[k]]
             self.swbonds[k] = m_to_mm * np.sum(C, 1)
@@ -394,8 +394,8 @@ class BillOfMaterials:
                                 'avgwidth': float(np.mean(arcs)),
                                 'area': float(np.sum(areas)),
                                 'thickness': mat.layerthickness,
-                                'weight': mat.drydensity * float(np.sum(areas)),
-                                'totalweight': mat.density * mat.layerthickness * mm_to_m * float(np.sum(areas)),
+                                'dryweight': mat.drydensity * float(np.sum(areas)),
+                                'curedweight': mat.density * mat.layerthickness * mm_to_m * float(np.sum(areas)),
                                 'angle': comp.fabricangle * 180 / np.pi,
                                 'sta_begin_idx': b_sta,
                                 'sta_end_idx': e_sta,
@@ -430,8 +430,8 @@ class BillOfMaterials:
                                 'avgwidth': float(np.mean(arcs)),
                                 'area': float(np.sum(areas)),
                                 'thickness': mat.layerthickness,
-                                'weight': mat.drydensity * float(np.sum(areas)),
-                                'totalweight': mat.density * mat.layerthickness * mm_to_m * float(np.sum(areas)),
+                                'dryweight': mat.drydensity * float(np.sum(areas)),
+                                'curedweight': mat.density * mat.layerthickness * mm_to_m * float(np.sum(areas)),
                                 'angle': -comp.fabricangle * 180 / np.pi,
                                 'sta_begin_idx': b_sta,
                                 'sta_end_idx': e_sta,
@@ -487,8 +487,8 @@ class BillOfMaterials:
                                 'avgwidth': float(np.mean(arcs)),
                                 'area': float(np.sum(areas)),
                                 'thickness': mat.layerthickness,
-                                'weight': mat.drydensity * float(np.sum(areas)),
-                                'totalweight': mat.density * mat.layerthickness * mm_to_m * float(np.sum(areas)),
+                                'dryweight': mat.drydensity * float(np.sum(areas)),
+                                'curedweight': mat.density * mat.layerthickness * mm_to_m * float(np.sum(areas)),
                                 'angle': comp.fabricangle * 180 / np.pi,
                                 'sta_begin_idx': b_sta,
                                 'sta_end_idx': e_sta,
@@ -523,14 +523,14 @@ class BillOfMaterials:
         self.lp = pd.DataFrame(lp_rows)
         self.sw = pd.DataFrame(sw_rows)
 
-        hp_dw = self.hp['weight'].sum() if not self.hp.empty else 0.0
-        lp_dw = self.lp['weight'].sum() if not self.lp.empty else 0.0
-        sw_dw = self.sw['weight'].sum() if not self.sw.empty else 0.0
-        self.total_dryweight = g_to_kg * (hp_dw + lp_dw + sw_dw)
+        hp_dw = self.hp['dryweight'].sum() if not self.hp.empty else 0.0
+        lp_dw = self.lp['dryweight'].sum() if not self.lp.empty else 0.0
+        sw_dw = self.sw['dryweight'].sum() if not self.sw.empty else 0.0
+        self.total_dryweight = hp_dw + lp_dw + sw_dw
 
-        hp_tw = self.hp['totalweight'].sum() if not self.hp.empty else 0.0
-        lp_tw = self.lp['totalweight'].sum() if not self.lp.empty else 0.0
-        sw_tw = self.sw['totalweight'].sum() if not self.sw.empty else 0.0
+        hp_tw = self.hp['curedweight'].sum() if not self.hp.empty else 0.0
+        lp_tw = self.lp['curedweight'].sum() if not self.lp.empty else 0.0
+        sw_tw = self.sw['curedweight'].sum() if not self.sw.empty else 0.0
         self.total_curedweight = hp_tw + lp_tw + sw_tw
 
         return self
