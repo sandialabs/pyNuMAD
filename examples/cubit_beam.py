@@ -63,7 +63,7 @@ def get_cs_params():
 
 blade=pynumad.Blade()
 
-yamlName='myBlade_Modified'
+yamlName='BAR0_5MW'
 blade.read_yaml('example_data/'+yamlName+'.yaml') 
 
 

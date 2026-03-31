@@ -1,7 +1,6 @@
 import yaml
 import numpy as np
 import logging
-from scipy.stats import mode
 
 from pynumad.utils.misc_utils import (
     LARCetaT,
@@ -40,7 +39,7 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
     # Read in yaml file as a nested dictionary
     with open(filename) as blade_yaml:
         # data = yaml.load(blade_yaml,Loader=yaml.FullLoader)
-        data = yaml.load(blade_yaml, Loader=yaml.Loader)
+        data = yaml.load(blade_yaml, Loader=yaml.FullLoader)
 
     # initialize definition
     definition = Definition()
@@ -74,6 +73,8 @@ def yaml_to_blade(blade, filename: str, write_airfoils: bool = False):
         filename,
         write_airfoils,
     )
+    blade.ispan = definition.ispan
+
     ### MATERIALS
     _add_materials(definition, mat_data)
 
@@ -117,13 +118,11 @@ def _add_stations(
     write_airfoils,
 ):
     # Obtaining some parameters not explicitly given in YAML file
-    L = np.ceil(blade_outer_shape_bem["reference_axis"]["z"]["values"][-1])
-    R = L + hub_outer_shape_bem["diameter"] / 2
-    L = R - hub_outer_shape_bem["diameter"] / 2
+    L = blade_outer_shape_bem["reference_axis"]["z"]["values"][-1]
     definition.span = np.multiply(
         np.transpose(blade_outer_shape_bem["reference_axis"]['z']['grid']), L
     )
-    definition.ispan = definition.span
+    definition.ispan = definition.span.copy()
 
     # Aerodynamic properties
     # using interp because yaml can have different r/R for twist and chord
@@ -161,14 +160,11 @@ def _add_stations(
         y = np.array(af_data[IAF]["coordinates"]["y"], dtype=float)
         xf_coords = np.stack((x, y), 1)
 
-        # find coordinate direction (clockwise or counter-clockwise) Winding
-        # Number. clockwise starting at (1,0) is correct
-        with np.errstate(divide="ignore", invalid="ignore"):
-            if (
-                np.nanmean(np.gradient(np.arctan(xf_coords[:, 1] / xf_coords[:, 0])))
-                > 0
-            ):
-                xf_coords = np.flipud(xf_coords)
+        # Ensure clockwise winding starting at (1,0) using signed area (shoelace).
+        # Positive signed area means counter-clockwise; flip to make it clockwise.
+        x, y = xf_coords[:, 0], xf_coords[:, 1]
+        if np.sum(x[:-1] * y[1:] - x[1:] * y[:-1]) > 0:
+            xf_coords = np.flipud(xf_coords)
 
         if write_airfoils:
             import os
@@ -268,9 +264,6 @@ def _add_materials(definition, material_data):
             logging.debug(msg)
             cur_mat.layerthickness = 1
 
-        finally:
-            pass
-
         # first
         cur_mat.uts = _parse_data(material_data[i]["Xt"])
         cur_mat.ucs = -_parse_data(material_data[i]["Xc"])
@@ -322,8 +315,7 @@ def _add_materials(definition, material_data):
             msg = f"No fatigue exponent found for material: {material_data[i]['name']}"
             logging.debug(msg)
         cur_mat.density = material_data[i]["rho"]
-        # cur_mat.dens = mat_data[i]['rho']
-        cur_mat.drydensity = material_data[i]["rho"]
+        cur_mat.drydensity = material_data[i].get("area_density_dry", float("nan"))
         if (
             "description" in material_data[i].keys()
             and "source" in material_data[i].keys()
@@ -358,8 +350,8 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
             cur_comp.fabricangle = np.mean(
                 i_component_data["fiber_orientation"]["values"]
             )
-        finally:
-            pass
+        except (KeyError, TypeError):
+            cur_comp.fabricangle = 0
         if "spar" in i_component_data["name"].lower():
             cur_comp.imethod = "pchip"
         else:
@@ -426,13 +418,13 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
         if len(tempKeyList) == 1:
             component_dict[tempKeyList[0]].lpextents = ["d", "te"]
         else:
-            ValueError("Incorrect number of te reinf ss components")
+            raise ValueError("Incorrect number of te reinf ss components")
 
         tempKeyList = full_keys_from_substrings(key_list, ["ps"])
         if len(tempKeyList) == 1:
             component_dict[tempKeyList[0]].hpextents = ["d", "te"]
         else:
-            ValueError("Incorrect number of te reinf ps components")
+            raise ValueError("Incorrect number of te reinf ps components")
     else:
         raise ValueError("Invalid number of LE reinforcements")
 
@@ -446,13 +438,13 @@ def _add_components(definition, blade_internal_structure, blade_structure_dict):
         if len(tempKeyList) == 1:
             component_dict[tempKeyList[0]].lpextents = ["le", "a"]
         else:
-            ValueError("Incorrect number of te reinf ss components")
+            raise ValueError("Incorrect number of le reinf ss components")
 
         tempKeyList = full_keys_from_substrings(key_list, ["ps"])
         if len(tempKeyList) == 1:
             component_dict[tempKeyList[0]].hpextents = ["le", "a"]
         else:
-            ValueError("Incorrect number of te reinf ps components")
+            raise ValueError("Incorrect number of le reinf ps components")
     else:
         raise ValueError("Invalid number of LE reinforcements")
 
@@ -591,10 +583,10 @@ def _add_spar_caps(definition, blade_structure_dict):
             * 1000
         )
     except KeyError:
-        definition.sparcap_start_nd_arc = blade_structure_dict[
+        definition.sparcap_start_nd_arc_lp = blade_structure_dict[
             sparCapKeys[lpSideIndex]
         ]["start_nd_arc"]["values"]
-        definition.sparcap_end_nd_arc = blade_structure_dict[sparCapKeys[lpSideIndex]][
+        definition.sparcap_end_nd_arc_lp = blade_structure_dict[sparCapKeys[lpSideIndex]][
             "end_nd_arc"
         ]["values"]
 
@@ -607,10 +599,10 @@ def _add_spar_caps(definition, blade_structure_dict):
             * 1000
         )
     except KeyError:
-        definition.sparcap_start_nd_arc = blade_structure_dict[
+        definition.sparcap_start_nd_arc_hp = blade_structure_dict[
             sparCapKeys[hpSideIndex]
         ]["start_nd_arc"]["values"]
-        definition.sparcap_end_nd_arc = blade_structure_dict[sparCapKeys[hpSideIndex]][
+        definition.sparcap_end_nd_arc_hp = blade_structure_dict[sparCapKeys[hpSideIndex]][
             "end_nd_arc"
         ]["values"]
     return definition

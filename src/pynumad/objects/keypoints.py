@@ -1,3 +1,4 @@
+import logging
 import re
 
 import numpy as np
@@ -157,11 +158,15 @@ class KeyPoints:
             n1 = mm_to_m * leband_local[k]  # no foam width
             n2 = mm_to_m * teband_local[k]  # no foam width
 
-            scwidth_hp = mm_to_m * definition.sparcapwidth_hp[k]  # type: float
-            scwidth_lp = mm_to_m * definition.sparcapwidth_lp[k]  # type: float
+            _scw_hp = definition.sparcapwidth_hp
+            _scw_lp = definition.sparcapwidth_lp
+            _sco_hp = definition.sparcapoffset_hp
+            _sco_lp = definition.sparcapoffset_lp
 
-            scoffset_hp = mm_to_m * definition.sparcapoffset_hp[k]  # type: float
-            scoffset_lp = mm_to_m * definition.sparcapoffset_lp[k]  # type: float
+            scwidth_hp = mm_to_m * _scw_hp[k] if _scw_hp is not None else None
+            scwidth_lp = mm_to_m * _scw_lp[k] if _scw_lp is not None else None
+            scoffset_hp = mm_to_m * _sco_hp[k] if _sco_hp is not None else 0.0
+            scoffset_lp = mm_to_m * _sco_lp[k] if _sco_lp is not None else 0.0
 
             tempTE = geometry.get_profile_te_type(k)
             if te_types:
@@ -192,11 +197,34 @@ class KeyPoints:
             else:
                 z = geometry.HParcx0[0, k]
             z0 = z
-            z = z - scoffset_hp
             a = np.amax(((0 - n1), 0.1 * geometry.arclength[ns, k]))  # type: float
             a = np.amin((a, 0.01 * geometry.arclength[ns, k]))
-            b = np.amin(((z + 0.5 * scwidth_hp), 0.15 * geometry.arclength[ns, k]))
-            c = np.amax(((z - 0.5 * scwidth_hp), 0.8 * geometry.arclength[ns, k]))
+            if scwidth_hp is not None: # yaml_to_blade v1  case
+                z = z - scoffset_hp
+                b = np.amin(((z + 0.5 * scwidth_hp), 0.15 * geometry.arclength[ns, k]))
+                c = np.amax(((z - 0.5 * scwidth_hp), 0.8 * geometry.arclength[ns, k]))
+            else: # yaml_to_blade v2 case
+                # nd_arc path: HP side nd_arc 0.5 (LE) -> 1.0 (TE), arclength 0 -> negative
+                nd_s = definition.sparcap_start_nd_arc_hp[k]
+                nd_e = definition.sparcap_end_nd_arc_hp[k]
+                arc_te = geometry.arclength[ns, k]
+                b = arc_te * (nd_s - 0.5) / 0.5
+                c = arc_te * (nd_e - 0.5) / 0.5
+                # Check for extreme values
+                if b > 0.15 * arc_te:
+                    logging.warning(
+                        "HP spar cap start arc b=%s is closer to LE than former 15%% limit %s (station k=%s)",
+                        b,
+                        0.15 * arc_te,
+                        k,
+                    )
+                if c < 0.8 * arc_te:
+                    logging.warning(
+                        "HP spar cap end arc c=%s is further toward TE than former 80%% limit %s (station k=%s)",
+                        c,
+                        0.8 * arc_te,
+                        k,
+                    )
             d = np.amin(
                 ((geometry.arclength[0, k] + n2), 0.85 * geometry.arclength[ns, k])
             )
@@ -238,11 +266,34 @@ class KeyPoints:
             else:
                 z = geometry.LParcx0[0, k]
             z0 = z  # ble: location where airfoil surface crosses Xglobal=0
-            z = z + scoffset_lp  # positive scoffset moves z toward t.e.
             a = np.amin(((0 + n1), 0.1 * geometry.arclength[nf, k]))
             a = np.amax((a, 0.01 * geometry.arclength[nf, k]))
-            b = np.amax(((z - 0.5 * scwidth_lp), 0.15 * geometry.arclength[nf, k]))
-            c = np.amin((z + 0.5 * scwidth_lp, 0.8 * geometry.arclength[nf, k]))
+            if scwidth_lp is not None: # yaml_to_blade v1 case
+                z = z + scoffset_lp  # positive scoffset moves z toward t.e.
+                b = np.amax(((z - 0.5 * scwidth_lp), 0.15 * geometry.arclength[nf, k]))
+                c = np.amin((z + 0.5 * scwidth_lp, 0.8 * geometry.arclength[nf, k]))
+            else: # yaml_to_blade v2 case
+                # nd_arc path: LP side nd_arc 0.0 (TE) -> 0.5 (LE), arclength max -> 0
+                nd_s = definition.sparcap_start_nd_arc_lp[k]
+                nd_e = definition.sparcap_end_nd_arc_lp[k]
+                arc_te = geometry.arclength[nf, k]
+                b = arc_te * (0.5 - nd_e) / 0.5
+                c = arc_te * (0.5 - nd_s) / 0.5
+                # Check for extreme values
+                if b < 0.15 * arc_te:
+                    logging.warning(
+                        "LP spar cap start arc b=%s is closer to LE than former 15%% limit %s (station k=%s)",
+                        b,
+                        0.15 * arc_te,
+                        k,
+                    )
+                if c > 0.8 * arc_te:
+                    logging.warning(
+                        "LP spar cap end arc c=%s is further toward TE than former 80%% limit %s (station k=%s)",
+                        c,
+                        0.8 * arc_te,
+                        k,
+                    )
             d = np.amax(
                 (geometry.arclength[-1, k] - n2, 0.85 * geometry.arclength[nf, k])
             )

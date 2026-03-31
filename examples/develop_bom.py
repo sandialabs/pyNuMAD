@@ -10,7 +10,7 @@ from pynumad.objects.blade import Blade
 from pynumad.graphics.graphics import plot_blade_geometry_pv, plot_segment_mass
 
 yaml_file = os.path.join(
-    os.path.dirname(__file__), "example_data", "IEA-22-280-RWT.yaml"
+    os.path.dirname(__file__), "example_data", "IEA-15-240-RWT.yaml"
 )
 
 # Choose a segmentation case: 'one-piece', 'two-piece', 'chord-wise', 'three-piece'

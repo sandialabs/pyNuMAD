@@ -7,7 +7,7 @@ from os.path import join
 from pynumad.mesh_gen.mesh_gen import get_shell_mesh
 
 blade = pynu.Blade()
-file_name = join("example_data","blade.yaml")
+file_name = join("example_data","BAR0_5MW.yaml")
 blade.read_yaml(file_name)
 
 elementSize = 0.2
