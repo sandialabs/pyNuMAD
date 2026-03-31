@@ -24,7 +24,7 @@ class TestBillOfMaterialsInit(unittest.TestCase):
         bom = BillOfMaterials()
         self.assertIsNone(bom.lebond)
         self.assertIsNone(bom.tebond)
-        self.assertIsNone(bom.dryweight)
+        self.assertIsNone(bom.total_dryweight)
         self.assertEqual(bom.swbonds, [])
         self.assertEqual(bom.mold, {})
 
@@ -50,7 +50,7 @@ class TestBillOfMaterialsGenerate(unittest.TestCase):
         bom = self.blade.bill_of_materials
         expected = [
             "layernum", "materialid", "name", "beginsta", "endsta",
-            "maxwidth", "avgwidth", "area", "thickness", "weight", "angle",
+            "maxwidth", "avgwidth", "area", "thickness", "dryweight", "angle",
             "sta_begin_idx", "sta_end_idx", "seg_start", "seg_end",
         ]
         for col in expected:
@@ -61,10 +61,10 @@ class TestBillOfMaterialsGenerate(unittest.TestCase):
         bom = self.blade.bill_of_materials
         self.assertIn("web_id", bom.sw.columns)
 
-    def test_generate_dryweight_positive(self):
+    def test_generate_total_dryweight_positive(self):
         bom = self.blade.bill_of_materials
-        self.assertIsNotNone(bom.dryweight)
-        self.assertGreater(bom.dryweight, 0)
+        self.assertIsNotNone(bom.total_dryweight)
+        self.assertGreater(bom.total_dryweight, 0)
 
     def test_generate_lebond_tebond_non_negative(self):
         bom = self.blade.bill_of_materials
